@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadProducts, Product as ManagedProduct } from '../products/page';
+import { loadProducts, Product as ManagedProduct } from '../../lib/products';
 import { loadInvoices, loadStock, saveSale, currentBranch, customerPoints, formatDate } from '../../lib/branchData';
 
 type Line = {

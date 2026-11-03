@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadProducts, Product as ManagedProduct } from '../products/page';
+import { loadProducts, Product as ManagedProduct } from '../../lib/products';
 
 type Product = {
   id: string;

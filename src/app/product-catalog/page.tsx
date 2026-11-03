@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { loadProducts, saveProducts, Product } from '../products/page';
+import { loadProducts, saveProducts, Product } from '../../lib/products';
 
 export default function ProductCatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);

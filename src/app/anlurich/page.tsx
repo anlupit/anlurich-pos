@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadProducts, Product } from '../products/page';
+import { loadProducts, Product } from '../../lib/products';
 
 type Sale = {
   id: string;

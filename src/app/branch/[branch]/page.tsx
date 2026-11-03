@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { loadProducts, Product } from '../../products/page';
+import { loadProducts, Product } from '../../../lib/products';
 import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate } from '../../../lib/branchData';
 
 const BRANCH_NAMES: Record<string, string> = {

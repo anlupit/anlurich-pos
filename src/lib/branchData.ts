@@ -203,6 +203,15 @@ export function saveBranchSuppliers(suppliers: any[], branch?: string) {
   localStorage.setItem(`anlurich-suppliers-${b}`, JSON.stringify(suppliers));
 }
 
+export function loadProducts(): any[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { return []; }
+}
+
+export function saveProducts(products: any[]) {
+  localStorage.setItem('anlurich-products', JSON.stringify(products));
+}
+
 export function loadReturns(branch?: string): any[] {
   if (typeof window === 'undefined') return [];
   const b = branch || currentBranch();
@@ -228,8 +237,4 @@ export function saveReturn(ret: any) {
 
 export function updateReturns(branch: string, returns: any[]) {
   localStorage.setItem(`anlurich-returns-${branch}`, JSON.stringify(returns));
-}
-export function loadProducts(): any[] {
-  if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { return []; }
 }

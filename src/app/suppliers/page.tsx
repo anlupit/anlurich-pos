@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export type Supplier = {
+type Supplier = {
   id: string;
   name: string;
   address: string;
@@ -21,7 +21,7 @@ const defaultSuppliers: Supplier[] = [
   { id: '4', name: 'Bosch Automotive', address: '321 Tech Park, Baliwag, Bulacan', phone: '0917-444-4444' },
 ];
 
-export function loadSuppliers(): Supplier[] {
+function loadSuppliers(): Supplier[] {
   if (typeof window === 'undefined') return defaultSuppliers;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -35,7 +35,7 @@ export function loadSuppliers(): Supplier[] {
   }
 }
 
-export function saveSuppliers(suppliers: Supplier[]) {
+function saveSuppliers(suppliers: Supplier[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(suppliers));
 }
 

@@ -32,7 +32,7 @@ type SupplierInvoice = {
 
 const INVOICES_KEY = 'anlurich-supplier-invoices';
 
-export function loadInvoices(): SupplierInvoice[] {
+function loadInvoices(): SupplierInvoice[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(INVOICES_KEY);
@@ -42,7 +42,7 @@ export function loadInvoices(): SupplierInvoice[] {
   }
 }
 
-export function saveInvoices(invoices: SupplierInvoice[]) {
+function saveInvoices(invoices: SupplierInvoice[]) {
   localStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
 }
 

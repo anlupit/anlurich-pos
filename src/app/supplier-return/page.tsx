@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { currentBranch, loadBranchSuppliers, loadReturns, saveReturn, updateReturns, loadProducts, getStockQty, setStockQty, loadInvoices, formatDate } from '../../lib/branchData';
+import { currentBranch, loadBranchSuppliers, loadReturns, saveReturn, updateReturns, getStockQty, setStockQty, loadInvoices, formatDate } from '../../lib/branchData';
+import { loadProducts } from '../../lib/products';
 
 export default function SupplierReturnPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
