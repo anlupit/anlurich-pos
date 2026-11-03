@@ -229,3 +229,7 @@ export function saveReturn(ret: any) {
 export function updateReturns(branch: string, returns: any[]) {
   localStorage.setItem(`anlurich-returns-${branch}`, JSON.stringify(returns));
 }
+export function loadProducts(): any[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { return []; }
+}
