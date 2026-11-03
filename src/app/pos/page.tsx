@@ -286,6 +286,8 @@ export default function POSPage() {
             <option>Check</option>
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Customer Name</label>
           <input className="w-full border rounded px-3 py-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
         </div>
         <div>
