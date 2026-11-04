@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { loadSales, loadAllStock, formatDate } from '../../lib/branchData';
+import { loadAllStock, formatDate } from '../../lib/branchData';
 
 const BRANCHES = [
   { id: 'anlurich', name: 'ANLURICH OPC' },
@@ -27,15 +27,15 @@ export default function OwnerReportPage() {
     }
     setSales(all);
     setStock(loadAllStock());
-    try { setProducts(JSON.parse(localStorage.getItem('anlurich-products') || '[]')); } catch {}
+    try { setProducts(JSON.parse(localStorage.getItem('anlurich-products') || '[]')); } catch { setProducts([]); }
   }, []);
 
   const today = new Date().toISOString().slice(0, 10);
   const month = today.slice(0, 7);
   const year = today.slice(0, 4);
   const of = (s: any) => String(s.date || s.dateTime || '');
-
   const sum = (list: any[]) => list.reduce((n, s) => n + (s.total || 0), 0);
+
   const branchRows = BRANCHES.map((b) => {
     const bSales = sales.filter((s) => s.branch === b.id);
     return {
@@ -65,16 +65,6 @@ export default function OwnerReportPage() {
   const ranked = Object.values(movers).sort((a, b) => b.qty - a.qty);
   const fast = ranked.slice(0, 20);
   const slow = ranked.filter((m) => m.qty <= 2).slice(0, 20);
-
-  const stockQty = (part: string) => {
-    let qty = 0;
-    Object.values(stock).forEach((branchStock) => {
-      Object.values(branchStock || {}).forEach((s: any) => {
-        if (String(s.partNumber || '').toUpperCase() === part.toUpperCase()) qty += s.qty || 0;
-      });
-    });
-    return qty;
-  };
 
   return (
     <div className="p-4">
@@ -113,7 +103,6 @@ export default function OwnerReportPage() {
 
       <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
         <h2 className="font-semibold mb-1">Fast Moving — invest more</h2>
-        <div className="text-xs text-gray-500 mb-2">Top 20 by quantity sold this year</div>
         <table className="w-full text-sm">
           <thead className="bg-green-600 text-white">
             <tr>
@@ -122,34 +111,30 @@ export default function OwnerReportPage() {
               <th className="text-left p-2">Brand</th>
               <th className="text-center p-2">Qty Sold</th>
               <th className="text-right p-2">Sales Value</th>
-              <th className="text-left p-2">Branches</th>
             </tr>
           </thead>
           <tbody>
             {fast.map((m) => (
               <tr key={m.partNumber + m.description} className="border-t">
-                <td className="p-2 font-medium">{m.partNumber}</td>
+                <td className="p-2">{m.partNumber}</td>
                 <td className="p-2">{m.description}</td>
                 <td className="p-2">{m.brand || '—'}</td>
                 <td className="p-2 text-center font-bold">{m.qty}</td>
                 <td className="p-2 text-right">₱{m.value.toLocaleString()}</td>
-                <td className="p-2 text-xs">{[...m.branches].join(', ')}</td>
               </tr>
             ))}
-            {fast.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No sales this year yet</td></tr>}
+            {fast.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No sales this year yet</td></tr>}
           </tbody>
         </table>
       </div>
 
       <div className="bg-white rounded-xl shadow p-4 overflow-x-auto">
         <h2 className="font-semibold mb-1">Slow Moving — invest less</h2>
-        <div className="text-xs text-gray-500 mb-2">Sold 2 or fewer times this year</div>
         <table className="w-full text-sm">
           <thead className="bg-orange-600 text-white">
             <tr>
               <th className="text-left p-2">Part Number</th>
               <th className="text-left p-2">Description</th>
-              <th className="text-left p-2">Brand</th>
               <th className="text-center p-2">Qty Sold</th>
               <th className="text-right p-2">Sales Value</th>
             </tr>
@@ -159,12 +144,11 @@ export default function OwnerReportPage() {
               <tr key={m.partNumber + m.description} className="border-t">
                 <td className="p-2">{m.partNumber}</td>
                 <td className="p-2">{m.description}</td>
-                <td className="p-2">{m.brand || '—'}</td>
                 <td className="p-2 text-center">{m.qty}</td>
                 <td className="p-2 text-right">₱{m.value.toLocaleString()}</td>
               </tr>
             ))}
-            {slow.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No slow movers yet</td></tr>}
+            {slow.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-gray-400">No slow movers yet</td></tr>}
           </tbody>
         </table>
       </div>
