@@ -15,6 +15,7 @@ const BRANCHES = [
 export default function OwnerReportPage() {
   const [sales, setSales] = useState<any[]>([]);
   const [stock, setStock] = useState<Record<string, Record<string, { qty: number }>>>({});
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
     const all: any[] = [];
