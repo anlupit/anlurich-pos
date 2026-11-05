@@ -60,6 +60,8 @@ export default function SearchInvoicePage() {
 
   const deleteInvoice = () => {
     if (!editing) return;
+    const pin = prompt('Enter delete password');
+    if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${editing.invoiceNo}?`)) return;
     const branch = currentBranch();
     const key = `anlurich-sales-${branch}`;

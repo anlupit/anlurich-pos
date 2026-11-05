@@ -16,6 +16,9 @@ export default function SearchPurchasePage() {
 
   useEffect(() => {
     setInvoices(loadInvoices());
+    const refresh = () => setInvoices(loadInvoices());
+    window.addEventListener('anlurich-synced', refresh);
+    return () => window.removeEventListener('anlurich-synced', refresh);
   }, []);
 
   const yearOf = (date: string) => {
@@ -117,6 +120,8 @@ export default function SearchPurchasePage() {
 
   const deleteInvoice = () => {
     if (!viewing) return;
+    const pin = prompt('Enter delete password');
+    if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${viewing.invoiceNumber}?`)) return;
     const branch = currentBranch();
     const all = loadInvoices(branch);

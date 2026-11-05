@@ -41,6 +41,7 @@ export default function AdminDashboard() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-1">ADMIN Dashboard</h1>
+      <a href="/users" className="inline-block mb-4 bg-black text-white px-4 py-2 rounded-lg text-sm">User and Password Manager</a>
       <p className="text-gray-500 mb-4">APIS — Auto Parts Inventory System</p>
       <a href="/owner-report" className="inline-block bg-blue-700 text-white px-5 py-2 rounded-lg mb-6">Owner Report</a>
 

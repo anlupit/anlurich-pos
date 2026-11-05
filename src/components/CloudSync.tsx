@@ -1,37 +1,47 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function CloudSync() {
+  const [status, setStatus] = useState('Connecting cloud...');
+
   useEffect(() => {
-    let pushing = false;
+    const pending: { key: string; value: string | null }[] = [];
+    let ready = false;
     const origSet = localStorage.setItem.bind(localStorage);
     const origRemove = localStorage.removeItem.bind(localStorage);
 
     async function push(key: string, value: string | null) {
       if (!key.startsWith('anlurich-')) return;
-      try {
-        await fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, value }),
-        });
-      } catch {}
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      });
+      if (!res.ok) throw new Error('save failed');
     }
 
     localStorage.setItem = (key: string, value: string) => {
       origSet(key, value);
-      if (pushing) push(key, value);
+      if (!key.startsWith('anlurich-')) return;
+      if (!ready) pending.push({ key, value });
+      else push(key, value).catch(() => setStatus('Cloud save failed'));
     };
     localStorage.removeItem = (key: string) => {
       origRemove(key);
-      if (pushing) push(key, null);
+      if (!key.startsWith('anlurich-')) return;
+      if (!ready) pending.push({ key, value: null });
+      else push(key, null).catch(() => setStatus('Cloud save failed'));
     };
 
     (async () => {
       try {
         const res = await fetch('/api/data');
-        if (!res.ok) return;
+        if (!res.ok) {
+          setStatus('Cloud not connected');
+          ready = true;
+          return;
+        }
         const rows: { key: string; value: unknown }[] = await res.json();
         const serverKeys = new Set(rows.map((r) => r.key));
         for (const row of rows) {
@@ -45,16 +55,24 @@ export default function CloudSync() {
             await push(key, localStorage.getItem(key));
           }
         }
-        pushing = true;
+        for (const item of pending) await push(item.key, item.value);
+        ready = true;
+        setStatus('Cloud connected — branch data shared');
+        window.dispatchEvent(new Event('anlurich-synced'));
         if (rows.length && !sessionStorage.getItem('anlurich-cloud-loaded')) {
           sessionStorage.setItem('anlurich-cloud-loaded', '1');
           window.location.reload();
         }
       } catch {
-        pushing = true;
+        ready = true;
+        setStatus('Cloud not connected');
       }
     })();
   }, []);
 
-  return null;
+  return (
+    <div className="fixed bottom-2 right-2 z-50 text-[11px] bg-black/70 text-white px-2 py-1 rounded">
+      {status}
+    </div>
+  );
 }

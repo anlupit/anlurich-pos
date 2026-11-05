@@ -146,8 +146,10 @@ export default function POSPage() {
   const doPriceCheck = () => {
     const pn = priceCheck.partNumber.trim().toLowerCase();
     if (!pn) return;
+    const freshInvoices = loadInvoices();
+    const freshProducts = loadProducts();
     let latest: any = null;
-    invoices
+    freshInvoices
       .slice()
       .sort((a, b) => (b.invoiceDate || '').localeCompare(a.invoiceDate || ''))
       .forEach((inv) => {
@@ -166,7 +168,7 @@ export default function POSPage() {
           }
         });
       });
-    const catalog = products.find((p) => p.partNumber.toLowerCase() === pn);
+    const catalog = freshProducts.find((p) => p.partNumber.toLowerCase() === pn);
     if (!latest && !catalog) return alert('Product not found in supplier invoices or catalog');
     const gross = Number(latest?.grossPrice) || 0;
     const netFromGross = gross * (1 - (latest?.discount1 || 0) / 100) * (1 - (latest?.discount2 || 0) / 100) * (1 - (latest?.discount3 || 0) / 100);

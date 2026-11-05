@@ -2,6 +2,8 @@ import './globals.css';
 import Sidebar from '../components/Sidebar';
 import CloudSync from '../components/CloudSync';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'APIS — Auto-Parts Inventory System',
   description: 'Auto-Parts Inventory System',
