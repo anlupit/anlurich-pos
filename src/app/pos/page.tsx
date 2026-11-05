@@ -42,6 +42,7 @@ export default function POSPage() {
   const [showUnpaid, setShowUnpaid] = useState(false);
   const [payCheck, setPayCheck] = useState({ no: '', bank: '', date: '' });
   const [selectedUnpaid, setSelectedUnpaid] = useState<string[]>([]);
+  const [unpaidSearch, setUnpaidSearch] = useState('');
   const [letterhead, setLetterhead] = useState('');
   const [savedSale, setSavedSale] = useState<any>(null);
   const [lines, setLines] = useState<Line[]>([
@@ -58,12 +59,16 @@ export default function POSPage() {
   const [redeemPts, setRedeemPts] = useState(0);
 
   useEffect(() => {
-    const prods = loadProducts();
-    const stock = loadStock();
-    setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
-    setInvoices(loadInvoices());
-    setSaleDateTime(formatDate(new Date().toISOString()) + ' ' + new Date().toLocaleTimeString());
-    loadSalesCloud().catch(() => {});
+    try {
+      const prods = loadProducts();
+      const stock = loadStock();
+      setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
+      setInvoices(loadInvoices());
+      setSaleDateTime(formatDate(new Date().toISOString()) + ' ' + new Date().toLocaleTimeString());
+      loadSalesCloud().catch(() => {});
+    } catch {
+      setSaleDateTime(new Date().toLocaleString());
+    }
   }, []);
 
   const twoYearsAgo = new Date();
@@ -765,8 +770,9 @@ export default function POSPage() {
 
       {/* Unpaid credit summary */}
       {showUnpaid && (() => {
-        const unpaid = loadSales().filter((s) => s.paymentMethod === 'Credit' && s.paid === false);
+        const unpaid = loadSales().filter((s) => s.paymentMethod === 'Credit' && s.paid === false && (!unpaidSearch.trim() || String(s.customerName || '').toLowerCase().includes(unpaidSearch.trim().toLowerCase())));
         const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const tickAll = () => setSelectedUnpaid(unpaid.map((s) => s.id));
         const recordPayment = () => {
           if (!payCheck.no || !payCheck.bank || !payCheck.date) return alert('Enter check no., bank name, and check date');
           if (!selectedUnpaid.length) return alert('Select the invoices paid');
