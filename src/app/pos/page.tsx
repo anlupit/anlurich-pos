@@ -143,15 +143,27 @@ export default function POSPage() {
     }
   };
 
-  const doPriceCheck = () => {
+  const doPriceCheck = async () => {
     const pn = priceCheck.partNumber.trim().toLowerCase();
     if (!pn) return;
-    const freshInvoices = loadInvoices();
+    const branch = currentBranch() || 'unknown';
+    let freshInvoices = loadInvoices(branch);
+    try {
+      const res = await fetch('/api/data', { cache: 'no-store' });
+      if (res.ok) {
+        const rows: { key: string; value: string }[] = await res.json();
+        const row = rows.find((r) => r.key === `anlurich-supplier-invoices-${branch}`);
+        if (row?.value) {
+          const cloud = JSON.parse(row.value);
+          if (Array.isArray(cloud) && cloud.length) freshInvoices = cloud;
+        }
+      }
+    } catch {}
     const freshProducts = loadProducts();
     let latest: any = null;
     freshInvoices
       .slice()
-      .sort((a, b) => (b.invoiceDate || '').localeCompare(a.invoiceDate || ''))
+      .sort((a, b) => String(b.invoiceDate || b.createdAt || b.id || '').localeCompare(String(a.invoiceDate || a.createdAt || a.id || '')))
       .forEach((inv) => {
         if (latest) return;
         (inv.lines || []).forEach((line: any) => {

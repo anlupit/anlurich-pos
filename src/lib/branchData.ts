@@ -60,7 +60,13 @@ export function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
   const key = `anlurich-supplier-invoices-${b}`;
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
-  localStorage.setItem(key, JSON.stringify([...existing, invoice]));
+  const next = [...existing, invoice];
+  localStorage.setItem(key, JSON.stringify(next));
+  fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value: JSON.stringify(next) }),
+  }).catch(() => {});
 }
 
 export function updateInvoices(branch: string, invoices: any[]) {

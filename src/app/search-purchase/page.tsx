@@ -86,7 +86,7 @@ export default function SearchPurchasePage() {
       }
     });
 
-    setResults(rows.sort((a, b) => (b.invoiceDate || '').localeCompare(a.invoiceDate || '')));
+    setResults(rows.sort((a, b) => String(b.invoiceDate || b.createdAt || b.invoiceId || '').localeCompare(String(a.invoiceDate || a.createdAt || a.invoiceId || ''))));
     setSearched(true);
   };
 
