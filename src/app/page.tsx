@@ -18,6 +18,7 @@ const LOGINS: Record<string, { name: string; password: string }> = {
   lipa: { name: 'User 1', password: 'Oranges!' },
   sezan: { name: 'User 1', password: 'Mangoes!' },
   timitsu: { name: 'User 1', password: 'Avocado!' },
+  avenders: { name: 'User 1', password: 'Thor!' },
   admin: { name: 'Anlupit', password: 'Guitar88!' },
 };
 

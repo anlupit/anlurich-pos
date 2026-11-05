@@ -54,12 +54,12 @@ export default function AnlurichDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow p-5">
           <div className="text-sm text-gray-500">Daily Sales</div>
-          <div className="text-3xl font-bold text-green-600">₱{dailyTotal.toLocaleString()}</div>
+          <div className="text-3xl font-bold text-green-600">₱{dailyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           <div className="text-sm text-gray-400">{dailySales.length} transactions today</div>
         </div>
         <div className="bg-white rounded-xl shadow p-5">
           <div className="text-sm text-gray-500">Monthly Sales</div>
-          <div className="text-3xl font-bold text-blue-600">₱{monthlyTotal.toLocaleString()}</div>
+          <div className="text-3xl font-bold text-blue-600">₱{monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           <div className="text-sm text-gray-400">{monthlySales.length} transactions this month</div>
         </div>
       </div>

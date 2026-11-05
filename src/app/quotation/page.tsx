@@ -11,6 +11,7 @@ type QuoteLine = {
   qty: number;
   unit: string;
   price: number;
+  laborPrice: number;
 };
 
 const BRANCH_HEADERS: Record<string, { name: string; location: string }> = {
@@ -41,13 +42,15 @@ export default function QuotationPage() {
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [printSnap, setPrintSnap] = useState<any>(null);
   const [branchHeader, setBranchHeader] = useState({ name: 'APIS', location: '' });
+  const [hasLabor, setHasLabor] = useState(false);
   const [lines, setLines] = useState<QuoteLine[]>([
-    { id: '1', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+    { id: '1', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 },
   ]);
 
   useEffect(() => {
     const id = localStorage.getItem('anlurich-branch') || '';
     setBranchHeader(BRANCH_HEADERS[id] || { name: 'APIS', location: '' });
+    setHasLabor(id === 'anlurich' || id === 'avenders');
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
     const existing = JSON.parse(localStorage.getItem(`anlurich-quotations-${id}`) || '[]').map((q: any) => String(q.quotationNo || ''));
@@ -63,7 +66,7 @@ export default function QuotationPage() {
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+      { id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 },
     ]);
   };
 
@@ -78,7 +81,7 @@ export default function QuotationPage() {
     });
   };
 
-  const lineTotal = (l: QuoteLine) => l.qty * l.price;
+  const lineTotal = (l: QuoteLine) => l.qty * l.price + (hasLabor ? (Number(l.laborPrice) || 0) : 0);
   const grandTotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
 
   const searchQuotations = () => {
@@ -253,7 +256,6 @@ export default function QuotationPage() {
             <input className="border rounded-lg px-3 py-2" placeholder="Year Model" value={yearModel} onChange={(e) => setYearModel(e.target.value)} />
             <input className="border rounded-lg px-3 py-2" placeholder="Chasis No." value={chasisNo} onChange={(e) => setChasisNo(e.target.value)} />
           </div>
-          <input className="mt-3 w-full border rounded-lg px-3 py-2" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 
         {/* Product Lines */}
@@ -261,13 +263,14 @@ export default function QuotationPage() {
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="p-2 text-left">Part Number</th>
-                <th className="p-2 text-left">Description</th>
-                <th className="p-2 text-left">Brand</th>
+                <th className="p-2 text-center">Part Number</th>
+                <th className="p-2 text-center">Description</th>
+                <th className="p-2 text-center">Brand</th>
                 <th className="p-2 text-center">Qty</th>
-                <th className="p-2 text-left">Unit</th>
-                <th className="p-2 text-right">Price</th>
-                <th className="p-2 text-right">Total</th>
+                <th className="p-2 text-center">Unit</th>
+                <th className="p-2 text-center">Price</th>
+                {hasLabor && <th className="p-2 text-center">Labor Cost</th>}
+                <th className="p-2 text-center">Total</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -280,6 +283,7 @@ export default function QuotationPage() {
                   <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 text-center" style={{ width: '4ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                   <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '8ch' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                   <td className="p-1"><input type="number" min={0} step="0.01" className="border rounded px-1 py-1 text-right" style={{ width: '10ch' }} value={line.price || ''} onChange={(e) => updateLine(line.id, 'price', parseFloat(e.target.value) || 0)} /></td>
+                  {hasLabor && <td className="p-1"><input type="number" min={0} step="0.01" className="border rounded px-1 py-1 text-right" style={{ width: '10ch' }} value={line.laborPrice || ''} onChange={(e) => updateLine(line.id, 'laborPrice', parseFloat(e.target.value) || 0)} /></td>}
                   <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="p-1 text-center"><button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button></td>
                 </tr>
@@ -342,6 +346,7 @@ export default function QuotationPage() {
               <th className="text-center py-0.5">Qty</th>
               <th className="text-left py-0.5">Unit</th>
               <th className="text-right py-0.5">Price</th>
+              {hasLabor && <th className="text-right py-0.5">Labor</th>}
               <th className="text-right py-0.5">Total</th>
             </tr>
           </thead>
@@ -354,13 +359,13 @@ export default function QuotationPage() {
                 <td className="py-0.5 text-center">{l.qty}</td>
                 <td className="py-0.5">{l.unit}</td>
                 <td className="py-0.5 text-right">{l.price.toLocaleString()}</td>
-                <td className="py-0.5 text-right">{(l.qty * l.price).toLocaleString()}</td>
+                {hasLabor && <td className="py-0.5 text-right">{(l.laborPrice || 0).toLocaleString()}</td>}
+                <td className="py-0.5 text-right">{(l.qty * l.price + (hasLabor ? (Number(l.laborPrice) || 0) : 0)).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div className="text-right font-bold mt-2">GRAND TOTAL: {printSnap.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-        {printSnap.notes && <div className="mt-2"><strong>Notes:</strong> {printSnap.notes}</div>}
       </div>
       )}
     </div>

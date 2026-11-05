@@ -21,6 +21,8 @@ export default function SearchPurchasePage() {
     return () => window.removeEventListener('anlurich-synced', refresh);
   }, []);
 
+  const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   const yearOf = (date: string) => {
     if (!date) return '';
     const m = String(date).match(/20\d{2}/);
@@ -206,8 +208,8 @@ export default function SearchPurchasePage() {
                   <td className="p-2">{r.brand || '—'}</td>
                   <td className="p-2">{r.description || '—'}</td>
                   <td className="p-2 text-center">{r.qty ?? '—'}</td>
-                  <td className="p-2 text-right">{r.price != null ? `₱${r.price.toLocaleString()}` : '—'}</td>
-                  <td className="p-2 text-right">₱{r.grandTotal?.toLocaleString()}</td>
+                  <td className="p-2 text-right">{r.price != null ? money(r.price) : '—'}</td>
+                  <td className="p-2 text-right">{money(r.grandTotal)}</td>
                   <td className="p-2 text-center">
                     <button onClick={() => openInvoice(r.invoiceId)} className="text-blue-600 text-xs font-medium">View / Edit</button>
                   </td>

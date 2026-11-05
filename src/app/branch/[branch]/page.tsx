@@ -126,7 +126,7 @@ export default function BranchDashboard() {
           </div>
         </div>
         <div className="bg-gray-200 rounded-lg px-4 py-2 text-right">
-          <div className="text-lg font-bold">₱{monthlyTotal.toLocaleString()}</div>
+          <div className="text-lg font-bold">₱{monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           <div className="text-xs text-gray-500">Monthly Sales</div>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function BranchDashboard() {
           </div>
         </div>
         <div className="bg-gray-100 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold">₱{dailyTotal.toLocaleString()}</div>
+          <div className="text-2xl font-bold">₱{dailyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           <div className="text-sm text-gray-500">Daily Sales</div>
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function BranchDashboard() {
                     <tr key={inv.id} className="border-t">
                       <td className="p-2">{inv.supplierName}</td>
                       <td className="p-2">{formatDate(inv.invoiceDate)}</td>
-                      <td className="p-2 text-right">₱{inv.grandTotal?.toLocaleString()}</td>
+                      <td className="p-2 text-right">₱{inv.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="p-2 text-center">
                         <span className={`px-2 py-1 rounded text-xs ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{inv.status || 'unpaid'}</span>
                       </td>
@@ -210,7 +210,7 @@ export default function BranchDashboard() {
                       <td className="p-2">{h.brand || '—'}</td>
                       <td className="p-2">{h.description}</td>
                       <td className="p-2 text-center">{h.qty}</td>
-                      <td className="p-2 text-right">₱{h.price?.toLocaleString()}</td>
+                      <td className="p-2 text-right">₱{h.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -278,7 +278,7 @@ export default function BranchDashboard() {
                 ))}
               </tbody>
             </table>
-            <div className="text-right font-bold mb-3">Grand Total: ₱{viewing.grandTotal?.toLocaleString()}</div>
+            <div className="text-right font-bold mb-3">Grand Total: ₱{viewing.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={saveEditedInvoice} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>

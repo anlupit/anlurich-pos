@@ -13,6 +13,7 @@ const DEFAULT_USERS = [
   { id: 'lipa-1', branch: 'lipa', name: 'User 1', password: 'Oranges!' },
   { id: 'sezan-1', branch: 'sezan', name: 'User 1', password: 'Mangoes!' },
   { id: 'timitsu-1', branch: 'timitsu', name: 'User 1', password: 'Avocado!' },
+  { id: 'avenders-1', branch: 'avenders', name: 'User 1', password: 'Thor!' },
   { id: 'admin-1', branch: 'admin', name: 'Anlupit', password: 'Guitar88!' },
 ];
 
@@ -37,7 +38,20 @@ export async function GET() {
     );
     return NextResponse.json(DEFAULT_USERS);
   }
-  try { return NextResponse.json(JSON.parse(rows[0].value)); } catch { return NextResponse.json(DEFAULT_USERS); }
+  try {
+    const stored = JSON.parse(rows[0].value);
+    const merged = [...stored];
+    DEFAULT_USERS.forEach((d) => {
+      if (!merged.some((u: any) => u.branch === d.branch && u.name === d.name)) merged.push(d);
+    });
+    if (merged.length !== stored.length) {
+      await pool.query(
+        `UPDATE app_data SET value = $1, updated_at = NOW() WHERE key = 'anlurich-users'`,
+        [JSON.stringify(merged)]
+      );
+    }
+    return NextResponse.json(merged);
+  } catch { return NextResponse.json(DEFAULT_USERS); }
 }
 
 export async function POST(req: Request) {

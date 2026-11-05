@@ -53,16 +53,16 @@ export default function AdminDashboard() {
           </thead>
           <tbody>
             {branchStats.map((b) => (
-              <tr key={b.id} className="border-t"><td className="p-2">{b.name}</td><td className="p-2 text-right">₱{b.monthly.toLocaleString()}</td><td className="p-2 text-right">₱{b.ytd.toLocaleString()}</td></tr>
+              <tr key={b.id} className="border-t"><td className="p-2">{b.name}</td><td className="p-2 text-right">₱{b.monthly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="p-2 text-right">₱{b.ytd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
             ))}
-            <tr className="border-t-2 font-bold bg-gray-50"><td className="p-2">GRAND TOTAL</td><td className="p-2 text-right">₱{grandMonthly.toLocaleString()}</td><td className="p-2 text-right">₱{grandYTD.toLocaleString()}</td></tr>
+            <tr className="border-t-2 font-bold bg-gray-50"><td className="p-2">GRAND TOTAL</td><td className="p-2 text-right">₱{grandMonthly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="p-2 text-right">₱{grandYTD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
           </tbody>
         </table>
       </div>
 
       <div className="bg-white rounded-xl shadow p-5 mb-6">
         <h2 className="font-semibold mb-2">Monthly Purchases</h2>
-        <div className="text-3xl font-bold text-orange-600">₱{monthlyPurchases.toLocaleString()}</div>
+        <div className="text-3xl font-bold text-orange-600">₱{monthlyPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
       </div>
 
       <div className="bg-white rounded-xl shadow p-5">

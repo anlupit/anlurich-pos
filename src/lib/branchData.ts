@@ -56,7 +56,27 @@ export function loadInvoices(branch?: string): any[] {
   } catch { return []; }
 }
 
-export function saveInvoice(invoice: any) {
+function pushCloud(key: string, value: unknown) {
+  if (typeof window === 'undefined') return;
+  fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value: typeof value === 'string' ? value : JSON.stringify(value) }),
+  }).catch(() => {});
+}
+
+async function pullCloud(key: string): Promise<any | null> {
+  try {
+    const res = await fetch('/api/data', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const rows: { key: string; value: string }[] = await res.json();
+    const row = rows.find((r) => r.key === key);
+    return row?.value ? JSON.parse(row.value) : null;
+  } catch {
+    return null;
+  }
+}
+  export function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
   const key = `anlurich-supplier-invoices-${b}`;
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
@@ -71,6 +91,7 @@ export function saveInvoice(invoice: any) {
 
 export function updateInvoices(branch: string, invoices: any[]) {
   localStorage.setItem(`anlurich-supplier-invoices-${branch}`, JSON.stringify(invoices));
+  pushCloud(`anlurich-supplier-invoices-${branch}`, invoices);
 }
 
 // Inventory (qty + location) — private per branch
@@ -86,7 +107,9 @@ export function loadStock(branch?: string): Record<string, Stock> {
 }
 
 export function saveStock(branch: string, stock: Record<string, Stock>) {
-  localStorage.setItem(`anlurich-stock-${branch}`, JSON.stringify(stock));
+  const key = `anlurich-stock-${branch}`;
+  localStorage.setItem(key, JSON.stringify(stock));
+  pushCloud(key, stock);
 }
 
 export function getStockQty(productId: string, branch?: string): number {
@@ -116,6 +139,16 @@ export function loadAllStock(): Record<string, Record<string, Stock>> {
 }
 
 // Sales / customers — private per branch
+export async function loadSalesCloud(branch?: string): Promise<any[]> {
+  const b = branch || currentBranch();
+  const cloud = await pullCloud(`anlurich-sales-${b}`);
+  if (Array.isArray(cloud)) {
+    localStorage.setItem(`anlurich-sales-${b}`, JSON.stringify(cloud));
+    return cloud;
+  }
+  return loadSales(b);
+}
+
 export function loadSales(branch?: string): any[] {
   if (typeof window === 'undefined') return [];
   const b = branch || currentBranch();
@@ -135,11 +168,35 @@ export function loadSales(branch?: string): any[] {
   } catch { return []; }
 }
 
+export function loadCorporate(branch?: string): any[] {
+  if (typeof window === 'undefined') return [];
+  const b = branch || currentBranch();
+  try { return JSON.parse(localStorage.getItem(`anlurich-corporate-${b}`) || '[]'); } catch { return []; }
+}
+
+export function saveCorporate(sale: any) {
+  const b = sale.branch || currentBranch() || 'unknown';
+  const key = `anlurich-corporate-${b}`;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  localStorage.setItem(key, JSON.stringify([...existing, sale]));
+}
+
+export function updateCorporate(branch: string, sales: any[]) {
+  localStorage.setItem(`anlurich-corporate-${branch}`, JSON.stringify(sales));
+}
+
 export function saveSale(sale: any) {
   const b = sale.branch || currentBranch() || 'unknown';
   const key = `anlurich-sales-${b}`;
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
-  localStorage.setItem(key, JSON.stringify([...existing, sale]));
+  const next = [...existing, sale];
+  localStorage.setItem(key, JSON.stringify(next));
+  pushCloud(key, next);
+}
+
+export function updateSales(branch: string, sales: any[]) {
+  localStorage.setItem(`anlurich-sales-${branch}`, JSON.stringify(sales));
+  pushCloud(`anlurich-sales-${branch}`, sales);
 }
 
 // Quotations — private per branch
@@ -168,6 +225,7 @@ export function deleteQuotationAt(index: number) {
   if (index < 0 || index >= existing.length) return;
   existing.splice(index, 1);
   localStorage.setItem(key, JSON.stringify(existing));
+  pushCloud(key, existing);
 }
 
 export function deleteQuotation(id: string, quotationNo?: string) {
@@ -183,6 +241,7 @@ export function saveQuotation(quotation: any) {
   const key = `anlurich-quotations-${b}`;
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
   localStorage.setItem(key, JSON.stringify([...existing, quotation]));
+  pushCloud(key, [...existing, quotation]);
 }
 
 // Suppliers — private per branch
@@ -207,6 +266,7 @@ export function loadBranchSuppliers(branch?: string): any[] {
 export function saveBranchSuppliers(suppliers: any[], branch?: string) {
   const b = branch || currentBranch() || 'unknown';
   localStorage.setItem(`anlurich-suppliers-${b}`, JSON.stringify(suppliers));
+  pushCloud(`anlurich-suppliers-${b}`, suppliers);
 }
 
 export function loadProducts(): any[] {
@@ -216,6 +276,7 @@ export function loadProducts(): any[] {
 
 export function saveProducts(products: any[]) {
   localStorage.setItem('anlurich-products', JSON.stringify(products));
+  pushCloud('anlurich-products', products);
 }
 
 export function loadReturns(branch?: string): any[] {
@@ -243,4 +304,5 @@ export function saveReturn(ret: any) {
 
 export function updateReturns(branch: string, returns: any[]) {
   localStorage.setItem(`anlurich-returns-${branch}`, JSON.stringify(returns));
+  pushCloud(`anlurich-returns-${branch}`, returns);
 }

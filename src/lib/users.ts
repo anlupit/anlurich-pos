@@ -21,6 +21,7 @@ const DEFAULT_USERS: UserAccount[] = [
   { id: 'lipa-1', branch: 'lipa', name: 'User 1', password: 'Oranges!' },
   { id: 'sezan-1', branch: 'sezan', name: 'User 1', password: 'Mangoes!' },
   { id: 'timitsu-1', branch: 'timitsu', name: 'User 1', password: 'Avocado!' },
+  { id: 'avenders-1', branch: 'avenders', name: 'User 1', password: 'Thor!' },
   { id: 'admin-1', branch: 'admin', name: 'Anlupit', password: 'Guitar88!' },
 ];
 

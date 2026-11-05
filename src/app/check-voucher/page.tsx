@@ -136,7 +136,7 @@ export default function CheckVoucherPage() {
                       <td className="p-3 font-medium">{inv.invoiceNumber}</td>
                       <td className="p-3">{formatDate(inv.invoiceDate)}</td>
                       <td className="p-3">{inv.terms || '—'}</td>
-                      <td className="p-3 text-right font-medium">₱{inv.grandTotal.toLocaleString()}</td>
+                      <td className="p-3 text-right font-medium">₱{inv.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded text-xs ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {inv.status}
@@ -165,7 +165,7 @@ export default function CheckVoucherPage() {
               <h2 className="text-lg font-bold mb-2">Mark as Paid</h2>
               <p className="text-sm mb-1"><strong>Supplier:</strong> {selected.supplierName}</p>
               <p className="text-sm mb-1"><strong>Invoice:</strong> {selected.invoiceNumber}</p>
-              <p className="text-sm mb-4"><strong>Amount:</strong> ₱{selected.grandTotal.toLocaleString()}</p>
+              <p className="text-sm mb-4"><strong>Amount:</strong> ₱{selected.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <label className="block text-sm font-medium mb-1">Check Voucher No.</label>
               <input
                 className="w-full border rounded-lg px-3 py-2 mb-4"

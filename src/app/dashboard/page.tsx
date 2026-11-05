@@ -87,12 +87,12 @@ export default function DashboardPage() {
             </div>
             <div className="bg-green-50 rounded-lg p-4">
               <div className="text-sm text-gray-600">Total Sales</div>
-              <div className="text-2xl font-bold text-green-600">₱{todayTotal.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-600">₱{todayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="text-sm text-gray-600">Average Ticket</div>
               <div className="text-2xl font-bold">
-                ₱{todayCount ? Math.round(todayTotal / todayCount).toLocaleString() : '0'}
+                ₱{todayCount ? Math.round(todayTotal / todayCount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0'}
               </div>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
             <div className="text-sm">
               <strong>By Payment:</strong>{' '}
               {Object.entries(todayByPayment).map(([method, amount]) => (
-                <span key={method} className="mr-4">{method}: ₱{amount.toLocaleString()}</span>
+                <span key={method} className="mr-4">{method}: ₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               ))}
             </div>
           )}
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                       <td className="p-2">{new Date(s.date).toLocaleTimeString()}</td>
                       <td className="p-2">{s.id.slice(-6)}</td>
                       <td className="p-2">{s.items.reduce((n, i) => n + i.qty, 0)}</td>
-                      <td className="p-2 text-right font-medium">₱{s.total.toLocaleString()}</td>
+                      <td className="p-2 text-right font-medium">₱{s.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="p-2">{s.paymentMethod}</td>
                     </tr>
                   ))}
@@ -151,12 +151,12 @@ export default function DashboardPage() {
             </div>
             <div className="bg-green-50 rounded-lg p-4">
               <div className="text-sm text-gray-600">Total Sales</div>
-              <div className="text-2xl font-bold text-green-600">₱{monthTotal.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-600">₱{monthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="text-sm text-gray-600">Average Ticket</div>
               <div className="text-2xl font-bold">
-                ₱{monthCount ? Math.round(monthTotal / monthCount).toLocaleString() : '0'}
+                ₱{monthCount ? Math.round(monthTotal / monthCount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0'}
               </div>
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <div className="text-sm">
               <strong>By Payment:</strong>{' '}
               {Object.entries(monthByPayment).map(([method, amount]) => (
-                <span key={method} className="mr-4">{method}: ₱{amount.toLocaleString()}</span>
+                <span key={method} className="mr-4">{method}: ₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               ))}
             </div>
           )}

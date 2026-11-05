@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
-import { loadInvoices, loadStock, saveSale, currentBranch, customerPoints, formatDate } from '../../lib/branchData';
+import { loadInvoices, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate } from '../../lib/branchData';
 
 type Line = {
   id: string;
@@ -34,7 +34,11 @@ export default function POSPage() {
   const [invoiceNo, setInvoiceNo] = useState('');
   const [saleDateTime, setSaleDateTime] = useState('');
   const [showPrintAsk, setShowPrintAsk] = useState(false);
-  const [showLetterhead, setShowLetterhead] = useState(false);
+  const [showDaily, setShowDaily] = useState(false);
+  const [showMonthly, setShowMonthly] = useState(false);
+  const [showUnpaid, setShowUnpaid] = useState(false);
+  const [payCheck, setPayCheck] = useState({ no: '', bank: '', date: '' });
+  const [selectedUnpaid, setSelectedUnpaid] = useState<string[]>([]);
   const [letterhead, setLetterhead] = useState('');
   const [savedSale, setSavedSale] = useState<any>(null);
   const [lines, setLines] = useState<Line[]>([
@@ -43,7 +47,10 @@ export default function POSPage() {
   const [discount, setDiscount] = useState('');
   const [cashTender, setCashTender] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [priceCheck, setPriceCheck] = useState({ partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
+  const [referenceNo, setReferenceNo] = useState('');
+  const [tin, setTin] = useState('');
+  const [paid, setPaid] = useState(true);
+  const [priceMatches, setPriceMatches] = useState<any[]>([]);
   const [pointsInfo, setPointsInfo] = useState<{ earned: number; redeemed: number; balance: number } | null>(null);
   const [redeemPts, setRedeemPts] = useState(0);
 
@@ -53,6 +60,7 @@ export default function POSPage() {
     setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
     setInvoices(loadInvoices());
     setSaleDateTime(formatDate(new Date().toISOString()) + ' ' + new Date().toLocaleTimeString());
+    loadSalesCloud().catch(() => {});
   }, []);
 
   const twoYearsAgo = new Date();
@@ -143,9 +151,26 @@ export default function POSPage() {
     }
   };
 
+  const applyMatch = (item: any) => {
+    const gross = Number(item.grossPrice) || 0;
+    const netFromGross = gross * (1 - (item.discount1 || 0) / 100) * (1 - (item.discount2 || 0) / 100) * (1 - (item.discount3 || 0) / 100);
+    const cost = netFromGross || Number(item.price) || Number(item.costPrice) || 0;
+    const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
+    setPriceCheck({
+      barcode: item.barcode || priceCheck.barcode,
+      partNumber: item.partNumber || priceCheck.partNumber,
+      description: item.description || item.name || '',
+      brand: item.brand || '',
+      costPrice: cost,
+      sellingPrice: selling,
+    });
+    setPriceMatches([]);
+  };
+
   const doPriceCheck = async () => {
     const pn = priceCheck.partNumber.trim().toLowerCase();
-    if (!pn) return;
+    const bc = priceCheck.barcode.trim().toLowerCase();
+    if (!pn && !bc) return;
     const branch = currentBranch() || 'unknown';
     let freshInvoices = loadInvoices(branch);
     try {
@@ -160,39 +185,37 @@ export default function POSPage() {
       }
     } catch {}
     const freshProducts = loadProducts();
-    let latest: any = null;
+    const found: any[] = [];
+    const seen = new Set<string>();
     freshInvoices
       .slice()
       .sort((a, b) => String(b.invoiceDate || b.createdAt || b.id || '').localeCompare(String(a.invoiceDate || a.createdAt || a.id || '')))
       .forEach((inv) => {
-        if (latest) return;
         (inv.lines || []).forEach((line: any) => {
-          if (latest) return;
-          if (String(line.partNumber || '').toLowerCase() === pn) {
-            latest = {
-              ...line,
-              invoiceDate: inv.invoiceDate,
-              supplierName: inv.supplierName,
-              discount1: inv.discount1 || 0,
-              discount2: inv.discount2 || 0,
-              discount3: inv.discount3 || 0,
-            };
+          const linePn = String(line.partNumber || '').toLowerCase();
+          const lineBc = String(line.barcode || '').toLowerCase();
+          const partOk = !pn || linePn.includes(pn);
+          const barcodeOk = !bc || lineBc.includes(bc) || linePn.includes(bc);
+          const key = linePn;
+          if (partOk && barcodeOk && linePn && !seen.has(key)) {
+            seen.add(key);
+            found.push({ ...line, invoiceDate: inv.invoiceDate, supplierName: inv.supplierName, discount1: inv.discount1 || 0, discount2: inv.discount2 || 0, discount3: inv.discount3 || 0 });
           }
         });
       });
-    const catalog = freshProducts.find((p) => p.partNumber.toLowerCase() === pn);
-    if (!latest && !catalog) return alert('Product not found in supplier invoices or catalog');
-    const gross = Number(latest?.grossPrice) || 0;
-    const netFromGross = gross * (1 - (latest?.discount1 || 0) / 100) * (1 - (latest?.discount2 || 0) / 100) * (1 - (latest?.discount3 || 0) / 100);
-    const cost = netFromGross || Number(latest?.price) || Number(latest?.costPrice) || Number(catalog?.costPrice) || 0;
-    const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
-    setPriceCheck({
-      partNumber: latest?.partNumber || catalog?.partNumber || priceCheck.partNumber,
-      description: latest?.description || catalog?.description || catalog?.name || '',
-      brand: latest?.brand || catalog?.brand || '',
-      costPrice: cost,
-      sellingPrice: selling,
+    freshProducts.forEach((p) => {
+      const cpn = p.partNumber.toLowerCase();
+      const cbc = (p.barcode || '').toLowerCase();
+      const partOk = !pn || cpn.includes(pn);
+      const barcodeOk = !bc || cbc.includes(bc) || cpn.includes(bc);
+      if (partOk && barcodeOk && cpn && !seen.has(cpn)) {
+        seen.add(cpn);
+        found.push(p);
+      }
     });
+    if (!found.length) return alert('Product not found in supplier invoices or catalog');
+    if (found.length === 1) return applyMatch(found[0]);
+    setPriceMatches(found.slice(0, 8));
   };
 
   const addCheckedToCart = () => {
@@ -201,7 +224,7 @@ export default function POSPage() {
       ...prev,
       {
         id: Date.now().toString(),
-        barcode: '',
+        barcode: priceCheck.barcode,
         partNumber: priceCheck.partNumber,
         description: priceCheck.description,
         brand: priceCheck.brand,
@@ -257,10 +280,93 @@ export default function POSPage() {
       pointsRedeemed: redeemPts,
       total: grandTotal,
       paymentMethod,
+      referenceNo: referenceNo.trim(),
+      cashTender: parseFloat(cashTender) || 0,
+      change: Math.max(0, (parseFloat(cashTender) || 0) - grandTotal),
     };
     saveSale(sale);
     setSavedSale(sale);
     setShowPrintAsk(true);
+  };
+
+  const salesRows = (sales: any[]) => sales
+    .slice()
+    .sort((a, b) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')))
+    .map((s) => {
+      const total = Number(s.total) || 0;
+      const net = Math.round((total / 1.12) * 100) / 100;
+      return {
+        Time: s.dateTime || formatDate(s.date),
+        Customer: s.customerName || '',
+        'Invoice No': s.invoiceNo,
+        Payment: s.paymentMethod || 'Cash',
+        'Ref / Check': s.referenceNo || '',
+        Total: Number(total.toFixed(2)),
+        Tendered: Number((s.cashTender || 0).toFixed(2)),
+        Change: Number((s.change || 0).toFixed(2)),
+        'Net of VAT': Number(net.toFixed(2)),
+        '12% VAT': Number((total - net).toFixed(2)),
+      };
+    });
+
+  const downloadDaily = async () => {
+    const XLSX = await import('xlsx');
+    const today = new Date().toISOString().slice(0, 10);
+    const branch = (currentBranch() || 'branch').toUpperCase();
+    const groups = ['Cash', 'GCash', 'Maya', 'Credit / Debit Card', 'Bank Transfer', 'Check'];
+    const sales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === today);
+    const header = ['Invoice No.', 'Time', 'Customer Name', 'Ref No./Check No.', 'Net of VAT', '12% VAT', 'Total', 'Amount Tendered', 'Change'];
+    const data: any[][] = [[branch], [formatDate(today)], [], header];
+    groups.forEach((g) => {
+      const list = sales
+        .filter((s) => (s.paymentMethod || 'Cash') === g)
+        .sort((a, b) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')));
+      if (!list.length) return;
+      const groupTotal = list.reduce((n, s) => n + (Number(s.total) || 0), 0);
+      data.push([g, Number(groupTotal.toFixed(2))]);
+      list.forEach((s) => {
+        const total = Number(s.total) || 0;
+        const net = Math.round((total / 1.12) * 100) / 100;
+        const time = s.dateTime ? String(s.dateTime).split(' ').slice(1).join(' ') : '';
+        data.push([s.invoiceNo, time, s.customerName || '', s.referenceNo || '', Number(net.toFixed(2)), Number((total - net).toFixed(2)), Number(total.toFixed(2)), Number((s.cashTender || 0).toFixed(2)), Number((s.change || 0).toFixed(2))]);
+      });
+    });
+    const sheet = XLSX.utils.aoa_to_sheet(data);
+    sheet['!pageSetup'] = { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1 };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Daily Sales');
+    XLSX.writeFile(wb, `daily-sales-${today}.xlsx`);
+  };
+
+  const downloadMonthly = async () => {
+    const XLSX = await import('xlsx');
+    const ym = new Date().toISOString().slice(0, 7);
+    const branch = (currentBranch() || 'branch').toUpperCase();
+    const monthLabel = new Date(`${ym}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const sales = loadSales()
+      .filter((s) => String(s.date || s.dateTime || '').slice(0, 7) === ym)
+      .sort((a, b) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')));
+    const header = ['Invoice Date', 'Invoice No.', 'Customer Name', 'Payment Type', 'Ref No./Check No.', 'Net of VAT', '12% VAT', 'Total Amount'];
+    const data: any[][] = [[branch], [monthLabel], [], header];
+    let netSum = 0;
+    let vatSum = 0;
+    let totalSum = 0;
+    sales.forEach((s) => {
+      const total = Number(s.total) || 0;
+      const net = Math.round((total / 1.12) * 100) / 100;
+      const vat = Math.round((total - net) * 100) / 100;
+      netSum += net;
+      vatSum += vat;
+      totalSum += total;
+      data.push([formatDate(s.date), s.invoiceNo, s.customerName || '', s.paymentMethod || 'Cash', s.referenceNo || '', Number(net.toFixed(2)), Number(vat.toFixed(2)), Number(total.toFixed(2))]);
+    });
+    data.push([]);
+    data.push(['', '', '', '', 'GRAND TOTAL', Number(netSum.toFixed(2)), Number(vatSum.toFixed(2)), Number(totalSum.toFixed(2))]);
+    const sheet = XLSX.utils.aoa_to_sheet(data);
+    sheet['!pageSetup'] = { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1 };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Monthly Sales');
+    XLSX.writeFile(wb, `monthly-sales-${ym}.xlsx`);
   };
 
   const doPrint = () => {
@@ -284,41 +390,49 @@ export default function POSPage() {
       <div className="print:hidden">
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
         <h1 className="text-xl font-bold text-yellow-600">Point of Sale</h1>
-        <span className="text-3xl font-black tracking-wide">INVOICING</span>
+        <span className="text-3xl font-black tracking-wide">WALK-IN Customer Invoicing</span>
       </div>
       <div className="text-xs text-gray-500 mb-4 print:hidden">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
 
-      <div className="bg-white rounded-xl shadow p-3 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 print:hidden">
-        <div>
+      <div className="bg-white rounded-xl shadow p-3 mb-4 grid grid-cols-1 md:grid-cols-12 gap-3 print:hidden">
+        <div className="md:col-span-2">
           <label className="block text-xs font-medium mb-1">Payment</label>
-          <select className="w-full border rounded px-3 py-2" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+          <select className="w-full border rounded px-2 py-2" style={{ maxWidth: '20ch' }} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
             <option>Cash</option>
             <option>GCash</option>
             <option>Maya</option>
             <option>Credit / Debit Card</option>
             <option>Bank Transfer</option>
             <option>Check</option>
+            <option>Credit</option>
           </select>
+          <input className="border rounded px-2 py-2 mt-2 block text-left" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
         </div>
-        <div>
-          <label className="block text-xs font-medium mb-1">Customer Name</label>
-          <input className="w-full border rounded px-3 py-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+        <div className="md:col-span-4">
+          <label className="block text-xs font-medium mb-1">{paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'}</label>
+          <input className="w-full border rounded px-3 py-2" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          {paymentMethod === 'Credit' && (
+            <>
+              <input className="w-full border rounded px-3 py-2 mt-2" placeholder="TIN No." value={tin} onChange={(e) => setTin(e.target.value)} />
+              <label className="flex items-center gap-2 mt-2 text-sm font-medium"><input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} /> PAID</label>
+            </>
+          )}
         </div>
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-xs font-medium mb-1">Contact Number</label>
           <input className="w-full border rounded px-3 py-2" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
         </div>
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-xs font-medium mb-1">Sales Invoice No.</label>
           <input className="w-full border rounded px-3 py-2" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
         </div>
-        <div>
+        <div className="md:col-span-2 text-right">
           <label className="block text-xs font-medium mb-1">Date & Time</label>
-          <input className="w-full border rounded px-3 py-2 bg-gray-50" value={saleDateTime} readOnly />
-        </div>
-        <div className="text-right flex flex-col justify-center">
-          <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
-          <div className="text-4xl font-black leading-none">{pointsInfo ? pointsInfo.balance : '—'}</div>
+          <input className="w-full border rounded px-3 py-2 bg-gray-50 text-right" value={saleDateTime} readOnly />
+          <div className="mt-2">
+            <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
+            <div className="text-4xl font-black leading-none">{pointsInfo ? pointsInfo.balance : '—'}</div>
+          </div>
         </div>
       </div>
 
@@ -388,13 +502,30 @@ export default function POSPage() {
             <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
+          <button onClick={() => setShowDaily(true)} className="w-full mt-2 bg-green-700 text-white py-3 rounded-lg font-bold">Print Daily Sales Report</button>
+          <button onClick={downloadDaily} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Download Daily Sales</button>
+          <button onClick={downloadMonthly} className="w-full mt-2 bg-orange-600 text-white py-3 rounded-lg font-bold">Download Monthly Sales</button>
+          <button onClick={() => setShowMonthly(true)} className="w-full mt-2 bg-orange-800 text-white py-3 rounded-lg font-bold">Print Monthly Sales</button>
+          <button onClick={() => setShowUnpaid(true)} className="w-full mt-2 bg-red-600 text-white py-3 rounded-lg font-bold">Unpaid Credit Summary</button>
         </div>
 
         {/* Price Check */}
         <div className="bg-white rounded-xl shadow p-4 print:hidden">
           <h2 className="font-semibold mb-3">Price Check</h2>
           <div className="space-y-2">
-            <input className="w-full border rounded-lg px-3 py-2" placeholder="Part Number" value={priceCheck.partNumber} onChange={(e) => setPriceCheck({ ...priceCheck, partNumber: e.target.value })} />
+            <div className="flex gap-2">
+              <input className="flex-1 border rounded-lg px-3 py-2" placeholder="Barcode" value={priceCheck.barcode} onChange={(e) => setPriceCheck({ ...priceCheck, barcode: e.target.value })} />
+              <input className="flex-1 border rounded-lg px-3 py-2" placeholder="Part Number" value={priceCheck.partNumber} onChange={(e) => setPriceCheck({ ...priceCheck, partNumber: e.target.value })} />
+            </div>
+            {priceMatches.length > 1 && (
+              <div className="border rounded max-h-40 overflow-auto">
+                {priceMatches.map((m, i) => (
+                  <button key={i} type="button" onClick={() => applyMatch(m)} className="w-full text-left px-2 py-1 border-b text-sm hover:bg-teal-50">
+                    <span className="font-medium">{m.partNumber}</span> · {m.brand || '—'} · {m.description || m.name || ''}
+                  </button>
+                ))}
+              </div>
+            )}
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Description" value={priceCheck.description} readOnly />
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Brand" value={priceCheck.brand} readOnly />
             <div className="flex justify-between text-sm"><span>Cost Price</span><span>₱{priceCheck.costPrice.toLocaleString()}</span></div>
@@ -444,6 +575,232 @@ export default function POSPage() {
 
       </div>
 
+      {/* Daily sales report */}
+      {showDaily && (() => {
+        const today = new Date().toISOString().slice(0, 10);
+        const groups = [
+          { key: 'Cash', label: 'CASH SALES' },
+          { key: 'GCash', label: 'GCASH' },
+          { key: 'Maya', label: 'MAYA' },
+          { key: 'Credit / Debit Card', label: 'CREDIT CARD' },
+          { key: 'Bank Transfer', label: 'BANK TRANSFER' },
+          { key: 'Check', label: 'CHECK PAYMENT' },
+        ];
+        const sales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === today);
+        const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const rows = groups.map((g) => {
+          const list = sales.filter((s) => (s.paymentMethod || 'Cash') === g.key);
+          const total = list.reduce((n, s) => n + (Number(s.total) || 0), 0);
+          return { ...g, count: list.length, total, list };
+        });
+        const grand = rows.reduce((n, r) => n + r.total, 0);
+        const net = Math.round((grand / 1.12) * 100) / 100;
+        const vat = Math.round((grand - net) * 100) / 100;
+        const printDaily = () => {
+          const style = document.createElement('style');
+          style.id = 'daily-print';
+          style.innerHTML = `@media print { @page { size: A4 landscape; margin: 8mm; } body * { visibility: hidden; } #daily-report, #daily-report * { visibility: visible; } #daily-report { position: absolute; left: 0; top: 0; width: 100%; } }`;
+          document.head.appendChild(style);
+          setTimeout(() => { window.print(); setTimeout(() => style.remove(), 500); }, 100);
+        };
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+            <div id="daily-report" className="bg-white max-w-md mx-auto p-4 rounded shadow">
+              <div className="text-center font-bold text-lg">DAILY SALES REPORT</div>
+              <div className="text-center text-sm mb-3">{formatDate(today)} · {currentBranch()?.toUpperCase()}</div>
+              {rows.map((r) => (
+                <div key={r.key} className="mb-3">
+                  <div className="flex justify-between font-bold bg-gray-800 text-white px-2 py-1 text-sm"><span>{r.label}</span><span>{money(r.total)} · {r.count}</span></div>
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b bg-gray-100">
+                        <th className="text-left p-1">Time</th>
+                        <th className="text-left p-1">Customer</th>
+                        <th className="text-left p-1">Invoice</th>
+                        <th className="text-left p-1">Ref / Check</th>
+                        <th className="text-right p-1">Total</th>
+                        <th className="text-right p-1">Tendered</th>
+                        <th className="text-right p-1">Change</th>
+                        <th className="text-right p-1">Net VAT</th>
+                        <th className="text-right p-1">12% VAT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.list
+                        .slice()
+                        .sort((a: any, b: any) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')))
+                        .map((s: any) => {
+                          const t = Number(s.total) || 0;
+                          const net = Math.round((t / 1.12) * 100) / 100;
+                          const vat = Math.round((t - net) * 100) / 100;
+                          const time = s.dateTime ? String(s.dateTime).split(' ').slice(1).join(' ') : '';
+                          return (
+                            <tr key={s.id || s.invoiceNo} className="border-b">
+                              <td className="p-1">{time}</td>
+                              <td className="p-1">{s.customerName || '—'}</td>
+                              <td className="p-1">{s.invoiceNo}</td>
+                              <td className="p-1">{s.referenceNo || '—'}</td>
+                              <td className="p-1 text-right">{money(t)}</td>
+                              <td className="p-1 text-right">{money(s.cashTender || 0)}</td>
+                              <td className="p-1 text-right">{money(s.change || 0)}</td>
+                              <td className="p-1 text-right">{money(net)}</td>
+                              <td className="p-1 text-right">{money(vat)}</td>
+                            </tr>
+                          );
+                        })}
+                      {r.list.length === 0 && <tr><td colSpan={9} className="p-1 text-gray-400">No sales</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+              <div className="mt-3 text-right space-y-1">
+                <div>Net of VAT: {money(net)}</div>
+                <div>12% VAT: {money(vat)}</div>
+                <div className="font-bold text-lg">GRAND TOTAL: {money(grand)}</div>
+              </div>
+              <div className="flex gap-2 mt-4 print:hidden">
+                <button onClick={() => setShowDaily(false)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
+                <button onClick={printDaily} className="flex-1 bg-blue-700 text-white py-2 rounded">Print</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Monthly sales report */}
+      {showMonthly && (() => {
+        const ym = new Date().toISOString().slice(0, 7);
+        const monthLabel = new Date(`${ym}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const sales = loadSales()
+          .filter((s) => String(s.date || s.dateTime || '').slice(0, 7) === ym)
+          .sort((a, b) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')));
+        const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const rows = sales.map((s) => {
+          const total = Number(s.total) || 0;
+          const net = Math.round((total / 1.12) * 100) / 100;
+          return { ...s, net, vat: Math.round((total - net) * 100) / 100, total };
+        });
+        const netSum = rows.reduce((n, r) => n + r.net, 0);
+        const vatSum = rows.reduce((n, r) => n + r.vat, 0);
+        const totalSum = rows.reduce((n, r) => n + r.total, 0);
+        const printMonthly = () => {
+          const style = document.createElement('style');
+          style.innerHTML = `@media print { @page { size: A4 landscape; margin: 8mm; } body * { visibility: hidden; } #monthly-report, #monthly-report * { visibility: visible; } #monthly-report { position: absolute; left: 0; top: 0; width: 100%; } }`;
+          document.head.appendChild(style);
+          setTimeout(() => { window.print(); setTimeout(() => style.remove(), 500); }, 100);
+        };
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+            <div id="monthly-report" className="bg-white max-w-5xl mx-auto p-4 rounded shadow">
+              <div className="text-center font-bold text-xl">{currentBranch()?.toUpperCase()}</div>
+              <div className="text-center font-semibold mb-3">{monthLabel}</div>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b bg-gray-100">
+                    <th className="text-left p-1">Invoice Date</th>
+                    <th className="text-left p-1">Invoice No.</th>
+                    <th className="text-left p-1">Customer Name</th>
+                    <th className="text-left p-1">Payment Type</th>
+                    <th className="text-left p-1">Ref No./Check No.</th>
+                    <th className="text-right p-1">Net of VAT</th>
+                    <th className="text-right p-1">12% VAT</th>
+                    <th className="text-right p-1">Total Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((s) => (
+                    <tr key={s.id || s.invoiceNo} className="border-b">
+                      <td className="p-1">{formatDate(s.date)}</td>
+                      <td className="p-1">{s.invoiceNo}</td>
+                      <td className="p-1">{s.customerName || '—'}</td>
+                      <td className="p-1">{s.paymentMethod || 'Cash'}</td>
+                      <td className="p-1">{s.referenceNo || '—'}</td>
+                      <td className="p-1 text-right">{money(s.net)}</td>
+                      <td className="p-1 text-right">{money(s.vat)}</td>
+                      <td className="p-1 text-right">{money(s.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="text-right font-bold mt-3 space-y-1">
+                <div>Net of VAT: {money(netSum)}</div>
+                <div>12% VAT: {money(vatSum)}</div>
+                <div className="text-lg">GRAND TOTAL: {money(totalSum)}</div>
+              </div>
+              <div className="flex gap-2 mt-4 print:hidden">
+                <button onClick={() => setShowMonthly(false)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
+                <button onClick={printMonthly} className="flex-1 bg-blue-700 text-white py-2 rounded">Print</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Unpaid credit summary */}
+      {showUnpaid && (() => {
+        const unpaid = loadSales().filter((s) => s.paymentMethod === 'Credit' && s.paid === false);
+        const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const recordPayment = () => {
+          if (!payCheck.no || !payCheck.bank || !payCheck.date) return alert('Enter check no., bank name, and check date');
+          if (!selectedUnpaid.length) return alert('Select the invoices paid');
+          const branch = currentBranch() || 'unknown';
+          const all = loadSales(branch);
+          const updated = all.map((s) => selectedUnpaid.includes(s.id) ? { ...s, paid: true, paymentRef: payCheck.no, bankName: payCheck.bank, checkDate: payCheck.date, paidOn: new Date().toISOString() } : s);
+          updateSales(branch, updated);
+          setSelectedUnpaid([]);
+          setPayCheck({ no: '', bank: '', date: '' });
+          alert('Payment recorded. Selected invoices are now PAID and removed from unpaid.');
+          setShowUnpaid(false);
+        };
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+            <div className="bg-white max-w-4xl mx-auto p-4 rounded">
+              <div className="text-center font-bold text-lg">UNPAID CREDIT CLIENTS</div>
+              <div className="flex gap-2 mt-3">
+                <input className="flex-1 border rounded px-3 py-2" placeholder="Search client name" value={unpaidSearch} onChange={(e) => setUnpaidSearch(e.target.value)} />
+                <button onClick={tickAll} className="bg-blue-700 text-white px-4 py-2 rounded">Tick All</button>
+              </div>
+              <table className="w-full text-sm mt-3">
+                <thead className="bg-red-600 text-white">
+                  <tr>
+                    <th className="p-2"></th>
+                    <th className="p-2 text-left">Date</th>
+                    <th className="p-2 text-left">Invoice</th>
+                    <th className="p-2 text-left">Name</th>
+                    <th className="p-2 text-left">TIN</th>
+                    <th className="p-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unpaid.map((s) => (
+                    <tr key={s.id} className="border-t">
+                      <td className="p-2"><input type="checkbox" checked={selectedUnpaid.includes(s.id)} onChange={(e) => setSelectedUnpaid(e.target.checked ? [...selectedUnpaid, s.id] : selectedUnpaid.filter((id) => id !== s.id))} /></td>
+                      <td className="p-2">{formatDate(s.date)}</td>
+                      <td className="p-2">{s.invoiceNo}</td>
+                      <td className="p-2">{s.customerName}</td>
+                      <td className="p-2">{s.tin}</td>
+                      <td className="p-2 text-right">{money(s.total)}</td>
+                    </tr>
+                  ))}
+                  {unpaid.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No unpaid credit</td></tr>}
+                </tbody>
+              </table>
+              <div className="text-right font-bold mt-3">Selected: {selectedUnpaid.length} · {money(unpaid.filter((s) => selectedUnpaid.includes(s.id)).reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
+              <div className="text-right font-bold">Unpaid Total: {money(unpaid.reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                <input className="border rounded px-2 py-2" placeholder="Check No." value={payCheck.no} onChange={(e) => setPayCheck({ ...payCheck, no: e.target.value })} />
+                <input className="border rounded px-2 py-2" placeholder="Bank Name" value={payCheck.bank} onChange={(e) => setPayCheck({ ...payCheck, bank: e.target.value })} />
+                <input type="date" className="border rounded px-2 py-2" value={payCheck.date} onChange={(e) => setPayCheck({ ...payCheck, date: e.target.value })} />
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setShowUnpaid(false)} className="flex-1 bg-gray-600 text-white py-2 rounded">Close</button>
+                <button onClick={recordPayment} className="flex-1 bg-green-700 text-white py-2 rounded font-bold">Record Check Payment</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Printable receipt */}
       {savedSale && letterhead && (
         <div className="hidden print:block text-[10px] leading-tight">
@@ -456,6 +813,7 @@ export default function POSPage() {
           <div className="flex justify-between mb-1">
             <div><strong>Customer:</strong> {savedSale.customerName || '—'}</div>
             <div><strong>Contact:</strong> {savedSale.customerPhone || '—'}</div>
+            {savedSale.tin && <div><strong>TIN:</strong> {savedSale.tin}</div>}
           </div>
           <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
             <colgroup>
@@ -495,6 +853,7 @@ export default function POSPage() {
             <div>Net of VAT: ₱{(Math.round((savedSale.total / 1.12) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div>12% VAT: ₱{(Math.round((savedSale.total - savedSale.total / 1.12) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="font-bold text-xs border-t pt-1 mt-1">GRAND TOTAL: ₱{savedSale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            {savedSale.paymentMethod === 'Credit' && <div className="text-center font-black text-sm mt-2">TERMS: STRICTLY 30 DAYS ONLY</div>}
           </div>
         </div>
       )}

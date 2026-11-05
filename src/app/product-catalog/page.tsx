@@ -120,7 +120,7 @@ export default function ProductCatalogPage() {
   };
 
   const downloadTemplate = () => {
-    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Selling Price\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200,1850';
+    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Selling Price\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,1850.00';
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
