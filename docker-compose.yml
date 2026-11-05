@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: anlurich-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: anlurich
+      POSTGRES_PASSWORD: anlurich
+      POSTGRES_DB: anlurich
+    ports:
+      - "5432:5432"
+    volumes:
+      - anlurich_pg:/var/lib/postgresql/data
+
+volumes:
+  anlurich_pg:
