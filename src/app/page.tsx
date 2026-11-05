@@ -29,6 +29,9 @@ export default function Home() {
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [announcements, setAnnouncements] = useState<{ id: string; text: string; author: string; date: string }[]>([]);
+  const [newAnnouncement, setNewAnnouncement] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     const ann = localStorage.getItem(ANNOUNCEMENTS_KEY);
