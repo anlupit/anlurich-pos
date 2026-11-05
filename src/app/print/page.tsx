@@ -102,6 +102,8 @@ export default function PrintReportsPage() {
     XLSX.utils.book_append_sheet(wb, sheet, 'Supplier Invoices');
     XLSX.writeFile(wb, 'monthly-supplier-invoice.xlsx');
   };
+
+  const clearAll = () => {
     setReport(null);
     setRows([]);
     setTitle('');

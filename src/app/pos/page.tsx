@@ -36,6 +36,9 @@ export default function POSPage() {
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [showDaily, setShowDaily] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
+  const [datePick, setDatePick] = useState<'daily-print' | 'daily-download' | 'monthly-print' | 'monthly-download' | null>(null);
+  const [reportDay, setReportDay] = useState(new Date().toISOString().slice(0, 10));
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showUnpaid, setShowUnpaid] = useState(false);
   const [payCheck, setPayCheck] = useState({ no: '', bank: '', date: '' });
   const [selectedUnpaid, setSelectedUnpaid] = useState<string[]>([]);
@@ -311,7 +314,7 @@ export default function POSPage() {
 
   const downloadDaily = async () => {
     const XLSX = await import('xlsx');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = reportDay;
     const branch = (currentBranch() || 'branch').toUpperCase();
     const groups = ['Cash', 'GCash', 'Maya', 'Credit / Debit Card', 'Bank Transfer', 'Check'];
     const sales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === today);
@@ -340,7 +343,7 @@ export default function POSPage() {
 
   const downloadMonthly = async () => {
     const XLSX = await import('xlsx');
-    const ym = new Date().toISOString().slice(0, 7);
+    const ym = reportMonth;
     const branch = (currentBranch() || 'branch').toUpperCase();
     const monthLabel = new Date(`${ym}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const sales = loadSales()
@@ -502,10 +505,10 @@ export default function POSPage() {
             <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
-          <button onClick={() => setShowDaily(true)} className="w-full mt-2 bg-green-700 text-white py-3 rounded-lg font-bold">Print Daily Sales Report</button>
-          <button onClick={downloadDaily} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Download Daily Sales</button>
-          <button onClick={downloadMonthly} className="w-full mt-2 bg-orange-600 text-white py-3 rounded-lg font-bold">Download Monthly Sales</button>
-          <button onClick={() => setShowMonthly(true)} className="w-full mt-2 bg-orange-800 text-white py-3 rounded-lg font-bold">Print Monthly Sales</button>
+          <button onClick={() => setDatePick('daily-print')} className="w-full mt-2 bg-green-700 text-white py-3 rounded-lg font-bold">Print Daily Sales Report</button>
+          <button onClick={() => setDatePick('daily-download')} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Download Daily Sales</button>
+          <button onClick={() => setDatePick('monthly-download')} className="w-full mt-2 bg-orange-600 text-white py-3 rounded-lg font-bold">Download Monthly Sales</button>
+          <button onClick={() => setDatePick('monthly-print')} className="w-full mt-2 bg-orange-800 text-white py-3 rounded-lg font-bold">Print Monthly Sales</button>
           <button onClick={() => setShowUnpaid(true)} className="w-full mt-2 bg-red-600 text-white py-3 rounded-lg font-bold">Unpaid Credit Summary</button>
         </div>
 
@@ -575,9 +578,33 @@ export default function POSPage() {
 
       </div>
 
+      {datePick && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-5 w-full max-w-sm">
+            <div className="font-bold mb-3">{datePick.startsWith('daily') ? 'Choose the day' : 'Choose the month'}</div>
+            {datePick.startsWith('daily') ? (
+              <input type="date" className="w-full border rounded px-3 py-2 mb-4" value={reportDay} onChange={(e) => setReportDay(e.target.value)} />
+            ) : (
+              <input type="month" className="w-full border rounded px-3 py-2 mb-4" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} />
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setDatePick(null)} className="flex-1 bg-gray-500 text-white py-2 rounded">Cancel</button>
+              <button onClick={() => {
+                const action = datePick;
+                setDatePick(null);
+                if (action === 'daily-print') setShowDaily(true);
+                if (action === 'daily-download') downloadDaily();
+                if (action === 'monthly-print') setShowMonthly(true);
+                if (action === 'monthly-download') downloadMonthly();
+              }} className="flex-1 bg-blue-700 text-white py-2 rounded">Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Daily sales report */}
       {showDaily && (() => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = reportDay;
         const groups = [
           { key: 'Cash', label: 'CASH SALES' },
           { key: 'GCash', label: 'GCASH' },
@@ -669,7 +696,7 @@ export default function POSPage() {
 
       {/* Monthly sales report */}
       {showMonthly && (() => {
-        const ym = new Date().toISOString().slice(0, 7);
+        const ym = reportMonth;
         const monthLabel = new Date(`${ym}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const sales = loadSales()
           .filter((s) => String(s.date || s.dateTime || '').slice(0, 7) === ym)
