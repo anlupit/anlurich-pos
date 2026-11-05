@@ -1,0 +1,406 @@
+// Anlurich OPC Multi-Branch POS & Inventory System
+// Shared master catalog + private branch stock/sales/purchases
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  SUPER_ADMIN
+  BRANCH_ADMIN
+  CASHIER
+  INVENTORY_ENCODER
+  PURCHASE_RECORDER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  GCASH
+  MAYA
+  BANK_TRANSFER
+  CREDIT
+  OTHER
+}
+
+enum SaleStatus {
+  COMPLETED
+  HELD
+  CANCELLED
+  REFUNDED
+}
+
+enum PurchaseStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum StockMovementType {
+  SALE
+  PURCHASE
+  ADJUSTMENT
+  RETURN
+  TRANSFER
+  DAMAGE
+}
+
+// ==================== CORE ====================
+
+model Branch {
+  id          String   @id @default(cuid())
+  code        String   @unique // LIPA, DASMA, BALIWAG, ANLURICH
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users            User[]
+  inventories      Inventory[]
+  sales            Sale[]
+  purchases        Purchase[]
+  stockMovements   StockMovement[]
+  customers        Customer[]
+  cashSessions     CashSession[]
+  quotations       Quotation[]
+  supplierReturns  SupplierReturn[]
+
+  @@map("branches")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sales         Sale[]
+  purchases     Purchase[]
+  stockMovements StockMovement[]
+
+  @@index([branchId])
+  @@map("users")
+}
+
+// ==================== PRODUCTS (SHARED MASTER CATALOG) ====================
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                  String    @id @default(cuid())
+  barcode             String?   @unique
+  partNumber          String    @unique          // Main Part Number
+  oemPartNumber       String?                    // OEM Part Number
+  brand               String?
+  name                String                     // Product name / short description
+  description         String?                    // Full description
+  position            String?                    // e.g. Front Left, Rear, Upper, etc.
+  yearModel           String?                    // e.g. "1995 - 2005"
+  categoryId          String?
+  category            Category? @relation(fields: [categoryId], references: [id])
+  unit                String    @default("pcs")
+  isActive            Boolean   @default(true)
+
+  // Product Photos
+  photoUrl            String?                    // Main product photo URL
+  photos              ProductPhoto[]             // Additional photos (optional)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  inventories         Inventory[]
+  saleItems           SaleItem[]
+  purchaseItems       PurchaseItem[]
+  stockMovements      StockMovement[]
+
+  @@index([barcode])
+  @@index([partNumber])
+  @@index([oemPartNumber])
+  @@index([brand])
+  @@index([yearModel])
+  @@map("products")
+}
+
+model ProductPhoto {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_photos")
+}
+
+// ==================== BRANCH-SPECIFIC INVENTORY & PRICING ====================
+
+model Inventory {
+  id                 String   @id @default(cuid())
+  branchId           String
+  branch             Branch   @relation(fields: [branchId], references: [id])
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id])
+
+  // Operational / branch-specific fields
+  quantity           Int      @default(0)
+  costPrice          Decimal  @db.Decimal(12, 2) @default(0)
+  sellingPrice       Decimal  @db.Decimal(12, 2)
+  location           String?  // Shelf / bin / warehouse location
+
+  // Reorder settings (per branch)
+  reorderPoint       Int      @default(5)   // Alert when quantity falls to this level
+  reorderQuantity    Int      @default(10)  // Suggested quantity to reorder
+
+  reservedQuantity   Int      @default(0)
+  updatedAt          DateTime @updatedAt
+
+  @@unique([branchId, productId])
+  @@index([branchId])
+  @@index([productId])
+  @@map("inventories")
+}
+
+// ==================== CUSTOMERS ====================
+
+model Customer {
+  id          String   @id @default(cuid())
+  branchId    String?  // null = shared / company-wide, or branch-specific
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  creditLimit Decimal? @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sales       Sale[]
+
+  @@index([branchId])
+  @@index([phone])
+  @@map("customers")
+}
+
+// ==================== SALES / POS ====================
+
+model Sale {
+  id            String      @id @default(cuid())
+  saleNumber    String      @unique // e.g. LIPA-20261022-001
+  branchId      String
+  branch        Branch      @relation(fields: [branchId], references: [id])
+  cashierId     String?
+  cashier       User?       @relation(fields: [cashierId], references: [id])
+  customerId    String?
+  customer      Customer?   @relation(fields: [customerId], references: [id])
+  status        SaleStatus  @default(COMPLETED)
+  subtotal      Decimal     @db.Decimal(12, 2)
+  discount      Decimal     @db.Decimal(12, 2) @default(0)
+  tax           Decimal     @db.Decimal(12, 2) @default(0)
+  total         Decimal     @db.Decimal(12, 2)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  items         SaleItem[]
+  payments      Payment[]
+
+  @@index([branchId])
+  @@index([createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  discount    Decimal  @db.Decimal(12, 2) @default(0)
+  total       Decimal  @db.Decimal(12, 2)
+
+  @@index([saleId])
+  @@map("sale_items")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  saleId        String
+  sale          Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  method        PaymentMethod
+  amount        Decimal       @db.Decimal(12, 2)
+  reference     String?       // transaction ID, check number, etc.
+  createdAt     DateTime      @default(now())
+
+  @@index([saleId])
+  @@map("payments")
+}
+
+// ==================== PURCHASES / SUPPLIER INVOICES ====================
+
+model Supplier {
+  id        String     @id @default(cuid())
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  purchases Purchase[]
+
+  @@map("suppliers")
+}
+
+model Purchase {
+  id              String         @id @default(cuid())
+  purchaseNumber  String         @unique
+  branchId        String
+  branch          Branch         @relation(fields: [branchId], references: [id])
+  supplierId      String
+  supplier        Supplier       @relation(fields: [supplierId], references: [id])
+  recorderId      String
+  recorder        User           @relation(fields: [recorderId], references: [id])
+  status          PurchaseStatus @default(DRAFT)
+  invoiceNumber   String?        // supplier invoice number
+  invoiceDate     DateTime?
+  subtotal        Decimal        @db.Decimal(12, 2)
+  tax             Decimal        @db.Decimal(12, 2) @default(0)
+  total           Decimal        @db.Decimal(12, 2)
+  notes           String?
+  receivedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items           PurchaseItem[]
+
+  @@index([branchId])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id          String   @id @default(cuid())
+  purchaseId  String
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitCost    Decimal  @db.Decimal(12, 2)
+  total       Decimal  @db.Decimal(12, 2)
+  receivedQty Int      @default(0)
+
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
+// ==================== STOCK MOVEMENTS (AUDIT TRAIL) ====================
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  branchId    String
+  branch      Branch            @relation(fields: [branchId], references: [id])
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id])
+  type        StockMovementType
+  quantity    Int               // positive = in, negative = out
+  referenceId String?           // saleId, purchaseId, etc.
+  notes       String?
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@index([branchId, productId])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ==================== CASH SESSIONS (for Cashiers) ====================
+
+model CashSession {
+  id           String   @id @default(cuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  cashierId    String
+  openingCash  Decimal  @db.Decimal(12, 2)
+  closingCash  Decimal? @db.Decimal(12, 2)
+  expectedCash Decimal? @db.Decimal(12, 2)
+  status       String   @default("OPEN") // OPEN, CLOSED
+  openedAt     DateTime @default(now())
+  closedAt     DateTime?
+
+  @@index([branchId])
+  @@map("cash_sessions")
+}
+
+model Quotation {
+  id           String   @id @default(cuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  quotationNo  String
+  customerName String?
+  customerPhone String?
+  plateNo      String?
+  carMake      String?
+  carModel     String?
+  yearModel    String?
+  chasisNo     String?
+  notes        String?
+  lines        Json
+  grandTotal   Decimal  @db.Decimal(12, 2) @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([branchId])
+  @@map("quotations")
+}
+
+model SupplierReturn {
+  id           String   @id @default(cuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  supplierName String
+  invoiceNo    String?
+  partNumber   String?
+  description  String?
+  brand        String?
+  qty          Int      @default(1)
+  unit         String   @default("pcs")
+  price        Decimal  @db.Decimal(12, 2) @default(0)
+  total        Decimal  @db.Decimal(12, 2) @default(0)
+  reason       String?
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+
+  @@index([branchId])
+  @@map("supplier_returns")
+}
