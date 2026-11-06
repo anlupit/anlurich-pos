@@ -188,6 +188,9 @@ export default function BranchSalaryPage() {
     await saveKey(key, next);
     alert(`Posted ${money(gross)} to Company Expense as Salaries and Wages.`);
   };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
       <div className="flex justify-between items-center mb-4">
         <div>
           <button onClick={() => (window.location.href = '/salary')} className="text-sm text-blue-600">← Salary Branches</button>
