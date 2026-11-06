@@ -38,7 +38,9 @@ export default function CloudSync() {
       try {
         const res = await fetch('/api/data');
         if (!res.ok) {
-          setStatus('Cloud not connected');
+          let reason = 'Cloud not connected';
+          try { const data = await res.json(); reason = data.error || reason; } catch {}
+          setStatus(reason);
           ready = true;
           return;
         }

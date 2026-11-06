@@ -150,9 +150,32 @@ export default function POSPage() {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   };
 
-  const lookupProduct = (id: string, partNumber: string) => {
+  const lookupBarcode = (id: string, barcode: string) => {
+    const code = barcode.trim();
+    updateLine(id, 'barcode', code);
+    if (code.length < 4) return;
+    const list = loadProducts();
+    const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase())
+      || list.find((p) => String(p.barcode || '').toLowerCase().includes(code.toLowerCase()));
+    if (!found) return;
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              barcode: found.barcode || code,
+              partNumber: found.partNumber,
+              description: found.description || found.name,
+              brand: found.brand || '',
+              price: found.sellingPrice || 0,
+            }
+          : l
+      )
+    );
+  };
+    const lookupProduct = (id: string, partNumber: string) => {
     updateLine(id, 'partNumber', partNumber);
-    const found = products.find((p) => p.partNumber.toLowerCase() === partNumber.toLowerCase());
+    const found = loadProducts().find((p) => p.partNumber.toLowerCase() === partNumber.toLowerCase());
     if (found) {
       setLines((prev) =>
         prev.map((l) =>
@@ -178,6 +201,31 @@ export default function POSPage() {
       sellingPrice: selling,
     });
     setPriceMatches([]);
+  };
+
+  const fillPriceCheckFromBarcode = (barcode: string, force = false) => {
+    const code = barcode.trim();
+    if (!force) {
+      setPriceCheck((prev) => ({ ...prev, barcode: code }));
+      if (code.length < 6) return;
+    }
+    const list = loadProducts();
+    const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase());
+    if (!found) {
+      if (force) alert('Barcode not found in Product Catalog');
+      return;
+    }
+    const cost = Number(found.costPrice) || 0;
+    const selling = Number(found.sellingPrice) || (cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0);
+    setPriceCheck({
+      barcode: found.barcode || code,
+      partNumber: found.partNumber,
+      description: found.description || found.name,
+      brand: found.brand || '',
+      costPrice: cost,
+      sellingPrice: selling,
+    });
+    setPriceMatches([{ ...found, partNumber: found.partNumber, description: found.description || found.name }]);
   };
 
   const doPriceCheck = async () => {
@@ -482,7 +530,7 @@ export default function POSPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-2 py-1 w-28" value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value); addLine(); } }} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-28" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '48ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
@@ -533,16 +581,14 @@ export default function POSPage() {
           <h2 className="font-semibold mb-3">Price Check</h2>
           <div className="space-y-2">
             <div className="flex gap-2">
-              <input className="flex-1 border rounded-lg px-3 py-2" placeholder="Barcode" value={priceCheck.barcode} onChange={(e) => setPriceCheck({ ...priceCheck, barcode: e.target.value })} />
+              <input className="flex-1 border rounded-lg px-3 py-2" placeholder="Scan barcode" value={priceCheck.barcode} onChange={(e) => fillPriceCheckFromBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); fillPriceCheckFromBarcode((e.target as HTMLInputElement).value, true); } }} />
               <input className="flex-1 border rounded-lg px-3 py-2" placeholder="Part Number" value={priceCheck.partNumber} onChange={(e) => setPriceCheck({ ...priceCheck, partNumber: e.target.value })} />
             </div>
-            {priceMatches.length > 1 && (
-              <div className="border rounded max-h-40 overflow-auto">
-                {priceMatches.map((m, i) => (
-                  <button key={i} type="button" onClick={() => applyMatch(m)} className="w-full text-left px-2 py-1 border-b text-sm hover:bg-teal-50">
-                    <span className="font-medium">{m.partNumber}</span> · {m.brand || '—'} · {m.description || m.name || ''}
-                  </button>
-                ))}
+            {priceMatches.length > 0 && (
+              <div className="border rounded bg-teal-50 p-2 text-sm">
+                <div className="font-bold">{priceMatches[0].partNumber}</div>
+                <div>{priceMatches[0].description || priceMatches[0].name}</div>
+                <div>{priceMatches[0].brand || '—'}</div>
               </div>
             )}
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Description" value={priceCheck.description} readOnly />

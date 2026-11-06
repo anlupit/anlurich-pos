@@ -46,9 +46,13 @@ export async function saveProducts(products: Product[]) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key: 'anlurich-products', value: JSON.stringify(products) }),
   });
-  if (!res.ok) throw new Error('Supabase save failed');
+  if (!res.ok) {
+    let message = 'Supabase save failed';
+    try { const data = await res.json(); message = data.error || message; } catch {}
+    throw new Error(message);
+  }
   const data = await res.json();
-  if (!data?.ok) throw new Error('Supabase save failed');
+  if (!data?.ok) throw new Error(data?.error || 'Supabase save failed');
   return true;
 }
 

@@ -92,7 +92,7 @@ export default function ProductCatalogPage() {
       const key = keys.find((k) => want.includes(k.toLowerCase().replace(/[^a-z0-9]/g, '')));
       if (!key || row[key] == null || row[key] === '') return undefined;
       const n = parseFloat(String(row[key]).replace(/[^0-9.]/g, ''));
-      return isNaN(n) ? undefined : Math.round(n * 100) / 100;
+      return isNaN(n) ? undefined : Number(n.toFixed(2));
     };
     const text = (row: any, names: string[]) => {
       const keys = Object.keys(row);
@@ -117,19 +117,36 @@ export default function ProductCatalogPage() {
       sellingPrice: num(r, ['Selling Price', 'Selling', 'sellingPrice', 'Price']),
     })).filter((p) => p.partNumber && p.name);
     if (newProducts.length === 0) return alert('No valid rows. Need Part Number and Name columns.');
-    const updated = [...products, ...newProducts];
-    setProducts(updated);
+    const merged = [...products];
+    let added = 0;
+    let updatedCount = 0;
+    newProducts.forEach((incoming) => {
+      const part = incoming.partNumber.toLowerCase();
+      const barcode = String(incoming.barcode || '').toLowerCase();
+      const index = merged.findIndex((p) =>
+        p.partNumber.toLowerCase() === part ||
+        (barcode && String(p.barcode || '').toLowerCase() === barcode)
+      );
+      if (index >= 0) {
+        merged[index] = { ...merged[index], ...incoming, id: merged[index].id };
+        updatedCount += 1;
+      } else {
+        merged.push(incoming);
+        added += 1;
+      }
+    });
+    setProducts(merged);
     try {
-      await saveProducts(updated);
-      alert(`Imported ${newProducts.length} products and saved to Supabase. Other branches can now see them.`);
-    } catch {
-      alert(`Imported ${newProducts.length} on this computer, but Supabase did not save.`);
+      await saveProducts(merged);
+      alert(`Saved to Supabase. Added ${added}, updated ${updatedCount}. No duplicates.`);
+    } catch (err: any) {
+      alert(`Saved on this computer. Added ${added}, updated ${updatedCount}. Supabase did not save.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const downloadTemplate = () => {
-    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Selling Price\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,1850.00';
+    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Selling Price\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,1850.00\nBBF3-20,Brake Fluid,9316068437780,,Bendix,BRAKE FLUID DOT-3 1X12 (900ml),Fluids,,, , ,250.50,400.00';
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

@@ -15,6 +15,7 @@ const MENU = [
   { href: '/product-catalog', label: 'Product Catalog' },
   { href: '/stock-request', label: 'Stock Request' },
   { href: '/print', label: 'Print Reports' },
+  { href: '/expenses', label: 'Company Expense' },
   { href: '/owner-report', label: 'Owner Report' },
 ];
 

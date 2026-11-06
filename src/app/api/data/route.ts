@@ -18,28 +18,40 @@ async function ensureTable() {
 }
 
 export async function GET() {
-  if (!process.env.DATABASE_URL) return NextResponse.json([]);
-  await ensureTable();
-  const { rows } = await pool.query('SELECT key, value FROM app_data');
-  return NextResponse.json(rows);
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: 'DATABASE_URL is missing in Vercel' }, { status: 500 });
+  }
+  try {
+    await ensureTable();
+    const { rows } = await pool.query('SELECT key, value FROM app_data');
+    return NextResponse.json(rows);
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Supabase connection failed' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  if (!process.env.DATABASE_URL) return NextResponse.json({ ok: false });
-  const body = await req.json();
-  const key = String(body.key || '');
-  if (!key.startsWith('anlurich-')) return NextResponse.json({ ok: false }, { status: 400 });
-  await ensureTable();
-  if (body.value == null) {
-    await pool.query('DELETE FROM app_data WHERE key = $1', [key]);
-    return NextResponse.json({ ok: true });
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ ok: false, error: 'DATABASE_URL is missing in Vercel Environment Variables' }, { status: 500 });
   }
-  const text = typeof body.value === 'string' ? body.value : JSON.stringify(body.value);
-  await pool.query(
-    `INSERT INTO app_data (key, value, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-    [key, text]
-  );
-  return NextResponse.json({ ok: true });
+  try {
+    const body = await req.json();
+    const key = String(body.key || '');
+    if (!key.startsWith('anlurich-')) return NextResponse.json({ ok: false, error: 'Bad key' }, { status: 400 });
+    await ensureTable();
+    if (body.value == null) {
+      await pool.query('DELETE FROM app_data WHERE key = $1', [key]);
+      return NextResponse.json({ ok: true });
+    }
+    const text = typeof body.value === 'string' ? body.value : JSON.stringify(body.value);
+    await pool.query(
+      `INSERT INTO app_data (key, value, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [key, text]
+    );
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message || 'Supabase connection failed' }, { status: 500 });
+  }
 }

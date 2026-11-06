@@ -145,7 +145,7 @@ export default function ProductsPage() {
     if (list.length === 0) return alert('No products match that brand or name.');
     const header = 'Part Number,Barcode,Name,Brand,Category,Description,Quantity,Location,Cost Price,Selling Price';
     const lines = list.map((p) =>
-      [p.partNumber, p.barcode || '', p.name, p.brand || '', p.category || '', p.description || '', p.quantity ?? 0, p.location || '', p.costPrice ?? '', p.sellingPrice ?? '']
+      [p.partNumber, p.barcode || '', p.name, p.brand || '', p.category || '', p.description || '', p.quantity ?? 0, p.location || '', p.costPrice != null ? Number(p.costPrice).toFixed(2) : '', p.sellingPrice != null ? Number(p.sellingPrice).toFixed(2) : '']
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(',')
     );
@@ -330,8 +330,8 @@ export default function ProductsPage() {
                       <td className="p-3">{p.name}</td>
                       <td className="p-3">{p.brand || '—'}</td>
                       <td className="p-3">{p.category || '—'}</td>
-                      <td className="p-3 text-right">{p.costPrice != null ? `₱${p.costPrice.toLocaleString()}` : '—'}</td>
-                      <td className="p-3 text-right">{p.sellingPrice != null ? `₱${p.sellingPrice.toLocaleString()}` : '—'}</td>
+                      <td className="p-3 text-right">{p.costPrice != null ? `₱${Number(p.costPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
+                      <td className="p-3 text-right">{p.sellingPrice != null ? `₱${Number(p.sellingPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
                       <td className="p-3 text-right whitespace-nowrap">
                         <button onClick={() => handleEdit(p)} className="text-blue-600 text-xs mr-3">Edit</button>
                         <button onClick={() => handleDelete(p.id)} className="text-red-600 text-xs">Delete</button>

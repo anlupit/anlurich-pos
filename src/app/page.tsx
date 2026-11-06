@@ -102,9 +102,10 @@ export default function Home() {
       {/* Footer row */}
       <div className="px-6 py-4 flex justify-between items-center">
         <div className="text-sm text-gray-600">AI-powered platform by ANLU... 🥰🥰🥰</div>
-        <button onClick={() => selectBranch('admin')} className="bg-black text-white px-6 py-2 rounded-full font-medium">
-          ADMIN
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => (window.location.href = '/salary')} className="bg-green-700 text-white px-5 py-2 rounded-full font-medium">Salary For Employee</button>
+          <button onClick={() => selectBranch('admin')} className="bg-black text-white px-6 py-2 rounded-full font-medium">ADMIN</button>
+        </div>
       </div>
 
       {/* Announcements */}
