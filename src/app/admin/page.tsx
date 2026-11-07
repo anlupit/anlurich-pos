@@ -4,39 +4,81 @@ import { useState, useEffect } from 'react';
 
 const BRANCHES = [
   { id: 'anlurich', name: 'ANLURICH OPC' },
+  { id: 'avenders', name: 'Avenders Auto Parts' },
   { id: 'dasma', name: 'Dasma Auto Parts' },
-  { id: 'sezan', name: 'Sezan' },
-  { id: 'timitsu', name: 'Timitsu' },
-  { id: 'avenders', name: 'Avenders' },
   { id: 'lipa', name: 'Lipa Auto Parts' },
+  { id: 'sezan', name: 'Sezan Baliwag Auto Parts' },
+  { id: 'timitsu', name: 'Timitsu Baliwag Auto Parts' },
 ];
+
+const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function saleProfit(sale: any, products: any[]) {
+  const items = sale.items || [];
+  const itemProfit = items.reduce((sum: number, item: any) => {
+    const qty = Number(item.qty) || 0;
+    const sell = Number(item.price) || 0;
+    let cost = Number(item.costPrice) || 0;
+    if (!cost) {
+      const p = products.find((x) => String(x.partNumber || '').toLowerCase() === String(item.partNumber || '').toLowerCase());
+      cost = Number(p?.costPrice) || 0;
+    }
+    return sum + (sell - cost) * qty;
+  }, 0);
+  const discount = Number(sale.discount) || 0;
+  return itemProfit - discount;
+}
 
 export default function AdminDashboard() {
   const [sales, setSales] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
 
+  const today = new Date().toISOString().slice(0, 10);
   const month = new Date().toISOString().slice(0, 7);
   const year = new Date().getFullYear().toString();
 
   useEffect(() => {
-    try {
-      setSales(JSON.parse(localStorage.getItem('anlurich-sales') || '[]'));
-      setInvoices(JSON.parse(localStorage.getItem('anlurich-supplier-invoices') || '[]'));
-      setRequests(JSON.parse(localStorage.getItem('anlurich-stock-requests') || '[]'));
-    } catch {}
+    const load = async () => {
+      try {
+        const res = await fetch('/api/data', { cache: 'no-store' });
+        const rows: { key: string; value: string }[] = res.ok ? await res.json() : [];
+        const get = (key: string) => {
+          const row = rows.find((r) => r.key === key);
+          return row?.value ? JSON.parse(row.value) : [];
+        };
+        const allSales = BRANCHES.flatMap((b) => {
+          const list = get(`anlurich-sales-${b.id}`);
+          return Array.isArray(list) ? list.map((s) => ({ ...s, branch: s.branch || b.id })) : [];
+        });
+        setSales(allSales);
+        const catalog = get('anlurich-products');
+        setProducts(Array.isArray(catalog) ? catalog : []);
+        const allInvoices = BRANCHES.flatMap((b) => {
+          const list = get(`anlurich-supplier-invoices-${b.id}`);
+          return Array.isArray(list) ? list : [];
+        });
+        setInvoices(allInvoices);
+        setRequests(get('anlurich-stock-requests'));
+      } catch {}
+    };
+    load();
   }, []);
 
   const branchStats = BRANCHES.map((b) => {
     const bSales = sales.filter((s) => s.branch === b.id);
-    const monthly = bSales.filter((s) => s.date?.startsWith(month)).reduce((sum, s) => sum + (s.total || 0), 0);
-    const ytd = bSales.filter((s) => s.date?.startsWith(year)).reduce((sum, s) => sum + (s.total || 0), 0);
-    return { ...b, monthly, ytd };
+    const profit = (list: any[]) => list.reduce((sum, s) => sum + saleProfit(s, products), 0);
+    const daily = profit(bSales.filter((s) => String(s.date || s.dateTime || '').startsWith(today)));
+    const monthly = profit(bSales.filter((s) => String(s.date || s.dateTime || '').startsWith(month)));
+    const ytd = profit(bSales.filter((s) => String(s.date || s.dateTime || '').startsWith(year)));
+    return { ...b, daily, monthly, ytd };
   });
 
+  const grandDaily = branchStats.reduce((sum, b) => sum + b.daily, 0);
   const grandMonthly = branchStats.reduce((sum, b) => sum + b.monthly, 0);
   const grandYTD = branchStats.reduce((sum, b) => sum + b.ytd, 0);
-  const monthlyPurchases = invoices.filter((i) => i.invoiceDate?.startsWith(month)).reduce((sum, i) => sum + (i.grandTotal || 0), 0);
+  const monthlyPurchases = invoices.filter((i) => String(i.invoiceDate || '').startsWith(month)).reduce((sum, i) => sum + (i.grandTotal || 0), 0);
 
   return (
     <div className="p-4">
@@ -46,16 +88,32 @@ export default function AdminDashboard() {
       <a href="/owner-report" className="inline-block bg-blue-700 text-white px-5 py-2 rounded-lg mb-6">Owner Report</a>
 
       <div className="bg-white rounded-xl shadow p-5 mb-6">
-        <h2 className="font-semibold mb-3">Branch Sales</h2>
+        <h2 className="font-semibold mb-1">Net Profit by Branch</h2>
+        <p className="text-xs text-gray-500 mb-3">Admin only. Net profit = selling price minus cost price, from POS invoices.</p>
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
-            <tr><th className="text-left p-2">Branch</th><th className="text-right p-2">Monthly</th><th className="text-right p-2">Year-to-Date</th></tr>
+            <tr>
+              <th className="text-left p-2">Branch</th>
+              <th className="text-right p-2">Daily Net Profit</th>
+              <th className="text-right p-2">Monthly Net Profit</th>
+              <th className="text-right p-2">Year to Date Net Profit</th>
+            </tr>
           </thead>
           <tbody>
             {branchStats.map((b) => (
-              <tr key={b.id} className="border-t"><td className="p-2">{b.name}</td><td className="p-2 text-right">₱{b.monthly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="p-2 text-right">₱{b.ytd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+              <tr key={b.id} className="border-t">
+                <td className="p-2">{b.name}</td>
+                <td className="p-2 text-right">{money(b.daily)}</td>
+                <td className="p-2 text-right">{money(b.monthly)}</td>
+                <td className="p-2 text-right">{money(b.ytd)}</td>
+              </tr>
             ))}
-            <tr className="border-t-2 font-bold bg-gray-50"><td className="p-2">GRAND TOTAL</td><td className="p-2 text-right">₱{grandMonthly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="p-2 text-right">₱{grandYTD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+            <tr className="border-t-2 font-bold bg-gray-50">
+              <td className="p-2">GRAND TOTAL</td>
+              <td className="p-2 text-right">{money(grandDaily)}</td>
+              <td className="p-2 text-right">{money(grandMonthly)}</td>
+              <td className="p-2 text-right">{money(grandYTD)}</td>
+            </tr>
           </tbody>
         </table>
       </div>

@@ -152,34 +152,37 @@ export default function POSPage() {
 
   const lookupBarcode = (id: string, barcode: string, fromScan = false) => {
     const code = barcode.trim();
-    if (!code) return;
-    const list = loadProducts();
-    const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase())
-      || list.find((p) => String(p.barcode || '').toLowerCase().includes(code.toLowerCase()));
-    if (!found) {
+    if (!fromScan) {
       updateLine(id, 'barcode', code);
       return;
     }
+    if (!code) return;
+    const list = loadProducts();
+    const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase());
+    if (!found) {
+      updateLine(id, 'barcode', code);
+      alert('Barcode not found in Product Catalog');
+      return;
+    }
     setLines((prev) => {
-      const match = prev.find((l) => l.id !== id && (
-        String(l.barcode || '').trim().toLowerCase() === String(found.barcode || code).toLowerCase() ||
-        String(l.partNumber || '').trim().toLowerCase() === String(found.partNumber || '').toLowerCase()
-      ));
+      const match = prev.find((l) => l.id !== id && String(l.barcode || '').trim().toLowerCase() === String(found.barcode || code).toLowerCase());
       if (match) {
         return prev
           .map((l) => l.id === match.id ? { ...l, qty: Number(l.qty || 0) + 1 } : l)
           .map((l) => l.id === id ? { ...l, barcode: '', partNumber: '', description: '', brand: '', qty: 1, price: 0 } : l);
       }
-      const filled = prev.map((l) => l.id === id ? {
-        ...l,
-        barcode: found.barcode || code,
-        partNumber: found.partNumber,
-        description: found.description || found.name,
-        brand: found.brand || '',
-        price: found.sellingPrice || 0,
-        qty: l.qty || 1,
-      } : l);
-      return fromScan ? [...filled, { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }] : filled;
+      return [
+        ...prev.map((l) => l.id === id ? {
+          ...l,
+          barcode: found.barcode || code,
+          partNumber: found.partNumber,
+          description: found.description || found.name,
+          brand: found.brand || '',
+          price: found.sellingPrice || 0,
+          qty: 1,
+        } : l),
+        { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+      ];
     });
   };
     const lookupProduct = (id: string, partNumber: string) => {
@@ -344,7 +347,11 @@ export default function POSPage() {
       date: new Date().toISOString(),
       dateTime: saleDateTime,
       branch,
-      items: valid.map((l, i) => ({ itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, total: l.qty * l.price })),
+      items: valid.map((l, i) => {
+        const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
+        const cost = Number(catalog?.costPrice) || 0;
+        return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, costPrice: cost, total: l.qty * l.price };
+      }),
       subtotal,
       discount: discountAmt,
       pointsRedeemed: redeemPts,
