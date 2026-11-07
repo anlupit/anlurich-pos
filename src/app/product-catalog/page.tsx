@@ -100,15 +100,6 @@ export default function ProductCatalogPage() {
     try { await saveProducts([]); } catch { alert('Deleted here, but Supabase did not save.'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this product from the catalog?')) return;
-    const updated = products.filter((p) => p.id !== id);
-    setProducts(updated);
-    setSelected(selected.filter((x) => x !== id));
-    try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
-    if (editingId === id) setEditingId(null);
-  };
-
   const handleExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
