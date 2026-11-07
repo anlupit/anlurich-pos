@@ -89,10 +89,9 @@ export function upsertCatalogFromInvoice(lines: any[]) {
     const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : undefined;
     if (existing) {
       if (l.brand) existing.brand = l.brand;
-      if (l.description) {
-        existing.description = l.description;
-        if (!existing.name || existing.name === existing.partNumber) existing.name = l.description;
-      }
+      if (l.description) existing.description = l.description;
+      if (l.productName) existing.name = l.productName;
+      else if (!existing.name) existing.name = part;
       if (barcode) existing.barcode = barcode;
       if (cost > 0) existing.costPrice = Math.round(cost * 100) / 100;
       if (selling) existing.sellingPrice = selling;
@@ -103,7 +102,7 @@ export function upsertCatalogFromInvoice(lines: any[]) {
         partNumber: part,
         barcode: barcode || undefined,
         brand: l.brand || undefined,
-        name: l.description || part,
+        name: l.productName || part,
         description: l.description || undefined,
         costPrice: cost > 0 ? Math.round(cost * 100) / 100 : undefined,
         sellingPrice: selling,

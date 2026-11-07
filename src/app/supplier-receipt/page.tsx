@@ -12,6 +12,7 @@ type Line = {
   brand: string;
   partNumber: string;
   description: string;
+  productName: string;
   qty: number;
   unit: string;
   grossPrice: number;
@@ -31,7 +32,7 @@ export default function SupplierReceiptPage() {
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: '', address: '', tin: '', contact: '', phone: '', email: '' });
   const [lines, setLines] = useState<Line[]>([
-    { id: '1', barcode: '', brand: '', partNumber: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
+    { id: '1', barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
   ]);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function SupplierReceiptPage() {
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: Date.now().toString(), barcode: '', brand: '', partNumber: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
+      { id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
     ]);
   };
 
@@ -189,6 +190,7 @@ export default function SupplierReceiptPage() {
               <th className="p-2 text-center">Barcode</th>
               <th className="p-2 text-center">Brand</th>
               <th className="p-2 text-center">Part Number</th>
+              <th className="p-2 text-center">Product Name</th>
               <th className="p-2 text-center">Description</th>
               <th className="p-2 text-center">Qty</th>
               <th className="p-2 text-center">Unit</th>
@@ -204,6 +206,7 @@ export default function SupplierReceiptPage() {
                 <td className="p-1 text-center"><input className="border rounded px-1 py-1 text-center" style={{ width: '20ch' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} /></td>
                 <td className="p-1 text-center"><input className="border rounded px-1 py-1 text-center" style={{ width: '20ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1 text-center"><input className="border rounded px-1 py-1 text-center" style={{ width: '20ch' }} value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
+                <td className="p-1 text-center"><input className="border rounded px-1 py-1 text-center" style={{ width: '25ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1 text-center"><input className="border rounded px-1 py-1 text-center" style={{ width: '60ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1 text-center"><input type="number" min={1} className="border rounded px-1 py-1 w-12 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1 text-center"><input className="border rounded px-1 py-1 w-14 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>

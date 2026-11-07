@@ -188,7 +188,10 @@ export default function ProductCatalogPage() {
     return (!part || p.partNumber.toLowerCase().includes(part))
       && (!brand || String(p.brand || '').toLowerCase().includes(brand))
       && (!name || String(p.name || '').toLowerCase().includes(name) || String(p.description || '').toLowerCase().includes(name));
-  });
+  }).sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }) ||
+    String(a.brand || '').localeCompare(String(b.brand || ''), undefined, { sensitivity: 'base' })
+  );
 
   return (
     <div className="p-4">
@@ -203,11 +206,10 @@ export default function ProductCatalogPage() {
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
           </label>
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
-          <button onClick={deleteAll} className="bg-black text-white px-4 py-2 rounded-lg text-sm">Delete All</button>
         </div>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
-          <input className="border rounded px-2 py-1" placeholder="Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input className="border rounded px-2 py-1" placeholder="Product Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
@@ -223,6 +225,7 @@ export default function ProductCatalogPage() {
           <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="make-suggestions">{makeSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="model-suggestions">{modelSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
+          <datalist id="category-suggestions">{categorySuggestions.map((v) => <option key={v} value={v} />)}</datalist>
         </form>
       </div>
 
@@ -230,7 +233,7 @@ export default function ProductCatalogPage() {
         <div className="p-3 flex flex-wrap gap-2">
           <input className="border rounded px-3 py-2" placeholder="Search part number, ex. GCT" value={findPart} onChange={(e) => setFindPart(e.target.value)} />
           <input className="border rounded px-3 py-2" placeholder="Search brand" value={findBrand} onChange={(e) => setFindBrand(e.target.value)} />
-          <input className="border rounded px-3 py-2" placeholder="Search part name" value={findName} onChange={(e) => setFindName(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search product name" value={findName} onChange={(e) => setFindName(e.target.value)} />
           <div className="text-sm text-gray-500 self-center">{filtered.length} shown</div>
         </div>
         <table className="w-full text-sm">
@@ -238,7 +241,7 @@ export default function ProductCatalogPage() {
             <tr>
               <th className="p-2"><input type="checkbox" checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id))} onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...filtered.map((p) => p.id)])) : selected.filter((id) => !filtered.some((p) => p.id === id)))} /></th>
               <th className="text-left p-2" style={{ width: '25ch' }}>Part Number</th>
-              <th className="text-left p-2" style={{ width: '25ch' }}>Name</th>
+              <th className="text-left p-2" style={{ width: '25ch' }}>Product Name</th>
               <th className="text-left p-2">Brand</th>
               <th className="text-left p-2">Description</th>
               <th className="text-right p-2">Cost</th>
