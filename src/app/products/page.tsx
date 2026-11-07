@@ -311,6 +311,7 @@ export default function ProductsPage() {
                     <th className="text-left p-3">Name</th>
                     <th className="text-left p-3">Brand</th>
                     <th className="text-left p-3">Category</th>
+                    <th className="text-left p-3">Shelf Location</th>
                     <th className="text-right p-3">Cost</th>
                     <th className="text-right p-3">Selling</th>
                     <th className="p-3"></th>
@@ -330,6 +331,7 @@ export default function ProductsPage() {
                       <td className="p-3">{p.name}</td>
                       <td className="p-3">{p.brand || '—'}</td>
                       <td className="p-3">{p.category || '—'}</td>
+                      <td className="p-3">{p.location || '—'}</td>
                       <td className="p-3 text-right">{p.costPrice != null ? `₱${Number(p.costPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
                       <td className="p-3 text-right">{p.sellingPrice != null ? `₱${Number(p.sellingPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
                       <td className="p-3 text-right whitespace-nowrap">

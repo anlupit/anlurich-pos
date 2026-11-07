@@ -177,6 +177,10 @@ export default function ProductCatalogPage() {
     a.click();
   };
 
+  const unique = (values: (string | undefined)[]) => Array.from(new Set(values.map((v) => String(v || '').trim()).filter(Boolean))).sort();
+  const nameSuggestions = unique(products.map((p) => p.name));
+  const makeSuggestions = unique([...products.map((p) => p.carMake), 'Toyota', 'Honda', 'Mitsubishi', 'Nissan', 'Hyundai', 'Ford', 'Isuzu', 'Suzuki', 'Mazda', 'Kia']);
+  const modelSuggestions = unique(products.map((p) => p.carModel));
   const filtered = products.filter((p) => {
     const part = findPart.trim().toLowerCase();
     const brand = findBrand.trim().toLowerCase();
@@ -203,19 +207,22 @@ export default function ProductCatalogPage() {
         </div>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
-          <input className="border rounded px-2 py-1" placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input className="border rounded px-2 py-1" placeholder="Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-          <input className="border rounded px-2 py-1" placeholder="Car Make" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
-          <input className="border rounded px-2 py-1" placeholder="Car Model" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
+          <input className="border rounded px-2 py-1" placeholder="Car Make" list="make-suggestions" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
+          <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Year Model" value={form.yearModel} onChange={(e) => setForm({ ...form, yearModel: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
           <button type="submit" className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
+          <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
+          <datalist id="make-suggestions">{makeSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
+          <datalist id="model-suggestions">{modelSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
         </form>
       </div>
 
@@ -230,8 +237,8 @@ export default function ProductCatalogPage() {
           <thead className="bg-teal-500 text-white">
             <tr>
               <th className="p-2"><input type="checkbox" checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id))} onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...filtered.map((p) => p.id)])) : selected.filter((id) => !filtered.some((p) => p.id === id)))} /></th>
-              <th className="text-left p-2">Part Number</th>
-              <th className="text-left p-2">Name</th>
+              <th className="text-left p-2" style={{ width: '25ch' }}>Part Number</th>
+              <th className="text-left p-2" style={{ width: '25ch' }}>Name</th>
               <th className="text-left p-2">Brand</th>
               <th className="text-left p-2">Description</th>
               <th className="text-right p-2">Cost</th>
@@ -243,8 +250,8 @@ export default function ProductCatalogPage() {
             {filtered.map((p) => (
               <tr key={p.id} className="border-t">
                 <td className="p-2"><input type="checkbox" checked={selected.includes(p.id)} onChange={(e) => setSelected(e.target.checked ? [...selected, p.id] : selected.filter((id) => id !== p.id))} /></td>
-                <td className="p-2 font-medium">{p.partNumber}</td>
-                <td className="p-2">{p.name}</td>
+                <td className="p-2 font-medium" style={{ width: '25ch' }} title={p.partNumber}>{p.partNumber}</td>
+                <td className="p-2" style={{ width: '25ch', maxWidth: '25ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name}</td>
                 <td className="p-2">{p.brand || '—'}</td>
                 <td className="p-2">{p.description || '—'}</td>
                 <td className="p-2 text-right">{p.costPrice != null ? `₱${p.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
