@@ -593,8 +593,8 @@ export default function POSPage() {
             )}
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Description" value={priceCheck.description} readOnly />
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Brand" value={priceCheck.brand} readOnly />
-            <div className="flex justify-between text-sm"><span>Cost Price</span><span>₱{priceCheck.costPrice.toLocaleString()}</span></div>
-            <div className="flex justify-between text-sm"><span>Selling Price</span><span>₱{priceCheck.sellingPrice.toLocaleString()}</span></div>
+            <div className="flex justify-between text-sm"><span>Cost Price</span><span>₱{Number(priceCheck.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between text-sm"><span>Selling Price</span><span>₱{Number(priceCheck.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             <div className="flex gap-2">
               <button onClick={doPriceCheck} className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-sm">Price Check</button>
               <button onClick={addCheckedToCart} className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm">Add to Cart</button>
