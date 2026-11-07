@@ -181,6 +181,7 @@ export default function ProductCatalogPage() {
   const nameSuggestions = unique(products.map((p) => p.name));
   const makeSuggestions = unique([...products.map((p) => p.carMake), 'Toyota', 'Honda', 'Mitsubishi', 'Nissan', 'Hyundai', 'Ford', 'Isuzu', 'Suzuki', 'Mazda', 'Kia']);
   const modelSuggestions = unique(products.map((p) => p.carModel));
+  const categorySuggestions = unique([...products.map((p) => p.category), 'Brake System', 'Engine', 'Suspension', 'Electrical', 'Filters', 'Fluids', 'Body Parts', 'Cooling System', 'Transmission', 'Accessories']);
   const filtered = products.filter((p) => {
     const part = findPart.trim().toLowerCase();
     const brand = findBrand.trim().toLowerCase();
@@ -214,7 +215,7 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <input className="border rounded px-2 py-1" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          <input className="border rounded px-2 py-1" placeholder="Category" list="category-suggestions" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Car Make" list="make-suggestions" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
