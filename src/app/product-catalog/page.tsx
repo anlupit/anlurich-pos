@@ -74,7 +74,7 @@ export default function ProductCatalogPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id: string) => {
+  const removeOne = async (id: string) => {
     if (!confirm('Delete this product from the catalog?')) return;
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
@@ -251,7 +251,7 @@ export default function ProductCatalogPage() {
                 <td className="p-2 text-right">{p.sellingPrice != null ? `₱${p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
                 <td className="p-2 text-right whitespace-nowrap">
                   <button onClick={() => startEdit(p)} className="text-blue-600 text-xs font-medium mr-3">View / Edit</button>
-                  <button onClick={() => handleDelete(p.id)} className="text-red-600 text-xs font-medium">Delete</button>
+                  <button onClick={() => removeOne(p.id)} className="text-red-600 text-xs font-medium">Delete</button>
                 </td>
               </tr>
             ))}
