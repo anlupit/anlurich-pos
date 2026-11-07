@@ -150,28 +150,37 @@ export default function POSPage() {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   };
 
-  const lookupBarcode = (id: string, barcode: string) => {
+  const lookupBarcode = (id: string, barcode: string, fromScan = false) => {
     const code = barcode.trim();
-    updateLine(id, 'barcode', code);
-    if (code.length < 4) return;
+    if (!code) return;
     const list = loadProducts();
     const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase())
       || list.find((p) => String(p.barcode || '').toLowerCase().includes(code.toLowerCase()));
-    if (!found) return;
-    setLines((prev) =>
-      prev.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              barcode: found.barcode || code,
-              partNumber: found.partNumber,
-              description: found.description || found.name,
-              brand: found.brand || '',
-              price: found.sellingPrice || 0,
-            }
-          : l
-      )
-    );
+    if (!found) {
+      updateLine(id, 'barcode', code);
+      return;
+    }
+    setLines((prev) => {
+      const match = prev.find((l) => l.id !== id && (
+        String(l.barcode || '').trim().toLowerCase() === String(found.barcode || code).toLowerCase() ||
+        String(l.partNumber || '').trim().toLowerCase() === String(found.partNumber || '').toLowerCase()
+      ));
+      if (match) {
+        return prev
+          .map((l) => l.id === match.id ? { ...l, qty: Number(l.qty || 0) + 1 } : l)
+          .map((l) => l.id === id ? { ...l, barcode: '', partNumber: '', description: '', brand: '', qty: 1, price: 0 } : l);
+      }
+      const filled = prev.map((l) => l.id === id ? {
+        ...l,
+        barcode: found.barcode || code,
+        partNumber: found.partNumber,
+        description: found.description || found.name,
+        brand: found.brand || '',
+        price: found.sellingPrice || 0,
+        qty: l.qty || 1,
+      } : l);
+      return fromScan ? [...filled, { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }] : filled;
+    });
   };
     const lookupProduct = (id: string, partNumber: string) => {
     updateLine(id, 'partNumber', partNumber);
@@ -530,7 +539,7 @@ export default function POSPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value); addLine(); } }} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-28" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '48ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
