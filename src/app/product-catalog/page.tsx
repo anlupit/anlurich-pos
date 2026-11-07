@@ -11,6 +11,10 @@ export default function ProductCatalogPage() {
     yearModel: '', costPrice: '', sellingPrice: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [findPart, setFindPart] = useState('');
+  const [findBrand, setFindBrand] = useState('');
+  const [findName, setFindName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,6 +78,33 @@ export default function ProductCatalogPage() {
     if (!confirm('Delete this product from the catalog?')) return;
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
+    setSelected(selected.filter((x) => x !== id));
+    try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
+    if (editingId === id) setEditingId(null);
+  };
+
+  const deleteSelected = async () => {
+    if (!selected.length) return alert('Select products first');
+    if (!confirm(`Delete ${selected.length} selected products?`)) return;
+    const updated = products.filter((p) => !selected.includes(p.id));
+    setProducts(updated);
+    setSelected([]);
+    try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
+  };
+
+  const deleteAll = async () => {
+    if (!products.length) return;
+    if (!confirm(`Delete ALL ${products.length} products in the catalog? This cannot be undone.`)) return;
+    setProducts([]);
+    setSelected([]);
+    try { await saveProducts([]); } catch { alert('Deleted here, but Supabase did not save.'); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this product from the catalog?')) return;
+    const updated = products.filter((p) => p.id !== id);
+    setProducts(updated);
+    setSelected(selected.filter((x) => x !== id));
     try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
     if (editingId === id) setEditingId(null);
   };
@@ -117,7 +148,8 @@ export default function ProductCatalogPage() {
       sellingPrice: num(r, ['Selling Price', 'Selling', 'sellingPrice', 'Price']),
     })).filter((p) => p.partNumber && p.name);
     if (newProducts.length === 0) return alert('No valid rows. Need Part Number and Name columns.');
-    const merged = [...products];
+    const replace = confirm('Replace the whole catalog with this file?\n\nOK = replace old products\nCancel = add/update only');
+    const merged = replace ? [] : [...products];
     let added = 0;
     let updatedCount = 0;
     newProducts.forEach((incoming) => {
@@ -138,9 +170,9 @@ export default function ProductCatalogPage() {
     setProducts(merged);
     try {
       await saveProducts(merged);
-      alert(`Saved to Supabase. Added ${added}, updated ${updatedCount}. No duplicates.`);
+      alert(replace ? `Catalog replaced. ${merged.length} products saved.` : `Saved to Supabase. Added ${added}, updated ${updatedCount}.`);
     } catch (err: any) {
-      alert(`Saved on this computer. Added ${added}, updated ${updatedCount}. Supabase did not save.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
+      alert(`Saved on this computer only.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -154,6 +186,15 @@ export default function ProductCatalogPage() {
     a.click();
   };
 
+  const filtered = products.filter((p) => {
+    const part = findPart.trim().toLowerCase();
+    const brand = findBrand.trim().toLowerCase();
+    const name = findName.trim().toLowerCase();
+    return (!part || p.partNumber.toLowerCase().includes(part))
+      && (!brand || String(p.brand || '').toLowerCase().includes(brand))
+      && (!name || String(p.name || '').toLowerCase().includes(name) || String(p.description || '').toLowerCase().includes(name));
+  });
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold text-yellow-600 mb-1">Product Catalog</h1>
@@ -166,6 +207,8 @@ export default function ProductCatalogPage() {
             Mass Upload (Excel/CSV)
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
           </label>
+          <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
+          <button onClick={deleteAll} className="bg-black text-white px-4 py-2 rounded-lg text-sm">Delete All</button>
         </div>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
@@ -186,9 +229,16 @@ export default function ProductCatalogPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <div className="p-3 flex flex-wrap gap-2">
+          <input className="border rounded px-3 py-2" placeholder="Search part number, ex. GCT" value={findPart} onChange={(e) => setFindPart(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search brand" value={findBrand} onChange={(e) => setFindBrand(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search part name" value={findName} onChange={(e) => setFindName(e.target.value)} />
+          <div className="text-sm text-gray-500 self-center">{filtered.length} shown</div>
+        </div>
         <table className="w-full text-sm">
           <thead className="bg-teal-500 text-white">
             <tr>
+              <th className="p-2"><input type="checkbox" checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id))} onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...filtered.map((p) => p.id)])) : selected.filter((id) => !filtered.some((p) => p.id === id)))} /></th>
               <th className="text-left p-2">Part Number</th>
               <th className="text-left p-2">Name</th>
               <th className="text-left p-2">Brand</th>
@@ -199,8 +249,9 @@ export default function ProductCatalogPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {filtered.map((p) => (
               <tr key={p.id} className="border-t">
+                <td className="p-2"><input type="checkbox" checked={selected.includes(p.id)} onChange={(e) => setSelected(e.target.checked ? [...selected, p.id] : selected.filter((id) => id !== p.id))} /></td>
                 <td className="p-2 font-medium">{p.partNumber}</td>
                 <td className="p-2">{p.name}</td>
                 <td className="p-2">{p.brand || '—'}</td>
