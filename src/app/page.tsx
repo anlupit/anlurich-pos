@@ -70,55 +70,54 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
-        <svg width="40" height="40" viewBox="0 0 40 40">
-          <circle cx="20" cy="20" r="16" fill="none" stroke="#1e3a5f" strokeWidth="2" />
-          <circle cx="20" cy="20" r="6" fill="#1e3a5f" />
-        </svg>
-        <h1 className="text-xl font-bold tracking-wide text-gray-900">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
-      </div>
-
-      {/* Branch Buttons */}
-      <div className="px-6 py-4 flex flex-wrap justify-center gap-3">
-        {BRANCHES.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => selectBranch(b.id)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-center min-w-[120px]"
-          >
-            <div className="font-semibold text-sm">{b.name}</div>
-            <div className="text-xs opacity-80">{b.location}</div>
-          </button>
-        ))}
-      </div>
-
-      {/* Banner */}
-      <div className="mx-6 rounded-2xl h-40 bg-gradient-to-r from-blue-200 via-blue-300 to-orange-300 flex items-center justify-center text-blue-800 font-medium">
-        APIS — Auto Parts Inventory System
-      </div>
-
-      {/* Footer row */}
-      <div className="px-6 py-4 flex justify-between items-center">
-        <div className="text-sm text-gray-600">AI-powered platform by ANLU... 🥰🥰🥰</div>
-        <div className="flex gap-2">
-          <button onClick={() => (window.location.href = '/salary')} className="bg-green-700 text-white px-5 py-2 rounded-full font-medium">Salary For Employee</button>
-          <button onClick={() => selectBranch('admin')} className="bg-black text-white px-6 py-2 rounded-full font-medium">ADMIN</button>
+    <div className="min-h-screen bg-[#f4f6fb] text-gray-900">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
+            <circle cx="32" cy="32" r="10" fill="#111827" />
+            <circle cx="32" cy="32" r="4" fill="#f4f6fb" />
+            <path d="M32 6v10M32 48v10M6 32h10M48 32h10M12 12l7 7M45 45l7 7M12 52l7-7M45 19l7-7" stroke="#6b7280" strokeWidth="3" />
+            <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
+          </svg>
+          <h1 className="text-2xl md:text-4xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
         </div>
-      </div>
 
-      {/* Announcements */}
-      <div className="px-6 pb-8">
-        <div className="bg-white rounded-xl shadow p-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          {BRANCHES.map((b) => (
+            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
+              <div className="bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-3 py-4 font-semibold shadow">{b.name}</div>
+              <div className="text-sm text-gray-700 mt-2">{b.location}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-2xl overflow-hidden mb-5 shadow">
+          <div className="h-48 md:h-64 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200 flex items-center justify-end pr-8">
+            <svg width="260" height="160" viewBox="0 0 260 160">
+              <path d="M20 120 C60 20, 110 20, 140 90 C160 130, 190 20, 240 70" fill="none" stroke="#dbeafe" strokeWidth="22" />
+              <path d="M10 140 C70 40, 120 50, 150 110 C175 150, 200 40, 250 90" fill="none" stroke="#bfdbfe" strokeWidth="18" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-lg font-semibold">AI-powered platform by ANLU... 🥰🥰🥰</div>
+          <div className="flex gap-2">
+            <button onClick={() => (window.location.href = '/salary')} className="bg-green-700 text-white px-5 py-2 rounded-full text-sm">Salary</button>
+            <button onClick={() => selectBranch('admin')} className="bg-black text-white px-8 py-3 rounded-full font-bold">ADMIN</button>
+          </div>
+        </div>
+
+        <div className="bg-white text-gray-900 rounded-2xl shadow p-5">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">Announcements</h2>
-            <button onClick={() => setShowForm(!showForm)} className="text-sm text-purple-600">{showForm ? 'Cancel' : '+ New'}</button>
+            <button onClick={() => setShowForm(!showForm)} className="text-sm text-blue-700">{showForm ? 'Cancel' : '+ New'}</button>
           </div>
           {showForm && (
             <div className="mb-3">
               <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} value={newAnnouncement} onChange={(e) => setNewAnnouncement(e.target.value)} />
-              <button onClick={post} className="mt-2 bg-purple-600 text-white px-4 py-1 rounded text-sm">Post</button>
+              <button onClick={post} className="mt-2 bg-blue-700 text-white px-4 py-1 rounded text-sm">Post</button>
             </div>
           )}
           {announcements.length === 0 ? (
@@ -126,7 +125,7 @@ export default function Home() {
           ) : (
             announcements.slice(0, 3).map((a) => (
               <div key={a.id} className="border-t py-2 text-sm">
-                <div className="font-medium text-purple-700">{a.author}</div>
+                <div className="font-medium text-blue-700">{a.author}</div>
                 <div>{a.text}</div>
               </div>
             ))
