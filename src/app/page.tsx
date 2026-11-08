@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { loadUsers } from '../lib/users';
 
-const BRANCHES = [
-  { id: 'anlurich', name: 'ANLURICH OC', location: 'Silang Cavite' },
-  { id: 'avenders', name: 'Avenders Auto Parts', location: 'Sta.Rosa Laguna' },
+const BUTTONS = [
+  { id: 'anlurich', name: 'Anlurich OPC', location: 'Silang Cavite' },
+  { id: 'avenders', name: 'Avenders', location: 'Sta.Rosa Laguna' },
   { id: 'dasma', name: 'Dasma Auto Parts', location: 'Dasma Cavite' },
   { id: 'lipa', name: 'Lipa Auto Parts', location: 'Lipa Batangas' },
-  { id: 'sezan', name: 'Sezan Baliwag Auto Parts', location: 'Baliwag Bulacan' },
-  { id: 'timitsu', name: 'Timitsu Baliwag Bulacan', location: 'Baliwag Bulacan' },
+  { id: 'sezan', name: 'Baliwag Auto Parts', location: 'Baliwag Bulacan' },
+  { id: 'admin', name: 'Anlu Pit', location: 'Admin' },
 ];
 
 const LOGINS: Record<string, { name: string; password: string }> = {
@@ -31,15 +31,30 @@ export default function Home() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [announcements, setAnnouncements] = useState<{ id: string; text: string; author: string; date: string }[]>([]);
-  const [newAnnouncement, setNewAnnouncement] = useState('');
-  const [showForm, setShowForm] = useState(false);
   const [bg, setBg] = useState('#f4f6fb');
   const [banner, setBanner] = useState('');
   const [logo, setLogo] = useState('');
 
-  useEffect(() => {
+  const loadAnnouncements = async () => {
+    try {
+      const res = await fetch('/api/data', { cache: 'no-store' });
+      if (res.ok) {
+        const rows: { key: string; value: string }[] = await res.json();
+        const row = rows.find((r) => r.key === ANNOUNCEMENTS_KEY);
+        if (row?.value) {
+          const list = JSON.parse(row.value);
+          setAnnouncements(list);
+          localStorage.setItem(ANNOUNCEMENTS_KEY, row.value);
+          return;
+        }
+      }
+    } catch {}
     const ann = localStorage.getItem(ANNOUNCEMENTS_KEY);
     if (ann) setAnnouncements(JSON.parse(ann));
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
     setBg(localStorage.getItem('anlurich-index-bg') || '#f4f6fb');
     setBanner(localStorage.getItem('anlurich-index-banner') || '');
     setLogo(localStorage.getItem('anlurich-index-logo') || '');
@@ -65,32 +80,11 @@ export default function Home() {
     setLoginError('Wrong login name or password');
   };
 
-  const post = () => {
-    if (!newAnnouncement.trim()) return;
-    const item = { id: Date.now().toString(), text: newAnnouncement.trim(), author: 'System', date: new Date().toISOString() };
-    const updated = [item, ...announcements];
-    setAnnouncements(updated);
-    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(updated));
-    setNewAnnouncement('');
-    setShowForm(false);
-  };
-
-  const saveImage = (key: string, setter: (v: string) => void, file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result || '');
-      setter(value);
-      localStorage.setItem(key, value);
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div className="min-h-screen text-gray-900" style={{ background: bg }}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center gap-3 mb-8">
-          {logo ? <img src={logo} alt="Logo" className="w-16 h-16 object-contain" /> : (
+          {logo ? <img src={logo} alt="Logo" style={{ width: '800px', height: '800px' }} className="object-contain" /> : (
           <svg width="64" height="64" viewBox="0 0 64 64">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
@@ -103,10 +97,9 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-          {BRANCHES.map((b) => (
+          {BUTTONS.map((b) => (
             <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
-              <div className="bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-3 py-4 font-semibold shadow">{b.name}</div>
-              <div className="text-sm text-gray-700 mt-2">{b.location}</div>
+              <div className="h-20 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-3 py-4 font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
@@ -119,38 +112,16 @@ export default function Home() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow p-4 mb-5 text-sm">
-          <div className="font-semibold mb-2">Design the page</div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <label>Background <input type="color" value={bg} onChange={(e) => { setBg(e.target.value); localStorage.setItem('anlurich-index-bg', e.target.value); }} /></label>
-            <label className="bg-gray-700 text-white px-3 py-2 rounded cursor-pointer">Upload Logo<input type="file" accept="image/*" className="hidden" onChange={(e) => saveImage('anlurich-index-logo', setLogo, e.target.files?.[0])} /></label>
-            <label className="bg-blue-700 text-white px-3 py-2 rounded cursor-pointer">Upload Banner<input type="file" accept="image/*" className="hidden" onChange={(e) => saveImage('anlurich-index-banner', setBanner, e.target.files?.[0])} /></label>
-          </div>
-        </div>
-
         <div className="flex items-center justify-between mb-6">
           <div className="text-lg font-semibold">AI-powered platform by ANLU... 🥰🥰🥰</div>
-          <div className="flex gap-2">
-            <button onClick={() => (window.location.href = '/salary')} className="bg-green-700 text-white px-5 py-2 rounded-full text-sm">Salary</button>
-            <button onClick={() => selectBranch('admin')} className="bg-black text-white px-8 py-3 rounded-full font-bold">ADMIN</button>
-          </div>
         </div>
 
         <div className="bg-white text-gray-900 rounded-2xl shadow p-5">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold">Announcements</h2>
-            <button onClick={() => setShowForm(!showForm)} className="text-sm text-blue-700">{showForm ? 'Cancel' : '+ New'}</button>
-          </div>
-          {showForm && (
-            <div className="mb-3">
-              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} value={newAnnouncement} onChange={(e) => setNewAnnouncement(e.target.value)} />
-              <button onClick={post} className="mt-2 bg-blue-700 text-white px-4 py-1 rounded text-sm">Post</button>
-            </div>
-          )}
+          <h2 className="font-semibold mb-3">Announcements</h2>
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-sm">No announcements</p>
           ) : (
-            announcements.slice(0, 3).map((a) => (
+            announcements.slice(0, 5).map((a) => (
               <div key={a.id} className="border-t py-2 text-sm">
                 <div className="font-medium text-blue-700">{a.author}</div>
                 <div>{a.text}</div>
@@ -164,7 +135,7 @@ export default function Home() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <h2 className="font-bold mb-1">Login</h2>
-            <p className="text-sm text-gray-500 mb-3">{loginFor === 'admin' ? 'ADMIN' : BRANCHES.find((b) => b.id === loginFor)?.name}</p>
+            <p className="text-sm text-gray-500 mb-3">{loginFor === 'admin' ? 'Anlu Pit' : BUTTONS.find((b) => b.id === loginFor)?.name}</p>
             <input className="w-full border rounded px-3 py-2 mb-2" placeholder="Login Name" value={loginName} onChange={(e) => setLoginName(e.target.value)} />
             <input type="password" className="w-full border rounded px-3 py-2 mb-2" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
             {loginError && <p className="text-red-600 text-sm mb-2">{loginError}</p>}

@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [newAnnouncement, setNewAnnouncement] = useState('');
 
   const today = new Date().toISOString().slice(0, 10);
   const month = new Date().toISOString().slice(0, 7);
@@ -61,6 +63,8 @@ export default function AdminDashboard() {
         });
         setInvoices(allInvoices);
         setRequests(get('anlurich-stock-requests'));
+        const ann = get('anlurich-announcements');
+        setAnnouncements(Array.isArray(ann) ? ann : []);
       } catch {}
     };
     load();
@@ -80,12 +84,32 @@ export default function AdminDashboard() {
   const grandYTD = branchStats.reduce((sum, b) => sum + b.ytd, 0);
   const monthlyPurchases = invoices.filter((i) => String(i.invoiceDate || '').startsWith(month)).reduce((sum, i) => sum + (i.grandTotal || 0), 0);
 
+  const postAnnouncement = async () => {
+    if (!newAnnouncement.trim()) return;
+    const item = { id: Date.now().toString(), text: newAnnouncement.trim(), author: 'Anlu Pit', date: new Date().toISOString() };
+    const next = [item, ...announcements];
+    setAnnouncements(next);
+    setNewAnnouncement('');
+    localStorage.setItem('anlurich-announcements', JSON.stringify(next));
+    await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'anlurich-announcements', value: JSON.stringify(next) }),
+    });
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-1">ADMIN Dashboard</h1>
       <a href="/users" className="inline-block mb-4 bg-black text-white px-4 py-2 rounded-lg text-sm">User and Password Manager</a>
       <p className="text-gray-500 mb-4">APIS — Auto Parts Inventory System</p>
       <a href="/owner-report" className="inline-block bg-blue-700 text-white px-5 py-2 rounded-lg mb-6">Owner Report</a>
+
+      <div className="bg-white rounded-xl shadow p-5 mb-6">
+        <h2 className="font-semibold mb-2">Announcement</h2>
+        <textarea className="w-full border rounded-lg px-3 py-2" rows={3} placeholder="Post an announcement to the index page" value={newAnnouncement} onChange={(e) => setNewAnnouncement(e.target.value)} />
+        <button onClick={postAnnouncement} className="mt-2 bg-blue-700 text-white px-4 py-2 rounded-lg">Post</button>
+      </div>
 
       <div className="bg-white rounded-xl shadow p-5 mb-6">
         <h2 className="font-semibold mb-1">Net Profit by Branch</h2>
