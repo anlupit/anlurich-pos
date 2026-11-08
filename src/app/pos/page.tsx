@@ -293,19 +293,22 @@ export default function POSPage() {
 
   const addCheckedToCart = () => {
     if (!priceCheck.partNumber) return;
-    setLines((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        barcode: priceCheck.barcode,
-        partNumber: priceCheck.partNumber,
-        description: priceCheck.description,
-        brand: priceCheck.brand,
-        qty: 1,
-        unit: 'pcs',
-        price: priceCheck.sellingPrice,
-      },
-    ]);
+    const item = {
+      barcode: priceCheck.barcode,
+      partNumber: priceCheck.partNumber,
+      description: priceCheck.description,
+      brand: priceCheck.brand,
+      qty: 1,
+      unit: 'pcs',
+      price: priceCheck.sellingPrice,
+    };
+    setLines((prev) => {
+      const firstEmpty = prev.findIndex((l) => !l.partNumber.trim() && !l.barcode.trim());
+      if (firstEmpty >= 0) {
+        return prev.map((l, i) => (i === firstEmpty ? { ...l, ...item } : l));
+      }
+      return [...prev, { id: Date.now().toString(), ...item }];
+    });
   };
 
   const lineTotal = (l: Line) => l.qty * l.price;
@@ -479,7 +482,7 @@ export default function POSPage() {
 
       <div className="bg-white rounded-xl shadow p-3 mb-4 grid grid-cols-1 md:grid-cols-12 gap-3 print:hidden">
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium mb-1">Payment</label>
+          <label className="block text-[18px] font-medium mb-1">Payment</label>
           <select className="w-full border rounded px-2 py-2" style={{ maxWidth: '20ch' }} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
             <option>Cash</option>
             <option>GCash</option>
@@ -492,8 +495,8 @@ export default function POSPage() {
           <input className="border rounded px-2 py-2 mt-2 block text-left" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
         </div>
         <div className="md:col-span-4">
-          <label className="block text-xs font-medium mb-1">{paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'}</label>
-          <input className="w-full border rounded px-3 py-2" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <label className="block text-[18px] font-medium mb-1">{paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'}</label>
+          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           {paymentMethod === 'Credit' && (
             <>
               <input className="w-full border rounded px-3 py-2 mt-2" placeholder="TIN No." value={tin} onChange={(e) => setTin(e.target.value)} />
@@ -502,15 +505,15 @@ export default function POSPage() {
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium mb-1">Contact Number</label>
-          <input className="w-full border rounded px-3 py-2" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+          <label className="block text-[18px] font-medium mb-1">Contact Number</label>
+          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium mb-1">Sales Invoice No.</label>
-          <input className="w-full border rounded px-3 py-2" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
+          <label className="block text-[18px] font-medium mb-1">Sales Invoice No.</label>
+          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
         </div>
         <div className="md:col-span-2 text-right">
-          <label className="block text-xs font-medium mb-1">Date & Time</label>
+          <label className="block text-[18px] font-medium mb-1">Date & Time</label>
           <input className="w-full border rounded px-3 py-2 bg-gray-50 text-right" value={saleDateTime} readOnly />
           <div className="mt-2">
             <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
@@ -529,7 +532,7 @@ export default function POSPage() {
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-[18px]">
           <thead className="bg-teal-500 text-white">
             <tr>
               <th className="p-2 text-left">Barcode</th>
@@ -546,13 +549,13 @@ export default function POSPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-28" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '48ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={1} className="border rounded px-2 py-1 w-14 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '48ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input type="number" min={1} className="border rounded px-2 py-1 text-[18px] w-14 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-16" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-right" style={{ width: '10ch' }} value={line.price || ''} onChange={(e) => updateLine(line.id, 'price', parseFloat(e.target.value) || 0)} /></td>
+                <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={line.price || ''} onChange={(e) => updateLine(line.id, 'price', parseFloat(e.target.value) || 0)} /></td>
                 <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button>
@@ -585,11 +588,6 @@ export default function POSPage() {
             <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
-          <button onClick={() => setDatePick('daily-print')} className="w-full mt-2 bg-green-700 text-white py-3 rounded-lg font-bold">Print Daily Sales Report</button>
-          <button onClick={() => setDatePick('daily-download')} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Download Daily Sales</button>
-          <button onClick={() => setDatePick('monthly-download')} className="w-full mt-2 bg-orange-600 text-white py-3 rounded-lg font-bold">Download Monthly Sales</button>
-          <button onClick={() => setDatePick('monthly-print')} className="w-full mt-2 bg-orange-800 text-white py-3 rounded-lg font-bold">Print Monthly Sales</button>
-          <button onClick={() => setShowUnpaid(true)} className="w-full mt-2 bg-red-600 text-white py-3 rounded-lg font-bold">Unpaid Credit Summary</button>
         </div>
 
         {/* Price Check */}

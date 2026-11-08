@@ -82,9 +82,9 @@ export default function Home() {
 
   return (
     <div className="h-screen overflow-hidden text-gray-900" style={{ background: bg }}>
-      <div className="h-full max-w-[1600px] mx-auto px-[15ch] pt-1 pb-6 md:pb-8 flex flex-col">
-        <div className="flex items-center justify-center gap-2 md:gap-3 mb-1">
-          {logo ? <img src={logo} alt="Logo" className="w-10 h-10 md:w-[185px] md:h-[185px] object-contain" /> : (
+      <div className="h-full max-w-[1600px] mx-auto px-3 pt-2 pb-2 md:px-[15ch] md:pb-8 flex flex-col">
+        <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 md:mb-1">
+          {logo ? <img src={logo} alt="Logo" className="w-12 h-12 md:w-[185px] md:h-[185px] object-contain" /> : (
           <svg width="48" height="48" viewBox="0 0 64 64" className="md:w-32 md:h-32">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
@@ -93,13 +93,13 @@ export default function Home() {
             <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
           </svg>
           )}
-          <h1 className="text-xs md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+          <h1 className="text-sm leading-tight md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-2 gap-y-2 mb-2 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 mb-2 justify-items-center">
           {BUTTONS.map((b) => (
-            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center w-[85%]">
-              <div className="h-9 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-0 md:px-3 text-[11px] md:text-sm font-semibold shadow flex items-center justify-center text-center whitespace-nowrap">{b.name}</div>
+            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center w-full md:w-[85%]">
+              <div className="h-12 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-1 md:px-3 text-xs md:text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
@@ -112,10 +112,10 @@ export default function Home() {
           )}
         </div>
 
-        <div className="text-xs md:text-sm font-semibold mb-2 text-right">Powered & Designed by Anlu</div>
+        <div className="text-sm font-semibold mb-2 text-center md:text-right">Powered & Designed by Anlu</div>
 
-        <div className="bg-white text-gray-900 rounded-xl shadow p-4 mb-4">
-          <h2 className="font-semibold mb-2 text-base md:text-lg">Announcements</h2>
+        <div className="bg-white text-gray-900 rounded-xl shadow p-3 mb-2">
+          <h2 className="font-semibold mb-1 text-base">Announcements</h2>
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-base">No announcements</p>
           ) : (
