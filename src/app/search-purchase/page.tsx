@@ -197,7 +197,6 @@ export default function SearchPurchasePage() {
             <thead className="bg-teal-500 text-white">
               <tr>
                 <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Photo</th>
                 <th className="text-left p-2">Supplier</th>
                 <th className="text-left p-2">Invoice No.</th>
                 <th className="text-left p-2">Part Number</th>
@@ -213,11 +212,6 @@ export default function SearchPurchasePage() {
               {results.map((r, i) => (
                 <tr key={i} className="border-t">
                   <td className="p-2">{formatDate(r.invoiceDate)}</td>
-                  <td className="p-2">
-                    {r.invoiceImage ? (
-                      <img src={r.invoiceImage} alt="Invoice" className="w-12 h-12 object-cover rounded border cursor-pointer" onClick={() => setLargeImage(r.invoiceImage)} />
-                    ) : '—'}
-                  </td>
                   <td className="p-2">{r.supplierName}</td>
                   <td className="p-2 font-medium">{r.invoiceNumber}</td>
                   <td className="p-2">{r.partNumber || '—'}</td>
@@ -231,7 +225,7 @@ export default function SearchPurchasePage() {
                   </td>
                 </tr>
               ))}
-              {results.length === 0 && <tr><td colSpan={11} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
+              {results.length === 0 && <tr><td colSpan={10} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -245,7 +239,9 @@ export default function SearchPurchasePage() {
 
       {viewing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="flex gap-4">
+              <div className="flex-1">
             <h3 className="font-bold text-lg mb-3">Invoice {viewing.invoiceNumber}</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
@@ -284,6 +280,17 @@ export default function SearchPurchasePage() {
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>
               <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>
+            </div>
+              </div>
+              <div className="w-40 shrink-0">
+                <div className="text-sm font-medium mb-2">Invoice Photo</div>
+                {viewing.invoiceImage ? (
+                  <img src={viewing.invoiceImage} alt="Invoice" className="w-full h-40 object-cover rounded border cursor-pointer" onClick={() => setLargeImage(viewing.invoiceImage)} />
+                ) : (
+                  <div className="w-full h-40 bg-gray-100 rounded border flex items-center justify-center text-xs text-gray-400">No photo</div>
+                )}
+                <div className="text-xs text-gray-500 mt-1">Click thumbnail to enlarge</div>
+              </div>
             </div>
           </div>
         </div>
