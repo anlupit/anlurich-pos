@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { currentBranch, formatDate, loadSales, updateSales } from '../../lib/branchData';
 
 export default function UnpaidPage() {
@@ -8,9 +8,14 @@ export default function UnpaidPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [payCheck, setPayCheck] = useState({ no: '', bank: '', date: '' });
   const [tick, setTick] = useState(0);
+  const [logo, setLogo] = useState('');
   const branch = currentBranch() || 'unknown';
   const unpaid = loadSales(branch).filter((s) => s.paymentMethod === 'Credit' && s.paid === false && (!search.trim() || String(s.customerName || '').toLowerCase().includes(search.trim().toLowerCase())));
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  useEffect(() => {
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
+  }, []);
 
   const recordPayment = () => {
     if (!payCheck.no || !payCheck.bank || !payCheck.date) return alert('Enter check no., bank name, and check date');
@@ -26,7 +31,15 @@ export default function UnpaidPage() {
 
   return (
     <div className="p-4" key={tick}>
-      <h1 className="text-xl font-bold text-yellow-600 mb-4">Unpaid Invoice List</h1>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+        </div>
+        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+      </div>
+      <div className="border-b-2 border-black mb-3" />
+      <h2 className="text-xl font-bold text-yellow-600 mb-4">Unpaid Invoice List</h2>
       <div className="flex gap-2 mb-3">
         <input className="flex-1 border rounded px-3 py-2" placeholder="Search client name" value={search} onChange={(e) => setSearch(e.target.value)} />
         <button onClick={() => setSelected(unpaid.map((s) => s.id))} className="bg-blue-700 text-white px-4 py-2 rounded">Tick All</button>

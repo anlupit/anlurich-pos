@@ -8,7 +8,7 @@ export default function GroupPage({ title, items }: { title: string; items: { hr
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    setLogo(localStorage.getItem('anlurich-index-logo') || '');
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
   }, []);
 
   return (

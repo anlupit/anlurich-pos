@@ -57,7 +57,7 @@ export default function Home() {
     loadAnnouncements();
     setBg(localStorage.getItem('anlurich-index-bg') || '#f4f6fb');
     setBanner(localStorage.getItem('anlurich-index-banner') || '/banner.png');
-    setLogo(localStorage.getItem('anlurich-index-logo') || '');
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
   }, []);
 
   const selectBranch = (id: string) => {

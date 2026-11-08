@@ -16,6 +16,7 @@ export default function SearchInvoicePage() {
   const [results, setResults] = useState<any[]>([]);
   const [searched, setSearched] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [logo, setLogo] = useState('');
 
   useEffect(() => {
     setSales(loadSales());
@@ -89,11 +90,18 @@ export default function SearchInvoicePage() {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-1">
-        <h1 className="text-2xl font-black text-yellow-600">Search SALES INVOICE</h1>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+        </div>
+        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+      </div>
+      <div className="border-b-2 border-black mb-3" />
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-2xl font-black text-yellow-600">Search SALES INVOICE</h2>
         <button onClick={goDashboard} className="text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
       </div>
-      <div className="text-xs text-gray-500 mb-4">This branch only</div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex flex-nowrap items-end gap-2 overflow-x-auto">

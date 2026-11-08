@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { currentBranch, formatDate, loadSales } from '../../lib/branchData';
 
 export default function DownloadPage() {
   const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [logo, setLogo] = useState('');
+
+  useEffect(() => {
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
+  }, []);
 
   const downloadDaily = async () => {
     const XLSX = await import('xlsx');
@@ -49,7 +54,15 @@ export default function DownloadPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold text-yellow-600 mb-4">Download</h1>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+        </div>
+        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+      </div>
+      <div className="border-b-2 border-black mb-3" />
+      <h2 className="text-xl font-bold text-yellow-600 mb-4">Download</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
         <div className="bg-white rounded-xl shadow p-4">
           <div className="font-semibold mb-2">Download Daily Sales</div>

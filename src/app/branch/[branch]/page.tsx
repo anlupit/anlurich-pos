@@ -41,7 +41,7 @@ export default function BranchDashboard() {
 
   useEffect(() => {
     if (branchId) localStorage.setItem('anlurich-branch', branchId);
-    setLogo(localStorage.getItem('anlurich-index-logo') || '');
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
     const load = async () => {
       try {
         await syncOnline(branchId);

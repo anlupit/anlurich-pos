@@ -42,6 +42,7 @@ export default function QuotationPage() {
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [printSnap, setPrintSnap] = useState<any>(null);
   const [branchHeader, setBranchHeader] = useState({ name: 'APIS', location: '' });
+  const [logo, setLogo] = useState('');
   const [hasLabor, setHasLabor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [lines, setLines] = useState<QuoteLine[]>([
@@ -218,11 +219,18 @@ export default function QuotationPage() {
   return (
     <div className="p-4">
       <div className="print:hidden">
-        <div className="flex justify-between items-center mb-1">
-          <h1 className="text-xl font-bold text-yellow-600">Quotation</h1>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+            <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+          </div>
+          <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+        </div>
+        <div className="border-b-2 border-black mb-3" />
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-xl font-bold text-yellow-600">Quotation</h2>
           <button onClick={() => setShowSearch(!showSearch)} className="bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Search Quotation</button>
         </div>
-        <div className="text-xs text-gray-500 mb-4">AUTO PARTS INVENTORY SYSTEM (APIS) — {branchHeader.name}</div>
 
         {showSearch && (
           <div className="bg-white rounded-xl shadow p-4 mb-4">

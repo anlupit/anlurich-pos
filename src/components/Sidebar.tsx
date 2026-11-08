@@ -90,7 +90,7 @@ export default function Sidebar() {
         <div className="text-lg font-bold">Dashboard</div>
         <div className="text-2xl font-black tracking-wide">{title}</div>
       </button>
-      {branchName && <div className="text-xs opacity-80 mb-3">{branchName}</div>}
+      {branchName && <div className="bg-blue-700 rounded-lg px-3 py-2 mb-3 text-center font-bold text-[18px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-2 flex-1">
         {menu.map((item) => (
           <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-3 py-2 text-sm text-center font-medium">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { loadSales, loadInvoices, formatDate } from '../../lib/branchData';
 
 export default function PrintReportsPage() {
@@ -12,6 +12,11 @@ export default function PrintReportsPage() {
   const [salesDate, setSalesDate] = useState(new Date().toISOString().slice(0, 10));
   const [month, setMonth] = useState(new Date().toISOString().slice(5, 7));
   const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [logo, setLogo] = useState('');
+
+  useEffect(() => {
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
+  }, []);
 
   const runDailySales = () => {
     const sales = loadSales().filter((s) => (s.date || s.dateTime || '').slice(0, 10) === salesDate);
@@ -119,8 +124,15 @@ export default function PrintReportsPage() {
   return (
     <div className="p-4">
       <div className="print:hidden">
-        <h1 className="text-xl font-bold text-yellow-600 mb-1">Print Reports</h1>
-        <div className="text-xs text-gray-500 mb-4">This branch only</div>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+            <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+          </div>
+          <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+        </div>
+        <div className="border-b-2 border-black mb-3" />
+        <h2 className="text-xl font-bold text-yellow-600 mb-4">Print Reports</h2>
         <div className="flex gap-3">
           <button onClick={() => setPick('sales')} className="bg-blue-700 text-white px-5 py-3 rounded-lg font-medium">Daily Sales</button>
           <button onClick={() => setPick('purchases')} className="bg-teal-600 text-white px-5 py-3 rounded-lg font-medium">Monthly Purchases</button>
