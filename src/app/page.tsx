@@ -33,10 +33,16 @@ export default function Home() {
   const [announcements, setAnnouncements] = useState<{ id: string; text: string; author: string; date: string }[]>([]);
   const [newAnnouncement, setNewAnnouncement] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [bg, setBg] = useState('#f4f6fb');
+  const [banner, setBanner] = useState('');
+  const [logo, setLogo] = useState('');
 
   useEffect(() => {
     const ann = localStorage.getItem(ANNOUNCEMENTS_KEY);
     if (ann) setAnnouncements(JSON.parse(ann));
+    setBg(localStorage.getItem('anlurich-index-bg') || '#f4f6fb');
+    setBanner(localStorage.getItem('anlurich-index-banner') || '');
+    setLogo(localStorage.getItem('anlurich-index-logo') || '');
   }, []);
 
   const selectBranch = (id: string) => {
@@ -69,10 +75,22 @@ export default function Home() {
     setShowForm(false);
   };
 
+  const saveImage = (key: string, setter: (v: string) => void, file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result || '');
+      setter(value);
+      localStorage.setItem(key, value);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-gray-900">
+    <div className="min-h-screen text-gray-900" style={{ background: bg }}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center gap-3 mb-8">
+          {logo ? <img src={logo} alt="Logo" className="w-16 h-16 object-contain" /> : (
           <svg width="64" height="64" viewBox="0 0 64 64">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
@@ -80,6 +98,7 @@ export default function Home() {
             <path d="M32 6v10M32 48v10M6 32h10M48 32h10M12 12l7 7M45 45l7 7M12 52l7-7M45 19l7-7" stroke="#6b7280" strokeWidth="3" />
             <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
           </svg>
+          )}
           <h1 className="text-2xl md:text-4xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
         </div>
 
@@ -92,12 +111,20 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="rounded-2xl overflow-hidden mb-5 shadow">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200 flex items-center justify-end pr-8">
-            <svg width="260" height="160" viewBox="0 0 260 160">
-              <path d="M20 120 C60 20, 110 20, 140 90 C160 130, 190 20, 240 70" fill="none" stroke="#dbeafe" strokeWidth="22" />
-              <path d="M10 140 C70 40, 120 50, 150 110 C175 150, 200 40, 250 90" fill="none" stroke="#bfdbfe" strokeWidth="18" />
-            </svg>
+        <div className="rounded-2xl overflow-hidden mb-5 shadow bg-white">
+          {banner ? (
+            <img src={banner} alt="Banner" className="w-full h-48 md:h-64 object-cover" />
+          ) : (
+            <div className="h-48 md:h-64 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-4 mb-5 text-sm">
+          <div className="font-semibold mb-2">Design the page</div>
+          <div className="flex flex-wrap gap-3 items-center">
+            <label>Background <input type="color" value={bg} onChange={(e) => { setBg(e.target.value); localStorage.setItem('anlurich-index-bg', e.target.value); }} /></label>
+            <label className="bg-gray-700 text-white px-3 py-2 rounded cursor-pointer">Upload Logo<input type="file" accept="image/*" className="hidden" onChange={(e) => saveImage('anlurich-index-logo', setLogo, e.target.files?.[0])} /></label>
+            <label className="bg-blue-700 text-white px-3 py-2 rounded cursor-pointer">Upload Banner<input type="file" accept="image/*" className="hidden" onChange={(e) => saveImage('anlurich-index-banner', setBanner, e.target.files?.[0])} /></label>
           </div>
         </div>
 
