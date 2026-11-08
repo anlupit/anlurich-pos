@@ -30,7 +30,7 @@ export function customerPoints(name: string, phone?: string): { earned: number; 
     const nameOk = key && n.includes(key);
     const phoneOk = ph && p.includes(ph);
     return nameOk || phoneOk;
-  });
+  }).filter((s) => !s.noPoints && !String(s.invoiceNo || '').match(/^\d{6}-\d{2}$/));
   const earned = matched.reduce((sum, s) => sum + pointsFor(s.total || 0), 0);
   const redeemed = matched.reduce((sum, s) => sum + (s.pointsRedeemed || 0), 0);
   return { earned, redeemed, balance: Math.max(0, earned - redeemed) };

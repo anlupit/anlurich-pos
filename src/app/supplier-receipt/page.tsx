@@ -131,19 +131,37 @@ export default function SupplierReceiptPage() {
 
   return (
     <div className="p-2 md:p-4 max-w-full">
-      <h1 className="text-xl font-bold text-yellow-600 mb-1">RECORD SUPPLIER INVOICE</h1>
-      <div className="text-xs text-gray-500 mb-4">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h1 className="text-xl font-bold text-yellow-600">RECORD SUPPLIER INVOICE</h1>
+          <div className="text-xs text-gray-500">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
+        </div>
+        <div className="flex gap-2">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Discount 1 (%)</label>
+            <input type="number" className="border rounded px-2 py-1 text-center w-[10ch]" value={discount1} onChange={(e) => setDiscount1(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Discount 2 (%)</label>
+            <input type="number" className="border rounded px-2 py-1 text-center w-[10ch]" value={discount2} onChange={(e) => setDiscount2(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Discount 3 (%)</label>
+            <input type="number" className="border rounded px-2 py-1 text-center w-[10ch]" value={discount3} onChange={(e) => setDiscount3(e.target.value)} />
+          </div>
+        </div>
+      </div>
 
       {/* Header fields */}
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
         <div>
           <label className="block text-xs font-medium mb-1 text-center">Supplier Name</label>
-          <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+          <input className="border rounded px-2 py-1" style={{ width: '30ch' }} list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
           <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
         </div>
         <div>
           <label className="block text-xs font-medium mb-1 text-center">Terms</label>
-          <select className="w-full border rounded px-2 py-1" value={terms} onChange={(e) => setTerms(e.target.value)}>
+          <select className="border rounded px-2 py-1" style={{ width: '10ch' }} value={terms} onChange={(e) => setTerms(e.target.value)}>
             <option value="">—</option>
             <option>COD</option>
             <option>30 days</option>
@@ -169,18 +187,7 @@ export default function SupplierReceiptPage() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1 text-center">Discount 1 (%)</label>
-          <input type="number" className="w-full border rounded px-2 py-1 text-center" value={discount1} onChange={(e) => setDiscount1(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Discount 2 (%)</label>
-          <input type="number" className="w-full border rounded px-2 py-1 text-center" value={discount2} onChange={(e) => setDiscount2(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Discount 3 (%)</label>
-          <input type="number" className="w-full border rounded px-2 py-1 text-center" value={discount3} onChange={(e) => setDiscount3(e.target.value)} />
-        </div>
-      </div>
+          <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-2 mb-4">

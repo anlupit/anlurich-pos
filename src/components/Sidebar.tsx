@@ -8,6 +8,7 @@ const MAIN = [
   { href: '/products-menu', label: 'Products' },
   { href: '/accounting', label: 'Accounting' },
   { href: '/stock-request', label: 'Stock Request' },
+  { href: '/check-voucher', label: 'Check Voucher' },
 ];
 
 const GROUPS: Record<string, { title: string; items: { href: string; label: string }[] }> = {

@@ -367,7 +367,8 @@ export default function POSPage() {
       }),
       subtotal,
       discount: discountAmt,
-      pointsRedeemed: redeemPts,
+      pointsRedeemed: noInvoice ? 0 : redeemPts,
+      noPoints: noInvoice,
       total: grandTotal,
       paymentMethod,
       referenceNo: referenceNo.trim(),
@@ -529,10 +530,12 @@ export default function POSPage() {
         <div className="md:col-span-2 text-right">
           <label className="block text-[18px] font-medium mb-1">Date & Time</label>
           <input className="w-full border rounded px-3 py-2 bg-gray-50 text-right" value={saleDateTime} readOnly />
+          {!noInvoice && (
           <div className="mt-2">
             <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
             <div className="text-4xl font-black leading-none">{pointsInfo ? pointsInfo.balance : '—'}</div>
           </div>
+          )}
         </div>
       </div>
 
