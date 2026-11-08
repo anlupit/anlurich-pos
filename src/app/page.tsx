@@ -82,10 +82,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-gray-900" style={{ background: bg }}>
-      <div className="max-w-6xl mx-auto px-3 py-3">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          {logo ? <img src={logo} alt="Logo" className="w-16 h-16 object-contain" /> : (
-          <svg width="48" height="48" viewBox="0 0 64 64">
+      <div className="max-w-[1600px] mx-auto px-3 py-3 md:px-6 md:py-8">
+        <div className="flex items-center justify-center gap-2 md:gap-4 mb-3 md:mb-4">
+          {logo ? <img src={logo} alt="Logo" className="w-16 h-16 md:w-32 md:h-32 object-contain" /> : (
+          <svg width="48" height="48" viewBox="0 0 64 64" className="md:w-32 md:h-32">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
             <circle cx="32" cy="32" r="4" fill="#f4f6fb" />
@@ -93,22 +93,22 @@ export default function Home() {
             <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
           </svg>
           )}
-          <h1 className="text-base md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
+          <h1 className="text-base md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 mb-3">
           {BUTTONS.map((b) => (
             <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
-              <div className="h-14 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-2 text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
+              <div className="h-14 md:h-20 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-2 md:px-3 md:text-base text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
 
         <div className="rounded-xl overflow-hidden mb-3 shadow bg-white">
           {banner ? (
-            <img src={banner} alt="Banner" className="w-full h-24 object-cover" />
+            <img src={banner} alt="Banner" className="w-full h-24 md:h-[32vh] object-cover" />
           ) : (
-            <div className="h-24 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
+            <div className="h-24 md:h-[32vh] bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
         </div>
 
