@@ -27,6 +27,9 @@ export default function BranchDashboard() {
   const [searchDesc, setSearchDesc] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
+  const [searchName, setSearchName] = useState('');
+  const [searchYear, setSearchYear] = useState('');
+  const [logo, setLogo] = useState('');
   const [invoiceResults, setInvoiceResults] = useState<any[]>([]);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [searched, setSearched] = useState(false);
@@ -38,6 +41,7 @@ export default function BranchDashboard() {
 
   useEffect(() => {
     if (branchId) localStorage.setItem('anlurich-branch', branchId);
+    setLogo(localStorage.getItem('anlurich-index-logo') || '');
     const load = async () => {
       try {
         await syncOnline(branchId);
@@ -56,44 +60,44 @@ export default function BranchDashboard() {
   const monthlyTotal = branchSales.filter((s) => s.date?.startsWith(month)).reduce((sum, s) => sum + (s.total || 0), 0);
 
   const handleSearch = () => {
-    const yearInvoices = invoices.filter((i) => i.invoiceDate?.startsWith(year) || i.createdAt?.startsWith(year));
-    if (searchSupplier.trim()) {
-      setInvoiceResults(yearInvoices.filter((i) => i.supplierName?.toLowerCase().includes(searchSupplier.trim().toLowerCase())));
+    const yearInvoices = invoices.filter((i) => {
+      const invYear = String(i.invoiceDate || i.createdAt || '').slice(0, 4);
+      return !searchYear.trim() || invYear === searchYear.trim();
+    });
+    const qSupplier = searchSupplier.trim().toLowerCase();
+    const qPart = searchPart.trim().toLowerCase();
+    const qName = searchName.trim().toLowerCase();
+    const qDesc = searchDesc.trim().toLowerCase();
+    const qBarcode = searchBarcode.trim().toLowerCase();
+    const qBrand = searchBrand.trim().toLowerCase();
+
+    if (qSupplier) {
+      setInvoiceResults(yearInvoices.filter((i) => String(i.supplierName || '').toLowerCase().includes(qSupplier)));
     } else {
       setInvoiceResults([]);
     }
-    const q = {
-      part: searchPart.trim().toLowerCase(),
-      desc: searchDesc.trim().toLowerCase(),
-      barcode: searchBarcode.trim().toLowerCase(),
-      brand: searchBrand.trim().toLowerCase(),
-    };
-    if (q.part || q.desc || q.barcode || q.brand) {
-      const history: any[] = [];
-      yearInvoices.forEach((inv) => {
-        (inv.lines || []).forEach((line: any) => {
-          const ok =
-            (!q.part || line.partNumber?.toLowerCase().includes(q.part)) &&
-            (!q.desc || line.description?.toLowerCase().includes(q.desc)) &&
-            (!q.barcode || line.barcode?.toLowerCase().includes(q.barcode)) &&
-            (!q.brand || line.brand?.toLowerCase().includes(q.brand));
-          if (ok) {
-            history.push({
-              supplierName: inv.supplierName,
-              invoiceDate: inv.invoiceDate,
-              partNumber: line.partNumber,
-              brand: line.brand,
-              description: line.description,
-              qty: line.qty || line.quantity,
-              price: line.price || line.costPrice,
-            });
-          }
-        });
+
+    const history: any[] = [];
+    yearInvoices.forEach((inv) => {
+      (inv.lines || []).forEach((line: any) => {
+        const part = String(line.partNumber || '').toLowerCase();
+        const name = String(line.productName || line.name || line.description || '').toLowerCase();
+        const desc = String(line.description || '').toLowerCase();
+        const brand = String(line.brand || '').toLowerCase();
+        const barcode = String(line.barcode || '').toLowerCase();
+        const ok =
+          (!qPart || part.includes(qPart)) &&
+          (!qName || name.includes(qName) || desc.includes(qName)) &&
+          (!qDesc || desc.includes(qDesc) || name.includes(qDesc)) &&
+          (!qBarcode || barcode.includes(qBarcode)) &&
+          (!qBrand || brand.includes(qBrand)) &&
+          (!qSupplier || String(inv.supplierName || '').toLowerCase().includes(qSupplier));
+        if (ok && (qPart || qName || qDesc || qBarcode || qBrand)) {
+          history.push({ ...line, supplierName: inv.supplierName, invoiceNumber: inv.invoiceNumber, invoiceDate: inv.invoiceDate, invoiceId: inv.id });
+        }
       });
-      setPriceHistory(history);
-    } else {
-      setPriceHistory([]);
-    }
+    });
+    setPriceHistory(history);
     setSearched(true);
   };
 
@@ -118,42 +122,40 @@ export default function BranchDashboard() {
 
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
-          <svg width="36" height="36" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="16" fill="none" stroke="#1e3a5f" strokeWidth="2" />
-            <circle cx="20" cy="20" r="6" fill="#1e3a5f" />
-          </svg>
-          <div>
-            <div className="text-xl font-bold text-yellow-600">{branchName}</div>
-            <div className="text-xs text-gray-500">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
-          </div>
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
-        <div className="bg-gray-200 rounded-lg px-4 py-2 text-right">
-          <div className="text-lg font-bold">₱{monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-xs text-gray-500">Monthly Sales</div>
+        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(today)}</div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+        <div className="bg-gray-100 rounded-lg px-4 py-2 text-right">
+          <div className="text-lg font-bold">₱{totalMonthlyPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-xs text-gray-500">Total Monthly Purchases</div>
+        </div>
+        <div className="bg-blue-50 rounded-lg px-4 py-2 text-right">
+          <div className="text-lg font-bold">₱{totalDrPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-xs text-gray-500">Total DR Purchases</div>
+        </div>
+        <div className="bg-orange-50 rounded-lg px-4 py-2 text-right">
+          <div className="text-lg font-bold">₱{totalSiPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-xs text-gray-500">Total Sales Invoice Purchases</div>
         </div>
       </div>
-      <div className="border-b-2 border-black mb-4" />
+      <div className="border-b-2 border-black mb-3" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <div className="lg:col-span-2">
-          <div className="text-sm font-medium mb-2">DATE TODAY: {today}</div>
-          <div className="font-semibold mb-2">PRODUCT SEARCH</div>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Supplier Name" value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
-            <input className="border rounded px-2 py-1 text-sm w-28" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
-            <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
-            <input className="border rounded px-2 py-1 text-sm w-28" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
-          </div>
-          <div className="flex gap-2">
-            <input className="border rounded px-2 py-1 text-sm w-40" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
-            <button onClick={handleSearch} className="bg-blue-700 text-white px-4 py-1 rounded text-sm">Search</button>
-          </div>
-        </div>
-        <div className="bg-gray-100 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold">₱{dailyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-sm text-gray-500">Daily Sales</div>
+      <div className="mb-4">
+        <div className="font-semibold mb-2">PRODUCT SEARCH</div>
+        <div className="flex flex-nowrap gap-2 overflow-x-auto">
+          <input className="border rounded px-2 py-1 text-sm w-20 text-center" placeholder="Year" value={searchYear} onChange={(e) => setSearchYear(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-40" placeholder="Supplier" value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-32" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Part Name" value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-28" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-sm w-44" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
+          <button onClick={handleSearch} className="bg-blue-700 text-white px-4 py-1 rounded text-sm">Search</button>
         </div>
       </div>
 
@@ -192,36 +194,36 @@ export default function BranchDashboard() {
           )}
           {priceHistory.length > 0 && (
             <div className="bg-white rounded-lg shadow overflow-x-auto">
-              <div className="font-semibold p-3">Purchase Price History ({year})</div>
+              <div className="font-semibold p-3">Purchase Price History {searchYear.trim() || 'ALL YEARS'}</div>
               <table className="w-full text-sm">
                 <thead className="bg-blue-600 text-white">
                   <tr>
-                    <th className="text-left p-2">Date</th>
-                    <th className="text-left p-2">Supplier</th>
+                    <th className="text-left p-2">Supplier Invoice No.</th>
                     <th className="text-left p-2">Part Number</th>
                     <th className="text-left p-2">Brand</th>
-                    <th className="text-left p-2">Description</th>
-                    <th className="text-center p-2">Qty</th>
-                    <th className="text-right p-2">Price</th>
+                    <th className="text-right p-2">Cost Price</th>
+                    <th className="text-right p-2">Selling Price</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {priceHistory.map((h, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="p-2">{formatDate(h.invoiceDate)}</td>
-                      <td className="p-2">{h.supplierName}</td>
-                      <td className="p-2">{h.partNumber}</td>
-                      <td className="p-2">{h.brand || '—'}</td>
-                      <td className="p-2">{h.description}</td>
-                      <td className="p-2 text-center">{h.qty}</td>
-                      <td className="p-2 text-right">₱{h.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    </tr>
-                  ))}
+                  {priceHistory.map((h, i) => {
+                    const cost = Number(h.netPrice || h.price || h.costPrice || 0);
+                    const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
+                    return (
+                      <tr key={i} className="border-t">
+                        <td className="p-2">{h.invoiceNumber || '—'}</td>
+                        <td className="p-2">{h.partNumber}</td>
+                        <td className="p-2">{h.brand || '—'}</td>
+                        <td className="p-2 text-right">₱{cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-2 text-right">₱{selling.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
-          {invoiceResults.length === 0 && priceHistory.length === 0 && <p className="text-gray-500 text-sm">No results for {year}.</p>}
+          {invoiceResults.length === 0 && priceHistory.length === 0 && <p className="text-gray-500 text-sm">No results for {searchYear.trim() || 'ALL YEARS'}.</p>}
         </div>
       )}
 
