@@ -56,7 +56,7 @@ export default function Home() {
   useEffect(() => {
     loadAnnouncements();
     setBg(localStorage.getItem('anlurich-index-bg') || '#f4f6fb');
-    setBanner(localStorage.getItem('anlurich-index-banner') || '');
+    setBanner(localStorage.getItem('anlurich-index-banner') || '/banner.png');
     setLogo(localStorage.getItem('anlurich-index-logo') || '');
   }, []);
 
@@ -82,9 +82,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-gray-900" style={{ background: bg }}>
-      <div className="max-w-[1600px] mx-auto px-3 py-3 md:px-6 md:py-8">
+      <div className="max-w-[1600px] mx-auto px-2 py-2 md:px-6 md:py-8">
         <div className="flex items-center justify-center gap-2 md:gap-4 mb-3 md:mb-4">
-          {logo ? <img src={logo} alt="Logo" className="w-12 h-12 md:w-[154px] md:h-[154px] object-contain" /> : (
+          {logo ? <img src={logo} alt="Logo" className="w-10 h-10 md:w-[185px] md:h-[185px] object-contain" /> : (
           <svg width="48" height="48" viewBox="0 0 64 64" className="md:w-32 md:h-32">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
@@ -93,26 +93,26 @@ export default function Home() {
             <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
           </svg>
           )}
-          <h1 className="text-sm md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+          <h1 className="text-xs md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-1 md:gap-2 mb-2 md:mb-3">
           {BUTTONS.map((b) => (
             <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
-              <div className="h-14 md:h-20 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-2 md:px-3 md:text-base text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
+              <div className="h-11 md:h-20 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-1 py-1 md:px-3 md:text-base text-xs font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
 
-        <div className="rounded-xl overflow-hidden mb-3 shadow bg-white">
+        <div className="rounded-xl overflow-hidden mb-2 md:mb-3 shadow bg-white">
           {banner ? (
-            <img src={banner} alt="Banner" className="w-full h-20 md:h-[700px] md:max-w-[1600px] object-cover" />
+            <img src={banner} alt="Banner" className="w-full h-16 md:h-[500px] md:w-[1600px] md:max-w-full object-contain bg-white" />
           ) : (
-            <div className="h-20 md:h-[700px] md:max-w-[1600px] bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
+            <div className="h-16 md:h-[500px] md:max-w-[1600px] bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
         </div>
 
-        <div className="text-sm font-semibold mb-2">AI-powered platform by ANLU... 🥰</div>
+        <div className="text-xs md:text-sm font-semibold mb-2">AI-powered platform by ANLU... 🥰</div>
 
         <div className="bg-white text-gray-900 rounded-xl shadow p-3">
           <h2 className="font-semibold mb-2 text-sm">Announcements</h2>
