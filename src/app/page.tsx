@@ -82,10 +82,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-gray-900" style={{ background: bg }}>
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          {logo ? <img src={logo} alt="Logo" style={{ width: '800px', height: '800px' }} className="object-contain" /> : (
-          <svg width="64" height="64" viewBox="0 0 64 64">
+      <div className="max-w-6xl mx-auto px-3 py-3">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          {logo ? <img src={logo} alt="Logo" className="w-16 h-16 object-contain" /> : (
+          <svg width="48" height="48" viewBox="0 0 64 64">
             <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
             <circle cx="32" cy="32" r="10" fill="#111827" />
             <circle cx="32" cy="32" r="4" fill="#f4f6fb" />
@@ -93,36 +93,34 @@ export default function Home() {
             <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
           </svg>
           )}
-          <h1 className="text-2xl md:text-4xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
+          <h1 className="text-base md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM (APIS)</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 mb-3">
           {BUTTONS.map((b) => (
             <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
-              <div className="h-20 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-3 py-4 font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
+              <div className="h-14 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-2 text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
 
-        <div className="rounded-2xl overflow-hidden mb-5 shadow bg-white">
+        <div className="rounded-xl overflow-hidden mb-3 shadow bg-white">
           {banner ? (
-            <img src={banner} alt="Banner" className="w-full h-48 md:h-64 object-cover" />
+            <img src={banner} alt="Banner" className="w-full h-24 object-cover" />
           ) : (
-            <div className="h-48 md:h-64 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
+            <div className="h-24 bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
         </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-lg font-semibold">AI-powered platform by ANLU... 🥰🥰🥰</div>
-        </div>
+        <div className="text-sm font-semibold mb-2">AI-powered platform by ANLU... 🥰</div>
 
-        <div className="bg-white text-gray-900 rounded-2xl shadow p-5">
-          <h2 className="font-semibold mb-3">Announcements</h2>
+        <div className="bg-white text-gray-900 rounded-xl shadow p-3">
+          <h2 className="font-semibold mb-2 text-sm">Announcements</h2>
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-sm">No announcements</p>
           ) : (
-            announcements.slice(0, 5).map((a) => (
-              <div key={a.id} className="border-t py-2 text-sm">
+            announcements.slice(0, 1).map((a) => (
+              <div key={a.id} className="text-sm">
                 <div className="font-medium text-blue-700">{a.author}</div>
                 <div>{a.text}</div>
               </div>
