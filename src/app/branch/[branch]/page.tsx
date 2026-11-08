@@ -58,6 +58,10 @@ export default function BranchDashboard() {
   const branchSales = sales.filter((s) => !s.branch || s.branch === branchId);
   const dailyTotal = branchSales.filter((s) => s.date?.startsWith(today)).reduce((sum, s) => sum + (s.total || 0), 0);
   const monthlyTotal = branchSales.filter((s) => s.date?.startsWith(month)).reduce((sum, s) => sum + (s.total || 0), 0);
+  const monthInvoices = invoices.filter((i) => String(i.invoiceDate || i.createdAt || '').startsWith(month));
+  const totalMonthlyPurchases = monthInvoices.reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+  const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+  const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
 
   const handleSearch = () => {
     const yearInvoices = invoices.filter((i) => {
