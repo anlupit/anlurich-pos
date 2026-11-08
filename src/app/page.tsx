@@ -81,8 +81,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-gray-900" style={{ background: bg }}>
-      <div className="max-w-[1600px] mx-auto px-2 py-1 md:px-4 md:py-2">
+    <div className="h-screen overflow-hidden text-gray-900" style={{ background: bg }}>
+      <div className="h-full max-w-[1600px] mx-auto px-2 pt-1 pb-2 md:px-4 flex flex-col">
         <div className="flex items-center justify-center gap-2 md:gap-3 mb-1">
           {logo ? <img src={logo} alt="Logo" className="w-10 h-10 md:w-[185px] md:h-[185px] object-contain" /> : (
           <svg width="48" height="48" viewBox="0 0 64 64" className="md:w-32 md:h-32">
@@ -96,25 +96,25 @@ export default function Home() {
           <h1 className="text-xs md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-1 mb-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-1 mb-2 justify-items-center">
           {BUTTONS.map((b) => (
-            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center">
-              <div className="h-9 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-1 py-0 md:px-3 md:text-base text-xs font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
+            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center w-4/5">
+              <div className="h-9 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-1 py-0 md:px-2 text-[11px] md:text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
             </button>
           ))}
         </div>
 
-        <div className="rounded-xl overflow-hidden mb-2 shadow bg-white">
+        <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0">
           {banner ? (
-            <img src={banner} alt="Banner" className="w-full h-14 md:h-[280px] md:max-w-[1600px] object-contain bg-white" />
+            <img src={banner} alt="Banner" className="w-full h-full object-cover object-center" />
           ) : (
-            <div className="h-14 md:h-[280px] md:max-w-[1600px] bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
+            <div className="w-full h-full bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
         </div>
 
-        <div className="text-xs md:text-base font-semibold mb-2">AI-powered platform by ANLU... 🥰</div>
+        <div className="text-xs md:text-base font-semibold mb-2 text-center">AI-powered platform by ANLU... 🥰</div>
 
-        <div className="bg-white text-gray-900 rounded-xl shadow p-4">
+        <div className="bg-white text-gray-900 rounded-xl shadow p-4 mt-auto">
           <h2 className="font-semibold mb-2 text-base md:text-lg">Announcements</h2>
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-base">No announcements</p>
