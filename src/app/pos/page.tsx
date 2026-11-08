@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
 import { loadInvoices, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline } from '../../lib/branchData';
