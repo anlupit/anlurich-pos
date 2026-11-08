@@ -117,6 +117,8 @@ export default function SearchPurchasePage() {
     reader.onload = () => setViewing({ ...viewing, invoiceImage: reader.result });
     reader.readAsDataURL(file);
   };
+
+  const saveEdit = () => {
     if (!viewing) return;
     const branch = currentBranch();
     const all = loadInvoices(branch);
