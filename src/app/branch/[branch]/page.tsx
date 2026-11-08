@@ -133,10 +133,14 @@ export default function BranchDashboard() {
         </div>
         <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(today)}</div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+        <div className="bg-green-50 rounded-lg px-4 py-2 text-right">
+          <div className="text-lg font-bold">₱{dailyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-xs text-gray-500">Daily Sales</div>
+        </div>
         <div className="bg-gray-100 rounded-lg px-4 py-2 text-right">
-          <div className="text-lg font-bold">₱{totalMonthlyPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-xs text-gray-500">Total Monthly Purchases</div>
+          <div className="text-lg font-bold">₱{monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-xs text-gray-500">Monthly Sales</div>
         </div>
         <div className="bg-blue-50 rounded-lg px-4 py-2 text-right">
           <div className="text-lg font-bold">₱{totalDrPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -151,15 +155,15 @@ export default function BranchDashboard() {
 
       <div className="mb-4">
         <div className="font-semibold mb-2">PRODUCT SEARCH</div>
-        <div className="flex flex-nowrap gap-2 overflow-x-auto">
-          <input className="border rounded px-2 py-1 text-sm w-20 text-center" placeholder="Year" value={searchYear} onChange={(e) => setSearchYear(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-40" placeholder="Supplier" value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-32" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-36" placeholder="Part Name" value={searchName} onChange={(e) => setSearchName(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-28" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-sm w-44" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
-          <button onClick={handleSearch} className="bg-blue-700 text-white px-4 py-1 rounded text-sm">Search</button>
+        <div className="grid grid-cols-8 gap-1">
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Year" value={searchYear} onChange={(e) => setSearchYear(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Supplier" value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Part Name" value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
+          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
+          <button onClick={handleSearch} className="bg-blue-700 text-white px-2 py-1 rounded text-[18px]">Search</button>
         </div>
       </div>
 
@@ -168,7 +172,7 @@ export default function BranchDashboard() {
           {invoiceResults.length > 0 && (
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <div className="font-semibold p-3">Supplier Invoices ({year})</div>
-              <table className="w-full text-sm">
+              <table className="w-full text-[18px]">
                 <thead className="bg-teal-500 text-white">
                   <tr>
                     <th className="text-left p-2">Supplier Name</th>
@@ -197,16 +201,18 @@ export default function BranchDashboard() {
             </div>
           )}
           {priceHistory.length > 0 && (
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow">
               <div className="font-semibold p-3">Purchase Price History {searchYear.trim() || 'ALL YEARS'}</div>
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-[18px]">
                 <thead className="bg-blue-600 text-white">
                   <tr>
-                    <th className="text-left p-2">Supplier Invoice No.</th>
-                    <th className="text-left p-2">Part Number</th>
-                    <th className="text-left p-2">Brand</th>
-                    <th className="text-right p-2">Cost Price</th>
-                    <th className="text-right p-2">Selling Price</th>
+                    <th className="text-left p-2 w-[15%]">Invoice No.</th>
+                    <th className="text-left p-2 w-[15%]">Part Number</th>
+                    <th className="text-left p-2 w-[11%]">Brand</th>
+                    <th className="text-left p-2 w-[37%]">Description</th>
+                    <th className="text-center p-2 w-[4%]">Qty</th>
+                    <th className="text-right p-2 w-[9%]">Cost Price</th>
+                    <th className="text-right p-2 w-[9%]">Selling Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -215,9 +221,11 @@ export default function BranchDashboard() {
                     const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
                     return (
                       <tr key={i} className="border-t">
-                        <td className="p-2">{h.invoiceNumber || '—'}</td>
-                        <td className="p-2">{h.partNumber}</td>
-                        <td className="p-2">{h.brand || '—'}</td>
+                        <td className="p-2 truncate">{h.invoiceNumber || '—'}</td>
+                        <td className="p-2 truncate">{h.partNumber}</td>
+                        <td className="p-2 truncate">{h.brand || '—'}</td>
+                        <td className="p-2 truncate">{h.description || h.name || '—'}</td>
+                        <td className="p-2 text-center">{h.qty || h.quantity || '—'}</td>
                         <td className="p-2 text-right">₱{cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="p-2 text-right">₱{selling.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                       </tr>
@@ -233,7 +241,7 @@ export default function BranchDashboard() {
 
       <div className="font-semibold mb-2">LOW STOCK Items</div>
       <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-[18px]">
           <thead className="bg-teal-500 text-white">
             <tr>
               <th className="text-left p-2">Part Number</th>
