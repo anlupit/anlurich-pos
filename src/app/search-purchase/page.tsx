@@ -13,6 +13,7 @@ export default function SearchPurchasePage() {
   const [results, setResults] = useState<any[]>([]);
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
+  const [largeImage, setLargeImage] = useState('');
 
   useEffect(() => {
     setInvoices(loadInvoices());
@@ -68,6 +69,7 @@ export default function SearchPurchasePage() {
             description: line.description,
             qty: line.qty || line.quantity,
             price: line.price || line.costPrice,
+            invoiceImage: inv.invoiceImage,
           });
         });
       } else if (qSupplier || qInv) {
@@ -83,6 +85,7 @@ export default function SearchPurchasePage() {
             description: line.description,
             qty: line.qty || line.quantity,
             price: line.price || line.costPrice,
+            invoiceImage: inv.invoiceImage,
           });
         });
       }
@@ -108,7 +111,12 @@ export default function SearchPurchasePage() {
     setViewing({ ...viewing, lines, subtotal, grandTotal });
   };
 
-  const saveEdit = () => {
+  const attachImage = (file?: File) => {
+    if (!file || !viewing) return;
+    const reader = new FileReader();
+    reader.onload = () => setViewing({ ...viewing, invoiceImage: reader.result });
+    reader.readAsDataURL(file);
+  };
     if (!viewing) return;
     const branch = currentBranch();
     const all = loadInvoices(branch);
@@ -187,6 +195,7 @@ export default function SearchPurchasePage() {
             <thead className="bg-teal-500 text-white">
               <tr>
                 <th className="text-left p-2">Date</th>
+                <th className="text-left p-2">Photo</th>
                 <th className="text-left p-2">Supplier</th>
                 <th className="text-left p-2">Invoice No.</th>
                 <th className="text-left p-2">Part Number</th>
@@ -202,6 +211,11 @@ export default function SearchPurchasePage() {
               {results.map((r, i) => (
                 <tr key={i} className="border-t">
                   <td className="p-2">{formatDate(r.invoiceDate)}</td>
+                  <td className="p-2">
+                    {r.invoiceImage ? (
+                      <img src={r.invoiceImage} alt="Invoice" className="w-12 h-12 object-cover rounded border cursor-pointer" onClick={() => setLargeImage(r.invoiceImage)} />
+                    ) : '—'}
+                  </td>
                   <td className="p-2">{r.supplierName}</td>
                   <td className="p-2 font-medium">{r.invoiceNumber}</td>
                   <td className="p-2">{r.partNumber || '—'}</td>
@@ -215,9 +229,15 @@ export default function SearchPurchasePage() {
                   </td>
                 </tr>
               ))}
-              {results.length === 0 && <tr><td colSpan={10} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
+              {results.length === 0 && <tr><td colSpan={11} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {largeImage && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setLargeImage('')}>
+          <img src={largeImage} alt="Invoice large" className="max-w-full max-h-[90vh] rounded bg-white" />
         </div>
       )}
 
@@ -244,6 +264,20 @@ export default function SearchPurchasePage() {
               </tbody>
             </table>
             <div className="text-right font-bold mb-3">Total: ₱{viewing.grandTotal?.toLocaleString()}</div>
+            <div className="mb-3">
+              <div className="text-sm font-medium mb-1">Invoice Image</div>
+              <div className="flex flex-wrap gap-2">
+                <label className="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
+                  Browse File
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => attachImage(e.target.files?.[0])} />
+                </label>
+                <label className="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
+                  Back Camera
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => attachImage(e.target.files?.[0])} />
+                </label>
+              </div>
+              {viewing.invoiceImage && <img src={viewing.invoiceImage} alt="Invoice" className="mt-2 max-h-48 rounded border" />}
+            </div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>

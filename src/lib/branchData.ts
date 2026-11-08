@@ -285,6 +285,15 @@ export function saveQuotation(quotation: any) {
   pushCloud(key, [...existing, quotation]);
 }
 
+export function updateQuotation(quotation: any) {
+  const b = quotation.branch || currentBranch() || 'unknown';
+  const key = `anlurich-quotations-${b}`;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const updated = existing.map((q: any) => q.id === quotation.id || q.quotationNo === quotation.quotationNo ? { ...q, ...quotation } : q);
+  localStorage.setItem(key, JSON.stringify(updated));
+  pushCloud(key, updated);
+}
+
 // Suppliers — private per branch
 export function loadBranchSuppliers(branch?: string): any[] {
   if (typeof window === 'undefined') return [];

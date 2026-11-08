@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { saveQuotation, loadQuotations, deleteQuotationAt, currentBranch, formatDate } from '../../lib/branchData';
+import { saveQuotation, updateQuotation, loadQuotations, deleteQuotation, currentBranch, formatDate } from '../../lib/branchData';
 
 type QuoteLine = {
   id: string;
@@ -43,6 +43,7 @@ export default function QuotationPage() {
   const [printSnap, setPrintSnap] = useState<any>(null);
   const [branchHeader, setBranchHeader] = useState({ name: 'APIS', location: '' });
   const [hasLabor, setHasLabor] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [lines, setLines] = useState<QuoteLine[]>([
     { id: '1', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 },
   ]);
@@ -108,6 +109,7 @@ export default function QuotationPage() {
   };
 
   const openQuotation = (q: any) => {
+    setEditingId(q.id || q.quotationNo);
     setCustomerName(q.customerName || '');
     setCustomerPhone(q.customerPhone || '');
     setQuotationNo(q.quotationNo || '');
@@ -117,8 +119,10 @@ export default function QuotationPage() {
     setYearModel(q.yearModel || '');
     setChasisNo(q.chasisNo || '');
     setNotes(q.notes || '');
-    if (q.lines?.length) setLines(q.lines);
+    if (q.lines?.some((l: any) => Number(l.laborPrice) > 0)) setHasLabor(true);
+    if (q.lines?.length) setLines(q.lines.map((l: any) => ({ laborPrice: 0, ...l })));
     setShowSearch(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const nextQuotationNo = () => {
@@ -143,17 +147,18 @@ export default function QuotationPage() {
     setYearModel('');
     setChasisNo('');
     setNotes('');
-    setLines([{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }]);
+    setLines([{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 }]);
     setQuotationNo(nextQuotationNo());
+    setEditingId(null);
   };
 
   const handleSave = () => {
     const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
     if (valid.length === 0) return alert('Add at least one item');
-    const taken = loadQuotations().some((q) => String(q.quotationNo) === quotationNo);
+    const taken = !editingId && loadQuotations().some((q) => String(q.quotationNo) === quotationNo);
     const uniqueNo = taken ? nextQuotationNo() : quotationNo;
     const snap = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      id: editingId || Date.now().toString() + Math.random().toString(36).slice(2, 6),
       quotationNo: uniqueNo,
       customerName,
       customerPhone,
@@ -168,10 +173,31 @@ export default function QuotationPage() {
       branch: currentBranch(),
       date: new Date().toISOString(),
     };
-    saveQuotation(snap);
+    if (editingId) updateQuotation(snap);
+    else saveQuotation(snap);
     setPrintSnap(snap);
     resetForm();
     setShowPrintAsk(true);
+  };
+
+  const printCurrent = () => {
+    const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
+    if (valid.length === 0) return alert('Add at least one item');
+    setPrintSnap({
+      quotationNo,
+      customerName,
+      customerPhone,
+      plateNo,
+      carMake,
+      carModel,
+      yearModel,
+      chasisNo,
+      notes,
+      lines: valid,
+      grandTotal,
+      date: new Date().toISOString(),
+    });
+    setTimeout(doPrint, 100);
   };
 
   const doPrint = () => {
@@ -230,7 +256,7 @@ export default function QuotationPage() {
                       <td className="p-2">{q.plateNo || '—'}</td>
                       <td className="p-2 text-right">₱{q.grandTotal?.toLocaleString()}</td>
                       <td className="p-2 text-center whitespace-nowrap">
-                        <button onClick={() => openQuotation(q)} className="text-blue-600 text-xs font-medium mr-2">Open</button>
+                        <button onClick={() => openQuotation(q)} className="text-blue-600 text-xs font-medium mr-2">Edit</button>
                         <button onClick={() => deleteQuote(q)} className="text-red-600 text-xs font-medium">Delete</button>
                       </td>
                     </tr>
@@ -298,7 +324,8 @@ export default function QuotationPage() {
             <span>Grand Total</span>
             <span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
-          <button onClick={handleSave} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Save Quotation</button>
+          <button onClick={handleSave} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold">{editingId ? 'Update Quotation' : 'Save Quotation'}</button>
+          <button onClick={printCurrent} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Print A5</button>
         </div>
       </div>
 

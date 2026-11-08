@@ -226,8 +226,17 @@ export default function SupplierReceiptPage() {
       {/* Totals + Upload */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl shadow p-4">
-          <label className="block text-sm font-medium mb-2">Upload Image</label>
-          <input type="file" accept="image/*" onChange={handleImage} className="text-sm" />
+          <label className="block text-sm font-medium mb-2">Invoice Image</label>
+          <div className="flex flex-wrap gap-2">
+            <label className="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
+              Browse File
+              <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
+            </label>
+            <label className="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
+              Back Camera
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImage} />
+            </label>
+          </div>
           {invoiceImage && <img src={invoiceImage} alt="Invoice" className="mt-2 max-h-32 rounded border" />}
         </div>
         <div className="bg-white rounded-xl shadow p-4">
