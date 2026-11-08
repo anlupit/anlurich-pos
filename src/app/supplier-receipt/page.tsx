@@ -186,8 +186,7 @@ export default function SupplierReceiptPage() {
             <option>Sales Invoice</option>
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
+      </div>
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-2 mb-4">
