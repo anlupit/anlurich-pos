@@ -96,10 +96,10 @@ export default function Home() {
           <h1 className="text-xs md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-[10ch] gap-y-2 mb-2 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-2 gap-y-2 mb-2 justify-items-center">
           {BUTTONS.map((b) => (
-            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center w-[68%]">
-              <div className="h-9 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-1 py-0 md:px-2 text-[11px] md:text-sm font-semibold shadow flex items-center justify-center text-center">{b.name}</div>
+            <button key={b.id} onClick={() => selectBranch(b.id)} className="text-center w-[85%]">
+              <div className="h-9 md:h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl px-2 py-0 md:px-3 text-[11px] md:text-sm font-semibold shadow flex items-center justify-center text-center whitespace-nowrap">{b.name}</div>
             </button>
           ))}
         </div>
