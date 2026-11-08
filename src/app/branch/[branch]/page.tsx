@@ -246,7 +246,6 @@ export default function BranchDashboard() {
             <tr>
               <th className="text-left p-2">Part Number</th>
               <th className="text-center p-2">Qty</th>
-              <th className="text-center p-2">Buffer</th>
               <th className="text-left p-2">Brand</th>
               <th className="text-left p-2">Product Description</th>
             </tr>
@@ -256,7 +255,6 @@ export default function BranchDashboard() {
               <tr key={p.id} className="border-t">
                 <td className="p-2">{p.partNumber}</td>
                 <td className="p-2 text-center">{p.quantity ?? 0}</td>
-                <td className="p-2 text-center">{p.reorderPointQty ?? p.bufferOrderQty ?? 0}</td>
                 <td className="p-2">{p.brand || '—'}</td>
                 <td className="p-2">{p.description || p.name}</td>
               </tr>

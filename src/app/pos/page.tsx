@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
 import { loadInvoices, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline } from '../../lib/branchData';
 
@@ -16,6 +16,8 @@ type Line = {
 };
 
 export default function POSPage() {
+  const pathname = usePathname();
+  const noInvoice = pathname === '/no-invoice';
   const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -72,9 +74,16 @@ export default function POSPage() {
       } catch {
         setSaleDateTime(new Date().toLocaleString());
       }
+      if (noInvoice) {
+        const d = new Date();
+        const prefix = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getFullYear()).slice(-2)}`;
+        const used = loadSales().filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
+        const next = used.reduce((max, s) => Math.max(max, parseInt(String(s.invoiceNo || '').split('-')[1] || '0', 10) || 0), 0) + 1;
+        setInvoiceNo(`${prefix}-${String(next).padStart(2, '0')}`);
+      }
     };
     load();
-  }, []);
+  }, [noInvoice]);
 
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -475,8 +484,8 @@ export default function POSPage() {
     <div className="p-4">
       <div className="print:hidden">
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
-        <h1 className="text-xl font-bold text-yellow-600">Point of Sale</h1>
-        <span className="text-3xl font-black tracking-wide">WALK-IN Customer Invoicing</span>
+        <h1 className="text-xl font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
+        <span className="text-3xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
       </div>
       <div className="text-xs text-gray-500 mb-4 print:hidden">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
 
@@ -494,6 +503,7 @@ export default function POSPage() {
           </select>
           <input className="border rounded px-2 py-2 mt-2 block text-left" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
         </div>
+        {!noInvoice && (
         <div className="md:col-span-4">
           <label className="block text-[18px] font-medium mb-1">{paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'}</label>
           <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
@@ -504,13 +514,16 @@ export default function POSPage() {
             </>
           )}
         </div>
+        )}
+        {!noInvoice && (
         <div className="md:col-span-2">
           <label className="block text-[18px] font-medium mb-1">Contact Number</label>
           <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
         </div>
+        )}
         <div className="md:col-span-2">
           <label className="block text-[18px] font-medium mb-1">Sales Invoice No.</label>
-          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
+          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} readOnly={noInvoice} />
         </div>
         <div className="md:col-span-2 text-right">
           <label className="block text-[18px] font-medium mb-1">Date & Time</label>
@@ -522,6 +535,7 @@ export default function POSPage() {
         </div>
       </div>
 
+      {!noInvoice && (
       <div className="bg-white rounded-xl shadow p-3 mb-4 flex gap-2 items-center">
         <button type="button" onClick={checkPoints} className="bg-purple-600 text-white px-5 py-2 rounded-lg font-medium">Check Points</button>
         {pointsInfo && (
@@ -529,6 +543,7 @@ export default function POSPage() {
         )}
         {redeemPts > 0 && <span className="text-sm text-red-600">₱{redeemPts} in Discount</span>}
       </div>
+      )}
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">

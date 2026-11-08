@@ -15,6 +15,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     title: 'Sales',
     items: [
       { href: '/pos', label: 'POS System' },
+      { href: '/no-invoice', label: 'No Invoice' },
       { href: '/search-invoice', label: 'Search Sales Invoice' },
       { href: '/quotation', label: 'Quotation' },
       { href: '/unpaid', label: 'Unpaid Invoice' },
@@ -42,7 +43,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
 };
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/search-invoice', '/quotation', '/unpaid', '/download', '/print'].includes(pathname)) return 'sales';
+  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print'].includes(pathname)) return 'sales';
   if (['/products-menu', '/product-catalog', '/products'].includes(pathname)) return 'products';
   if (['/accounting', '/add-supplier', '/supplier-receipt', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
