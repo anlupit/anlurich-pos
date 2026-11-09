@@ -49,7 +49,8 @@ export default function ProductsPage() {
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setForm((prev) => ({ ...prev, photoUrl: await compressImage(file) }));
+    const photoUrl = await compressImage(file);
+    setForm((prev) => ({ ...prev, photoUrl }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
