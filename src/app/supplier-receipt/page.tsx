@@ -81,6 +81,7 @@ export default function SupplierReceiptPage() {
   };
 
   const supplierMatches = suppliers.filter((s) => supplierName.trim() && s.name.toLowerCase().includes(supplierName.trim().toLowerCase())).slice(0, 8);
+  const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
   const netPrice = (l: Line) => l.grossPrice * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100);
