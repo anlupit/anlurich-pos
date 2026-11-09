@@ -30,6 +30,7 @@ export default function SupplierReceiptPage() {
   const [discount1, setDiscount1] = useState('');
   const [discount2, setDiscount2] = useState('');
   const [discount3, setDiscount3] = useState('');
+  const [saving, setSaving] = useState(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: '', address: '', tin: '', contact: '', phone: '', email: '' });
   const [lines, setLines] = useState<Line[]>([
