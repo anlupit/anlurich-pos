@@ -22,6 +22,7 @@ type Line = {
 export default function SupplierReceiptPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierName, setSupplierName] = useState('');
+  const [supplierOpen, setSupplierOpen] = useState(false);
   const [terms, setTerms] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -80,7 +81,7 @@ export default function SupplierReceiptPage() {
     }));
   };
 
-  const supplierMatches = suppliers.filter((s) => supplierName.trim() && s.name.toLowerCase().includes(supplierName.trim().toLowerCase())).slice(0, 8);
+  const supplierChoices = suppliers.filter((s) => !supplierName.trim() || s.name.toLowerCase().includes(supplierName.trim().toLowerCase())).slice(0, 10);
   const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
@@ -186,12 +187,11 @@ export default function SupplierReceiptPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[20ch] flex-1 relative">
             <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
-            <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
-            <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
-            {supplierOpen && supplierMatches.length > 0 && (
+            <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => setSupplierOpen(true)} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
+            {supplierOpen && supplierChoices.length > 0 && (
               <div className="absolute z-20 left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
-                {supplierMatches.map((s) => (
-                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onClick={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
+                {supplierChoices.map((s) => (
+                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
                 ))}
               </div>
             )}
