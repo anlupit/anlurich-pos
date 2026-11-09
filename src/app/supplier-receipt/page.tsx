@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { compressImage } from '../../lib/compressImage';
 import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline } from '../../lib/branchData';
-import { upsertCatalogFromInvoice } from '../../lib/products';
+import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
 
 type Supplier = { id: string; name: string; address?: string; tin?: string; contact?: string; phone?: string; email?: string };
 
@@ -35,9 +35,11 @@ export default function SupplierReceiptPage() {
   const [lines, setLines] = useState<Line[]>([
     { id: '1', barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
   ]);
+  const [catalog, setCatalog] = useState<any[]>([]);
 
   useEffect(() => {
     syncOnline().then(() => setSuppliers(loadBranchSuppliers())).catch(() => setSuppliers(loadBranchSuppliers()));
+    loadProductsCloud().then(setCatalog).catch(() => {});
   }, []);
 
   const addLine = () => {
@@ -55,7 +57,21 @@ export default function SupplierReceiptPage() {
   };
 
   const updateLine = (id: string, field: keyof Line, value: string | number) => {
-    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+    setLines((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const next = { ...l, [field]: value };
+      if (field === 'barcode') {
+        const code = String(value || '').trim().toLowerCase();
+        const product = catalog.find((p) => String(p.barcode || '').trim().toLowerCase() === code);
+        if (product) {
+          next.brand = product.brand || '';
+          next.partNumber = product.partNumber || '';
+          next.productName = product.name || '';
+          next.description = product.description || '';
+        }
+      }
+      return next;
+    }));
   };
 
   const d1 = parseFloat(discount1) || 0;
