@@ -100,7 +100,11 @@ export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
   [...local, ...cloud].forEach((inv) => {
     const k = String(inv.id || `${inv.supplierName}-${inv.invoiceNumber || inv.invoiceNo}`);
     const prev = byKey.get(k);
-    if (!prev || String(inv.createdAt || '') > String(prev.createdAt || '')) byKey.set(k, inv);
+    const nextStamp = String(inv.updatedAt || inv.createdAt || '');
+    const prevStamp = String(prev?.updatedAt || prev?.createdAt || '');
+    const nextHasPhoto = Boolean(inv.invoiceImage);
+    const prevHasPhoto = Boolean(prev?.invoiceImage);
+    if (!prev || nextStamp > prevStamp || (nextStamp === prevStamp && nextHasPhoto && !prevHasPhoto)) byKey.set(k, inv);
   });
   const merged = Array.from(byKey.values());
   localStorage.setItem(key, JSON.stringify(merged));

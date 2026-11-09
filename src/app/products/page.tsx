@@ -53,7 +53,7 @@ export default function ProductsPage() {
     setForm((prev) => ({ ...prev, photoUrl }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.partNumber.trim() || !form.name.trim()) {
       alert('Part Number and Product Name are required');
@@ -88,7 +88,7 @@ export default function ProductsPage() {
     }
 
     setProducts(updated);
-    saveProducts(updated);
+    try { await saveProducts(updated); } catch { return alert('Product photo was NOT saved. Supabase is not connected.'); }
     // Save qty/location to this branch's private inventory
     if (productData.quantity != null || productData.location) {
       setStockQty(productData.id, productData.quantity ?? 0, productData.location);

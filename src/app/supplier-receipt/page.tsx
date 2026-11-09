@@ -62,10 +62,12 @@ export default function SupplierReceiptPage() {
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
   const netPrice = (l: Line) => l.grossPrice * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100);
-  const lineTotal = (l: Line) => l.qty * netPrice(l);
-  const grandTotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
-  const netOfVAT = grandTotal / 1.12;
-  const vat = grandTotal - netOfVAT;
+  const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const round2 = (n: number) => Math.round((n || 0) * 100) / 100;
+  const lineTotal = (l: Line) => round2(l.qty * netPrice(l));
+  const grandTotal = round2(lines.reduce((sum, l) => sum + lineTotal(l), 0));
+  const netOfVAT = round2(grandTotal / 1.12);
+  const vat = round2(grandTotal - netOfVAT);
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,38 +159,40 @@ export default function SupplierReceiptPage() {
       </div>
 
       {/* Header fields */}
-      <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Supplier Name</label>
-          <input className="border rounded px-2 py-1" style={{ width: '30ch' }} list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
-          <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Terms</label>
-          <select className="border rounded px-2 py-1" style={{ width: '10ch' }} value={terms} onChange={(e) => setTerms(e.target.value)}>
-            <option value="">—</option>
-            <option>COD</option>
-            <option>30 days</option>
-            <option>60 days</option>
-            <option>90 days</option>
-            <option>120 days</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Invoice Date</label>
-          <input type="date" className="w-full border rounded px-2 py-1" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Invoice Number</label>
-          <input className="w-full border rounded px-2 py-1" maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
-          <select className="w-full border rounded px-2 py-1" value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
-            <option value="">—</option>
-            <option>DR Invoice</option>
-            <option>Sales Invoice</option>
-          </select>
+      <div className="bg-white rounded-xl shadow p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[20ch] flex-1">
+            <label className="block text-xs font-medium mb-1 text-center">Supplier Name</label>
+            <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+            <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Terms</label>
+            <select className="border rounded px-2 py-1" style={{ width: '12ch' }} value={terms} onChange={(e) => setTerms(e.target.value)}>
+              <option value="">—</option>
+              <option>COD</option>
+              <option>30 days</option>
+              <option>60 days</option>
+              <option>90 days</option>
+              <option>120 days</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Invoice Date</label>
+            <input type="date" className="border rounded px-2 py-1" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Invoice Number</label>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
+            <select className="border rounded px-2 py-1" style={{ width: '16ch' }} value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
+              <option value="">—</option>
+              <option>DR Invoice</option>
+              <option>Sales Invoice</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -222,7 +226,7 @@ export default function SupplierReceiptPage() {
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
                 <td className="p-1 text-center font-medium">{netPrice(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                <td className="p-1 text-center font-medium">{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className="p-1 text-center font-medium">{money(lineTotal(line))}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">X</button>
                 </td>
@@ -250,9 +254,9 @@ export default function SupplierReceiptPage() {
           {invoiceImage && <img src={invoiceImage} alt="Invoice" className="mt-2 max-h-32 rounded border" />}
         </div>
         <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex justify-between py-2 font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between py-2 font-bold text-lg"><span>Grand Total</span><span>{money(grandTotal)}</span></div>
+          <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>{money(netOfVAT)}</span></div>
+          <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>{money(vat)}</span></div>
           <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">SAVE INVOICE</button>
         </div>
       </div>

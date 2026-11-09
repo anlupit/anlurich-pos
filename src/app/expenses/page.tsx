@@ -66,12 +66,13 @@ async function loadExpenses(branch: string): Promise<Expense[]> {
 
 async function saveExpenses(branch: string, rows: Expense[]) {
   const key = `anlurich-expenses-${branch}`;
-  localStorage.setItem(key, JSON.stringify(rows));
-  await fetch('/api/data', {
+  const res = await fetch('/api/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, value: JSON.stringify(rows) }),
   });
+  if (!res.ok) throw new Error('Supabase save failed');
+  localStorage.setItem(key, JSON.stringify(rows));
 }
 
 export default function ExpensesPage() {
@@ -123,7 +124,7 @@ export default function ExpensesPage() {
     };
     const next = editing ? rows.map((r) => (r.id === editing ? item : r)) : [item, ...rows];
     setRows(next);
-    await saveExpenses(target, next);
+    try { await saveExpenses(target, next); } catch { return alert('Expense photo was NOT saved. Supabase is not connected.'); }
     setEditing(null);
     setForm({ date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], payee: '', reference: '', amount: '', vat: '', notes: '', image: '' });
   };

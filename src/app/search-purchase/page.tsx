@@ -129,15 +129,22 @@ export default function SearchPurchasePage() {
     setViewing({ ...viewing, invoiceImage: await compressImage(file) });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!viewing) return;
-    const branch = currentBranch();
-    const all = loadInvoices(branch);
-    const updated = all.map((inv) => (inv.id === viewing.id ? viewing : inv));
-    updateInvoices(branch, updated);
+    const branch = currentBranch() || 'unknown';
+    const all = await loadInvoicesCloud(branch);
+    const next = { ...viewing, updatedAt: new Date().toISOString() };
+    const updated = all.some((inv) => inv.id === next.id)
+      ? all.map((inv) => (inv.id === next.id ? next : inv))
+      : [...all, next];
+    try {
+      await updateInvoices(branch, updated);
+    } catch {
+      return alert('Photo and changes were NOT saved. Supabase is not connected.');
+    }
     setInvoices(updated);
     setViewing(null);
-    alert('Invoice updated');
+    alert('Invoice and photo saved to Supabase');
     handleSearch();
   };
 

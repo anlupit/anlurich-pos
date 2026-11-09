@@ -22,8 +22,7 @@ export default function ProductCatalogPage() {
     loadProductsCloud().then(setProducts).catch(() => setProducts(loadProducts()));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveProduct = async () => {
     if (!form.partNumber.trim() || !form.name.trim()) return alert('Part Number and Name are required');
     const data: Product = {
       id: editingId || Date.now().toString(),
@@ -213,10 +212,10 @@ export default function ProductCatalogPage() {
           </label>
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
         </div>
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
           <input className="border rounded px-2 py-1" placeholder="Product Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
+          <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -228,12 +227,12 @@ export default function ProductCatalogPage() {
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
           <input type="number" className="border rounded px-2 py-1" placeholder="Buffer Order Qty" value={form.bufferOrderQty} onChange={(e) => setForm({ ...form, bufferOrderQty: e.target.value })} />
-          <button type="submit" className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
+          <button type="button" onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
           <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="make-suggestions">{makeSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="model-suggestions">{modelSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="category-suggestions">{categorySuggestions.map((v) => <option key={v} value={v} />)}</datalist>
-        </form>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
