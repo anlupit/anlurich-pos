@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { compressImage } from '../../lib/compressImage';
-import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline } from '../../lib/branchData';
+import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud } from '../../lib/branchData';
 import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
 
 type Supplier = { id: string; name: string; address?: string; tin?: string; contact?: string; phone?: string; email?: string };
@@ -38,7 +38,13 @@ export default function SupplierReceiptPage() {
   const [catalog, setCatalog] = useState<any[]>([]);
 
   useEffect(() => {
-    syncOnline().then(() => setSuppliers(loadBranchSuppliers())).catch(() => setSuppliers(loadBranchSuppliers()));
+    syncOnline().then(async () => {
+      const saved = loadBranchSuppliers();
+      const invoices = await loadInvoicesCloud().catch(() => []);
+      const fromInvoices = (invoices || []).map((inv: any) => inv.supplierName).filter(Boolean);
+      const names = Array.from(new Map([...saved.map((s) => s.name), ...fromInvoices].filter(Boolean).map((name) => [String(name).toLowerCase(), { id: String(name), name: String(name) }])).values());
+      setSuppliers(names.length ? names : saved);
+    }).catch(() => setSuppliers(loadBranchSuppliers()));
     loadProductsCloud().then(setCatalog).catch(() => {});
   }, []);
 
@@ -61,20 +67,20 @@ export default function SupplierReceiptPage() {
       if (l.id !== id) return l;
       const next = { ...l, [field]: value };
       if (field === 'barcode') {
-        const code = String(value || '').trim().toLowerCase();
-        const product = catalog.find((p) => String(p.barcode || '').trim().toLowerCase() === code);
+        const code = String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const product = catalog.find((p) => String(p.barcode || '').replace(/[^a-z0-9]/gi, '').toLowerCase() === code);
         if (product) {
           next.brand = product.brand || '';
           next.partNumber = product.partNumber || '';
-          next.productName = product.name || '';
-          next.description = product.description || '';
+          next.productName = product.name || product.productName || '';
+          next.description = product.description || product.name || product.productName || '';
         }
       }
       return next;
     }));
   };
 
-  const d1 = parseFloat(discount1) || 0;
+  const supplierMatches = suppliers.filter((s) => supplierName.trim() && s.name.toLowerCase().includes(supplierName.trim().toLowerCase())).slice(0, 8);
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
   const netPrice = (l: Line) => l.grossPrice * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100);
@@ -177,10 +183,17 @@ export default function SupplierReceiptPage() {
       {/* Header fields */}
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[20ch] flex-1">
-            <label className="block text-xs font-medium mb-1 text-center">Supplier Name</label>
+          <div className="min-w-[20ch] flex-1 relative">
+            <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
             <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
             <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+            {supplierMatches.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
+                {supplierMatches.map((s) => (
+                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onClick={() => setSupplierName(s.name)}>{s.name}</button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Terms</label>
@@ -218,7 +231,7 @@ export default function SupplierReceiptPage() {
           <thead className="bg-teal-500 text-white">
             <tr>
               <th className="p-1 text-center" style={{ width: '11%' }}>Barcode</th>
-              <th className="p-1 text-center" style={{ width: '10%' }}>Brand</th>
+              <th className="p-1 text-center" style={{ width: '35ch' }}>Brand</th>
               <th className="p-1 text-center" style={{ width: '11%' }}>Part Number</th>
               <th className="p-1 text-center" style={{ width: '14%' }}>Product Name</th>
               <th className="p-1 text-center" style={{ width: '22%' }}>Description</th>
@@ -234,7 +247,7 @@ export default function SupplierReceiptPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} /></td>
-                <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '35ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
