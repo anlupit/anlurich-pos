@@ -21,6 +21,7 @@ type Line = {
 
 export default function SupplierReceiptPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierName, setSupplierName] = useState('');
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [terms, setTerms] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -186,12 +187,12 @@ export default function SupplierReceiptPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[20ch] flex-1 relative">
             <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
-            <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+            <input className="w-full border rounded px-2 py-1" list="suppliers-list" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
             <datalist id="suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
-            {supplierMatches.length > 0 && (
+            {supplierOpen && supplierMatches.length > 0 && (
               <div className="absolute z-20 left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
                 {supplierMatches.map((s) => (
-                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onClick={() => setSupplierName(s.name)}>{s.name}</button>
+                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onClick={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
                 ))}
               </div>
             )}
