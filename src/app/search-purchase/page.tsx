@@ -284,6 +284,8 @@ export default function SearchPurchasePage() {
               <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>
             </div>
               </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

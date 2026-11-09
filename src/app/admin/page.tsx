@@ -89,6 +89,8 @@ export default function AdminDashboard() {
     const res = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-clear-photos' }) });
     alert(res.ok ? 'All stored photos cleared from Supabase' : 'Photo clear failed. Check Supabase connection.');
   };
+
+  const postAnnouncement = async () => {
     if (!newAnnouncement.trim()) return;
     const item = { id: Date.now().toString(), text: newAnnouncement.trim(), author: 'Anlu Pit', date: new Date().toISOString() };
     const next = [item, ...announcements];
@@ -106,6 +108,7 @@ export default function AdminDashboard() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-1">ADMIN Dashboard</h1>
       <a href="/users" className="inline-block mb-4 bg-black text-white px-4 py-2 rounded-lg text-sm">User and Password Manager</a>
+      <a href="/check-voucher" className="inline-block mb-4 ml-2 bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Check Voucher</a>
       <button onClick={clearPhotos} className="inline-block mb-4 ml-2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Clear All Photos</button>
       <p className="text-gray-500 mb-4">APIS — Auto Parts Inventory System</p>
 
