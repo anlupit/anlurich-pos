@@ -56,13 +56,15 @@ export function loadInvoices(branch?: string): any[] {
   } catch { return []; }
 }
 
-function pushCloud(key: string, value: unknown) {
-  if (typeof window === 'undefined') return;
-  fetch('/api/data', {
+async function pushCloud(key: string, value: unknown) {
+  if (typeof window === 'undefined') return false;
+  const res = await fetch('/api/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, value: typeof value === 'string' ? value : JSON.stringify(value) }),
-  }).catch(() => {});
+  });
+  if (!res.ok) throw new Error('Supabase save failed');
+  return true;
 }
 
 async function pullCloud(key: string): Promise<any | null> {
@@ -76,17 +78,15 @@ async function pullCloud(key: string): Promise<any | null> {
     return null;
   }
 }
-  export function saveInvoice(invoice: any) {
+  export async function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
   const key = `anlurich-supplier-invoices-${b}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
-  const next = [...existing, invoice];
+  const cloud = await pullCloud(key);
+  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
+  const next = [...existing.filter((i: any) => i.id !== invoice.id && i.invoiceNumber !== invoice.invoiceNumber), invoice];
+  await pushCloud(key, next);
   localStorage.setItem(key, JSON.stringify(next));
-  fetch('/api/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, value: JSON.stringify(next) }),
-  }).catch(() => {});
+  return next;
 }
 
 export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
@@ -107,9 +107,10 @@ export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
   return merged;
 }
 
-export function updateInvoices(branch: string, invoices: any[]) {
-  localStorage.setItem(`anlurich-supplier-invoices-${branch}`, JSON.stringify(invoices));
-  pushCloud(`anlurich-supplier-invoices-${branch}`, invoices);
+export async function updateInvoices(branch: string, invoices: any[]) {
+  const key = `anlurich-supplier-invoices-${branch}`;
+  await pushCloud(key, invoices);
+  localStorage.setItem(key, JSON.stringify(invoices));
 }
 
 // Inventory (qty + location) — private per branch
@@ -124,10 +125,10 @@ export function loadStock(branch?: string): Record<string, Stock> {
   } catch { return {}; }
 }
 
-export function saveStock(branch: string, stock: Record<string, Stock>) {
+export async function saveStock(branch: string, stock: Record<string, Stock>) {
   const key = `anlurich-stock-${branch}`;
+  await pushCloud(key, stock);
   localStorage.setItem(key, JSON.stringify(stock));
-  pushCloud(key, stock);
 }
 
 export function getStockQty(productId: string, branch?: string): number {
@@ -190,7 +191,19 @@ export async function syncOnline(branch?: string) {
   ];
   for (const key of keys) {
     const cloud = await pullCloud(key);
-    if (cloud != null) localStorage.setItem(key, JSON.stringify(cloud));
+    if (cloud == null) continue;
+    if (key.includes('supplier-invoices') && Array.isArray(cloud)) {
+      const local = JSON.parse(localStorage.getItem(key) || '[]');
+      const byKey = new Map<string, any>();
+      [...(Array.isArray(local) ? local : []), ...cloud].forEach((inv) => {
+        const k = String(inv.id || `${inv.supplierName}-${inv.invoiceNumber || inv.invoiceNo}`);
+        const prev = byKey.get(k);
+        if (!prev || String(inv.createdAt || '') > String(prev.createdAt || '')) byKey.set(k, inv);
+      });
+      localStorage.setItem(key, JSON.stringify(Array.from(byKey.values())));
+    } else {
+      localStorage.setItem(key, JSON.stringify(cloud));
+    }
   }
 }
 
@@ -243,18 +256,20 @@ export function updateCorporate(branch: string, sales: any[]) {
   pushCloud(`anlurich-corporate-${branch}`, sales);
 }
 
-export function saveSale(sale: any) {
+export async function saveSale(sale: any) {
   const b = sale.branch || currentBranch() || 'unknown';
   const key = `anlurich-sales-${b}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const cloud = await pullCloud(key);
+  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
   const next = [...existing, sale];
+  await pushCloud(key, next);
   localStorage.setItem(key, JSON.stringify(next));
-  pushCloud(key, next);
 }
 
-export function updateSales(branch: string, sales: any[]) {
-  localStorage.setItem(`anlurich-sales-${branch}`, JSON.stringify(sales));
-  pushCloud(`anlurich-sales-${branch}`, sales);
+export async function updateSales(branch: string, sales: any[]) {
+  const key = `anlurich-sales-${branch}`;
+  await pushCloud(key, sales);
+  localStorage.setItem(key, JSON.stringify(sales));
 }
 
 // Quotations — private per branch
@@ -295,21 +310,24 @@ export function deleteQuotation(id: string, quotationNo?: string) {
   pushCloud(key, updated);
 }
 
-export function saveQuotation(quotation: any) {
+export async function saveQuotation(quotation: any) {
   const b = quotation.branch || currentBranch() || 'unknown';
   const key = `anlurich-quotations-${b}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
-  localStorage.setItem(key, JSON.stringify([...existing, quotation]));
-  pushCloud(key, [...existing, quotation]);
+  const cloud = await pullCloud(key);
+  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
+  const next = [...existing, quotation];
+  await pushCloud(key, next);
+  localStorage.setItem(key, JSON.stringify(next));
 }
 
-export function updateQuotation(quotation: any) {
+export async function updateQuotation(quotation: any) {
   const b = quotation.branch || currentBranch() || 'unknown';
   const key = `anlurich-quotations-${b}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const cloud = await pullCloud(key);
+  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
   const updated = existing.map((q: any) => q.id === quotation.id || q.quotationNo === quotation.quotationNo ? { ...q, ...quotation } : q);
+  await pushCloud(key, updated);
   localStorage.setItem(key, JSON.stringify(updated));
-  pushCloud(key, updated);
 }
 
 // Suppliers — private per branch
@@ -342,9 +360,9 @@ export function loadProducts(): any[] {
   try { return JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { return []; }
 }
 
-export function saveProducts(products: any[]) {
+export async function saveProducts(products: any[]) {
+  await pushCloud('anlurich-products', products);
   localStorage.setItem('anlurich-products', JSON.stringify(products));
-  pushCloud('anlurich-products', products);
 }
 
 export function loadReturns(branch?: string): any[] {

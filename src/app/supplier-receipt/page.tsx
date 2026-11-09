@@ -93,7 +93,7 @@ export default function SupplierReceiptPage() {
     setShowAddSupplier(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!supplierName.trim()) return alert('Enter supplier name');
     if (!invoiceNumber.trim()) return alert('Enter invoice number');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
@@ -117,7 +117,11 @@ export default function SupplierReceiptPage() {
       status: 'unpaid',
       createdAt: new Date().toISOString(),
     };
-    saveInvoice(invoice);
+    try {
+      await saveInvoice(invoice);
+    } catch {
+      return alert('Invoice was NOT saved. Supabase is not connected. Check the cloud connection and try again.');
+    }
     const catalog = upsertCatalogFromInvoice(invoice.lines);
     const missed: string[] = [];
     valid.forEach((l) => {
