@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { compressImage } from '../../lib/compressImage';
-import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -17,7 +16,7 @@ export default function SearchPurchasePage() {
   const [largeImage, setLargeImage] = useState('');
 
   useEffect(() => {
-    loadInvoicesCloud().then(setInvoices);
+    stripInvoicePhotos().then(setInvoices).catch(() => loadInvoicesCloud().then(setInvoices));
   }, []);
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -28,16 +27,14 @@ export default function SearchPurchasePage() {
     return m ? m[0] : String(date).slice(0, 4);
   };
 
-  const handleSearch = async () => {
-    const fresh = await loadInvoicesCloud();
-    setInvoices(fresh);
+  const buildResults = (list: any[]) => {
     const rows: any[] = [];
     const qPart = part.trim().toLowerCase();
     const qBrand = brand.trim().toLowerCase();
     const qSupplier = supplier.trim().toLowerCase();
     const qInv = invoiceNo.trim().toLowerCase();
 
-    fresh.forEach((inv) => {
+    list.forEach((inv) => {
       const invYear = yearOf(inv.invoiceDate || inv.createdAt || '');
       if (year !== 'All' && invYear && invYear !== year) return;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return;
@@ -108,6 +105,15 @@ export default function SearchPurchasePage() {
     setSearched(true);
   };
 
+  const handleSearch = async () => {
+    const local = loadInvoices();
+    setInvoices(local);
+    buildResults(local);
+    const fresh = await loadInvoicesCloud();
+    setInvoices(fresh);
+    buildResults(fresh);
+  };
+
   const openInvoice = (invoiceId: string) => {
     const inv = invoices.find((i) => i.id === invoiceId) || loadInvoices().find((i) => i.id === invoiceId);
     if (inv) setViewing(JSON.parse(JSON.stringify(inv)));
@@ -122,11 +128,6 @@ export default function SearchPurchasePage() {
     const subtotal = lines.reduce((sum: number, l: any) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
     const grandTotal = subtotal * (1 - (viewing.discount1 || 0) / 100) * (1 - (viewing.discount2 || 0) / 100);
     setViewing({ ...viewing, lines, subtotal, grandTotal });
-  };
-
-  const attachImage = async (file?: File) => {
-    if (!file || !viewing) return;
-    setViewing({ ...viewing, invoiceImage: await compressImage(file) });
   };
 
   const saveEdit = async () => {
@@ -179,7 +180,7 @@ export default function SearchPurchasePage() {
       <div className="text-xs text-gray-500 mb-4">This branch only</div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto">
+        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">Year</div>
             <input className="border rounded px-2 py-1 text-center" style={{ width: '8ch' }} placeholder="All" value={year === 'All' ? '' : year} onChange={(e) => setYear(e.target.value || 'All')} />
@@ -249,12 +250,6 @@ export default function SearchPurchasePage() {
         </div>
       )}
 
-      {largeImage && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[80] p-4" onClick={() => setLargeImage('')}>
-          <img src={largeImage} alt="Invoice large" className="max-w-full max-h-[90vh] rounded bg-white" />
-        </div>
-      )}
-
       {viewing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -281,18 +276,7 @@ export default function SearchPurchasePage() {
             </table>
             <div className="text-right font-bold mb-3">Total: ₱{viewing.grandTotal?.toLocaleString()}</div>
             <div className="mb-3">
-              <div className="text-sm font-medium mb-1">Invoice Image</div>
-              <div className="flex flex-wrap gap-2">
-                <label className="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
-                  Browse File
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => attachImage(e.target.files?.[0])} />
-                </label>
-                <label className="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
-                  Back Camera
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => attachImage(e.target.files?.[0])} />
-                </label>
-              </div>
-              {viewing.invoiceImage && <img src={viewing.invoiceImage} alt="Invoice" className="mt-2 max-h-48 rounded border" />}
+              <div className="text-sm text-gray-500">Invoice photo removed. Photos will be handled in a separate program.</div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
@@ -300,17 +284,6 @@ export default function SearchPurchasePage() {
               <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>
             </div>
               </div>
-              <div className="w-40 shrink-0">
-                <div className="text-sm font-medium mb-2">Invoice Photo</div>
-                {viewing.invoiceImage ? (
-                  <img src={viewing.invoiceImage} alt="Invoice" className="w-full h-40 object-cover rounded border cursor-pointer" onClick={() => setLargeImage(viewing.invoiceImage)} />
-                ) : (
-                  <div className="w-full h-40 bg-gray-100 rounded border flex items-center justify-center text-xs text-gray-400">No photo</div>
-                )}
-                <div className="text-xs text-gray-500 mt-1">Click thumbnail to enlarge</div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -69,7 +69,7 @@ async function pushCloud(key: string, value: unknown) {
 
 async function pullCloud(key: string): Promise<any | null> {
   try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
+    const res = await fetch(`/api/data?key=${encodeURIComponent(key)}`, { cache: 'no-store' });
     if (!res.ok) return null;
     const rows: { key: string; value: string }[] = await res.json();
     const row = rows.find((r) => r.key === key);
@@ -81,11 +81,10 @@ async function pullCloud(key: string): Promise<any | null> {
   export async function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
   const key = `anlurich-supplier-invoices-${b}`;
-  const cloud = await pullCloud(key);
-  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
   const next = [...existing.filter((i: any) => i.id !== invoice.id && i.invoiceNumber !== invoice.invoiceNumber), invoice];
-  await pushCloud(key, next);
   localStorage.setItem(key, JSON.stringify(next));
+  await pushCloud(key, next);
   return next;
 }
 
@@ -111,7 +110,20 @@ export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
   return merged;
 }
 
-export async function updateInvoices(branch: string, invoices: any[]) {
+export async function stripInvoicePhotos(branch?: string) {
+  const b = branch || currentBranch() || 'unknown';
+  const key = `anlurich-supplier-invoices-${b}`;
+  const cloud = await pullCloud(key);
+  const list = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
+  const cleaned = list.map((inv: any) => {
+    const { invoiceImage, image, photoUrl, ...rest } = inv;
+    return rest;
+  });
+  localStorage.setItem(key, JSON.stringify(cleaned));
+  await pushCloud(key, cleaned);
+  return cleaned;
+}
+  export async function updateInvoices(branch: string, invoices: any[]) {
   const key = `anlurich-supplier-invoices-${branch}`;
   await pushCloud(key, invoices);
   localStorage.setItem(key, JSON.stringify(invoices));

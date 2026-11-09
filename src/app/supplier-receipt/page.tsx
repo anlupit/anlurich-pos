@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { compressImage } from '../../lib/compressImage';
-import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud } from '../../lib/branchData';
+import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos } from '../../lib/branchData';
 import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
 
 type Supplier = { id: string; name: string; address?: string; tin?: string; contact?: string; phone?: string; email?: string };
@@ -31,7 +30,6 @@ export default function SupplierReceiptPage() {
   const [discount1, setDiscount1] = useState('');
   const [discount2, setDiscount2] = useState('');
   const [discount3, setDiscount3] = useState('');
-  const [invoiceImage, setInvoiceImage] = useState<string | null>(null);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: '', address: '', tin: '', contact: '', phone: '', email: '' });
   const [lines, setLines] = useState<Line[]>([
@@ -48,6 +46,7 @@ export default function SupplierReceiptPage() {
       setSuppliers(names.length ? names : saved);
     }).catch(() => setSuppliers(loadBranchSuppliers()));
     loadProductsCloud().then(setCatalog).catch(() => {});
+    stripInvoicePhotos().catch(() => {});
   }, []);
 
   const addLine = () => {
@@ -94,12 +93,6 @@ export default function SupplierReceiptPage() {
   const netOfVAT = round2(grandTotal / 1.12);
   const vat = round2(grandTotal - netOfVAT);
 
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setInvoiceImage(await compressImage(file));
-  };
-
   const handleAddSupplier = () => {
     if (!newSupplier.name.trim()) return alert('Supplier name is required');
     const supplier: Supplier = {
@@ -120,7 +113,10 @@ export default function SupplierReceiptPage() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     if (!supplierName.trim()) return alert('Enter supplier name');
+    if (!invoiceNumber.trim()) return alert('Enter invoice number');
+    setSaving(true);
     if (!invoiceNumber.trim()) return alert('Enter invoice number');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
@@ -140,7 +136,6 @@ export default function SupplierReceiptPage() {
       discount2: d2,
       discount3: d3,
       grandTotal,
-      invoiceImage,
       status: 'unpaid',
       createdAt: new Date().toISOString(),
     };
@@ -156,8 +151,9 @@ export default function SupplierReceiptPage() {
       if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
     });
     if (missed.length) alert(`Invoice saved. Catalog added ${catalog.added}. Stock not added for: ${missed.join(', ')}.`);
-    else alert(`Invoice saved. Catalog added ${catalog.added} new item(s). Purchased quantity added to this branch stock.`);
-    window.location.reload();
+    else alert(`Invoice saved to Supabase. Catalog added ${catalog.added} new item(s). Purchased quantity added to this branch stock.`);
+    setSaving(false);
+    setInvoiceNumber('');
   };
 
   return (
@@ -271,24 +267,10 @@ export default function SupplierReceiptPage() {
       {/* Totals + Upload */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl shadow p-4">
-          <label className="block text-sm font-medium mb-2">Invoice Image</label>
-          <div className="flex flex-wrap gap-2">
-            <label className="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
-              Browse File
-              <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
-            </label>
-            <label className="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer">
-              Back Camera
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImage} />
-            </label>
-          </div>
-          {invoiceImage && <img src={invoiceImage} alt="Invoice" className="mt-2 max-h-32 rounded border" />}
-        </div>
-        <div className="bg-white rounded-xl shadow p-4">
           <div className="flex justify-between py-2 font-bold text-lg"><span>Grand Total</span><span>{money(grandTotal)}</span></div>
           <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>{money(netOfVAT)}</span></div>
           <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>{money(vat)}</span></div>
-          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">SAVE INVOICE</button>
+          <button onClick={handleSave} disabled={saving} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold disabled:opacity-60">{saving ? 'SAVING TO SUPABASE...' : 'SAVE INVOICE'}</button>
         </div>
       </div>
 

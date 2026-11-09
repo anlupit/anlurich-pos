@@ -55,6 +55,7 @@ export default function Home() {
 
   useEffect(() => {
     loadAnnouncements();
+    fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-clear-photos' }) }).catch(() => {});
     setBg(localStorage.getItem('anlurich-index-bg') || '#f4f6fb');
     setBanner(localStorage.getItem('anlurich-index-banner') || '/banner.png');
     setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');

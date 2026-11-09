@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
-  max: 1,
+  max: 5,
 });
 
 let tableReady = false;
@@ -20,12 +20,17 @@ async function ensureTable() {
   tableReady = true;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'DATABASE_URL is missing in Vercel' }, { status: 500 });
   }
   try {
     await ensureTable();
+    const key = new URL(req.url).searchParams.get('key');
+    if (key) {
+      const { rows } = await pool.query('SELECT key, value FROM app_data WHERE key = $1', [key]);
+      return NextResponse.json(rows);
+    }
     const { rows } = await pool.query('SELECT key, value FROM app_data');
     return NextResponse.json(rows);
   } catch (err: any) {
@@ -40,7 +45,21 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const key = String(body.key || '');
-    if (!key.startsWith('anlurich-')) return NextResponse.json({ ok: false, error: 'Bad key' }, { status: 400 });
+    if (key === 'anlurich-clear-photos') {
+      const { rows } = await pool.query(`SELECT key, value FROM app_data WHERE key LIKE 'anlurich-supplier-invoices-%' OR key LIKE 'anlurich-expenses-%'`);
+      for (const row of rows) {
+        try {
+          const list = JSON.parse(row.value);
+          if (!Array.isArray(list)) continue;
+          const cleaned = list.map((item: any) => {
+            const { invoiceImage, image, photoUrl, ...rest } = item || {};
+            return rest;
+          });
+          await pool.query('UPDATE app_data SET value = $2, updated_at = NOW() WHERE key = $1', [row.key, JSON.stringify(cleaned)]);
+        } catch {}
+      }
+      return NextResponse.json({ ok: true, cleared: rows.length });
+    }
     await ensureTable();
     if (body.value == null) {
       await pool.query('DELETE FROM app_data WHERE key = $1', [key]);
