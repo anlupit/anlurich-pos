@@ -22,7 +22,6 @@ type Line = {
 export default function SupplierReceiptPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierName, setSupplierName] = useState('');
-  const [supplierOpen, setSupplierOpen] = useState(false);
   const [terms, setTerms] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [invoiceNumber, setInvoiceNumber] = useState('');
