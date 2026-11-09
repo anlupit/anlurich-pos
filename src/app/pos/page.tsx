@@ -349,7 +349,7 @@ export default function POSPage() {
     setDiscount(String(use));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!invoiceNo.trim()) return alert('Enter Sales Invoice No.');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
