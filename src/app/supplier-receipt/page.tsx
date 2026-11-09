@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { compressImage } from '../../lib/compressImage';
 import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline } from '../../lib/branchData';
 import { upsertCatalogFromInvoice } from '../../lib/products';
 
@@ -66,12 +67,10 @@ export default function SupplierReceiptPage() {
   const netOfVAT = grandTotal / 1.12;
   const vat = grandTotal - netOfVAT;
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setInvoiceImage(reader.result as string);
-    reader.readAsDataURL(file);
+    setInvoiceImage(await compressImage(file));
   };
 
   const handleAddSupplier = () => {
@@ -114,6 +113,7 @@ export default function SupplierReceiptPage() {
       discount2: d2,
       discount3: d3,
       grandTotal,
+      invoiceImage,
       status: 'unpaid',
       createdAt: new Date().toISOString(),
     };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { compressImage } from '../../lib/compressImage';
 import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
@@ -123,11 +124,9 @@ export default function SearchPurchasePage() {
     setViewing({ ...viewing, lines, subtotal, grandTotal });
   };
 
-  const attachImage = (file?: File) => {
+  const attachImage = async (file?: File) => {
     if (!file || !viewing) return;
-    const reader = new FileReader();
-    reader.onload = () => setViewing({ ...viewing, invoiceImage: reader.result });
-    reader.readAsDataURL(file);
+    setViewing({ ...viewing, invoiceImage: await compressImage(file) });
   };
 
   const saveEdit = () => {

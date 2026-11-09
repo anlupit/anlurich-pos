@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { compressImage } from '../../lib/compressImage';
 import { currentBranch } from '../../lib/branchData';
 
 type Expense = {
@@ -144,11 +145,11 @@ export default function ExpensesPage() {
   const total = filtered.reduce((s, r) => s + (r.amount || 0), 0);
   const vatTotal = filtered.reduce((s, r) => s + (r.vat || 0), 0);
 
-  const onImage = (file?: File) => {
+  const onImage = async (file?: File) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result || '') }));
-    reader.readAsDataURL(file);
+    setForm((f) => ({ ...f, image: '' }));
+    const image = await compressImage(file);
+    setForm((f) => ({ ...f, image }));
   };
 
   const printSummary = () => window.print();

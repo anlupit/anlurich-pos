@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { currentBranch, loadStock, setStockQty, getStockQty } from '../../lib/branchData';
+import { compressImage } from '../../lib/compressImage';
 import { loadProducts, saveProducts, Product } from '../../lib/products';
 
 export default function ProductsPage() {
@@ -45,12 +46,10 @@ export default function ProductsPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm((prev) => ({ ...prev, photoUrl: reader.result as string }));
-    reader.readAsDataURL(file);
+    setForm((prev) => ({ ...prev, photoUrl: await compressImage(file) }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {

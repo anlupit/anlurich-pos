@@ -11,6 +11,24 @@ export default function CloudSync() {
     const origSet = localStorage.setItem.bind(localStorage);
     const origRemove = localStorage.removeItem.bind(localStorage);
 
+    function mergeValue(localValue: string | null, cloudValue: string) {
+      if (!localValue) return cloudValue;
+      try {
+        const local = JSON.parse(localValue);
+        const cloud = JSON.parse(cloudValue);
+        if (Array.isArray(local) && Array.isArray(cloud)) {
+          const byKey = new Map<string, any>();
+          [...cloud, ...local].forEach((item, index) => {
+            const key = String(item?.id || item?.invoiceNumber || item?.invoiceNo || item?.quotationNo || index);
+            const prev = byKey.get(key);
+            if (!prev || String(item?.createdAt || item?.date || '') >= String(prev?.createdAt || prev?.date || '')) byKey.set(key, item);
+          });
+          return JSON.stringify(Array.from(byKey.values()));
+        }
+      } catch {}
+      return cloudValue;
+    }
+
     async function push(key: string, value: string | null) {
       if (!key.startsWith('anlurich-')) return;
       const res = await fetch('/api/data', {
@@ -48,23 +66,20 @@ export default function CloudSync() {
         const serverKeys = new Set(rows.map((r) => r.key));
         for (const row of rows) {
           if (!row.key?.startsWith('anlurich-')) continue;
-          const value = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-          origSet(row.key, value);
+          const cloudValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+          origSet(row.key, mergeValue(localStorage.getItem(row.key), cloudValue));
         }
+        const missing: Promise<void>[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key?.startsWith('anlurich-') && !serverKeys.has(key)) {
-            await push(key, localStorage.getItem(key));
+            missing.push(push(key, localStorage.getItem(key)));
           }
         }
-        for (const item of pending) await push(item.key, item.value);
+        await Promise.all([...missing, ...pending.map((item) => push(item.key, item.value))]);
         ready = true;
         setStatus('Cloud connected — branch data shared');
         window.dispatchEvent(new Event('anlurich-synced'));
-        if (rows.length && !sessionStorage.getItem('anlurich-cloud-loaded')) {
-          sessionStorage.setItem('anlurich-cloud-loaded', '1');
-          window.location.reload();
-        }
       } catch {
         ready = true;
         setStatus('Cloud not connected');

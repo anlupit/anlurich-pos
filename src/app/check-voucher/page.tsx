@@ -56,7 +56,12 @@ export default function CheckVoucherPage() {
     };
     load();
     setVoucherNo(nextVoucherNo());
-    setSchedules(JSON.parse(localStorage.getItem('anlurich-check-schedules') || '[]'));
+    fetch('/api/data', { cache: 'no-store' }).then((res) => res.ok ? res.json() : []).then((rows: any[]) => {
+      const schedules = rows.find((r) => r.key === 'anlurich-check-schedules');
+      const nos = rows.find((r) => r.key === 'anlurich-voucher-nos');
+      if (schedules?.value) setSchedules(JSON.parse(schedules.value));
+      if (nos?.value) localStorage.setItem('anlurich-voucher-nos', nos.value);
+    }).catch(() => setSchedules(JSON.parse(localStorage.getItem('anlurich-check-schedules') || '[]')));
   }, []);
 
   const list = invoices.filter((i) => {

@@ -7,7 +7,9 @@ const pool = new Pool({
   max: 1,
 });
 
+let tableReady = false;
 async function ensureTable() {
+  if (tableReady) return;
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_data (
       key TEXT PRIMARY KEY,
@@ -15,6 +17,7 @@ async function ensureTable() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  tableReady = true;
 }
 
 export async function GET() {

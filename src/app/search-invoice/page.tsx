@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadSales, currentBranch, formatDate } from '../../lib/branchData';
+import { loadSales, loadSalesCloud, updateSales, currentBranch, formatDate } from '../../lib/branchData';
 
 function pointsFor(total: number) {
   return Math.floor((total || 0) / 200);
@@ -19,11 +19,11 @@ export default function SearchInvoicePage() {
   const [logo, setLogo] = useState('');
 
   useEffect(() => {
-    setSales(loadSales());
+    loadSalesCloud().then(setSales);
   }, []);
 
-  const handleSearch = () => {
-    const fresh = loadSales();
+  const handleSearch = async () => {
+    const fresh = await loadSalesCloud();
     setSales(fresh);
     const filtered = fresh.filter((s) => {
       const saleYear = (s.date || s.dateTime || '').slice(0, 4);
@@ -59,29 +59,27 @@ export default function SearchInvoicePage() {
     setEditing({ ...editing, items, subtotal, total });
   };
 
-  const deleteInvoice = () => {
+  const deleteInvoice = async () => {
     if (!editing) return;
     const pin = prompt('Enter delete password');
     if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${editing.invoiceNo}?`)) return;
-    const branch = currentBranch();
-    const key = `anlurich-sales-${branch}`;
-    const all = JSON.parse(localStorage.getItem(key) || '[]');
+    const branch = currentBranch() || 'unknown';
+    const all = await loadSalesCloud(branch);
     const updated = all.filter((s: any) => s.id !== editing.id);
-    localStorage.setItem(key, JSON.stringify(updated));
+    await updateSales(branch, updated);
     setSales(updated);
     setResults((prev) => prev.filter((s) => s.id !== editing.id));
     setEditing(null);
     alert('Invoice deleted');
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editing) return;
-    const branch = currentBranch();
-    const key = `anlurich-sales-${branch}`;
-    const all = JSON.parse(localStorage.getItem(key) || '[]');
+    const branch = currentBranch() || 'unknown';
+    const all = await loadSalesCloud(branch);
     const updated = all.map((s: any) => (s.id === editing.id ? editing : s));
-    localStorage.setItem(key, JSON.stringify(updated));
+    await updateSales(branch, updated);
     setSales(updated);
     setResults((prev) => prev.map((s) => (s.id === editing.id ? editing : s)));
     setEditing(null);

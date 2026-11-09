@@ -377,7 +377,11 @@ export default function POSPage() {
       cashTender: parseFloat(cashTender) || 0,
       change: Math.max(0, (parseFloat(cashTender) || 0) - grandTotal),
     };
-    saveSale(sale);
+    try {
+      await saveSale(sale);
+    } catch {
+      return alert('Sale was NOT saved. Supabase is not connected.');
+    }
     const missed: string[] = [];
     valid.forEach((l) => {
       const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
