@@ -22,6 +22,7 @@ type Line = {
 export default function SupplierReceiptPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierName, setSupplierName] = useState('');
+  const [supplierSearch, setSupplierSearch] = useState('');
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [terms, setTerms] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -85,7 +86,7 @@ export default function SupplierReceiptPage() {
   const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
-  const netPrice = (l: Line) => l.grossPrice * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100);
+  const netPrice = (l: Line) => round2(l.grossPrice * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100));
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const round2 = (n: number) => Math.round((n || 0) * 100) / 100;
   const lineTotal = (l: Line) => round2(l.qty * netPrice(l));
@@ -255,7 +256,7 @@ export default function SupplierReceiptPage() {
                 <td className="p-1"><input type="number" min={1} className="w-full border rounded px-1 py-1 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
-                <td className="p-1 text-center font-medium">{netPrice(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className="p-1 text-center font-medium">{money(netPrice(line))}</td>
                 <td className="p-1 text-center font-medium">{money(lineTotal(line))}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">X</button>
