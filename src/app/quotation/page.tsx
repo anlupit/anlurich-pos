@@ -365,37 +365,32 @@ export default function QuotationPage() {
         </div>
         <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           <colgroup>
+            <col style={{ width: '40%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '10%' }} />
             <col style={{ width: '16%' }} />
-            <col style={{ width: '34%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '10%' }} />
+            {printSnap.lines.some((l: any) => Number(l.laborPrice) > 0) && <col style={{ width: '10%' }} />}
+            <col style={{ width: '16%' }} />
           </colgroup>
           <thead>
             <tr className="border-b">
-              <th className="text-left py-0.5">Part No.</th>
               <th className="text-left py-0.5">Description</th>
               <th className="text-left py-0.5">Brand</th>
               <th className="text-center py-0.5">Qty</th>
-              <th className="text-left py-0.5">Unit</th>
               <th className="text-right py-0.5">Price</th>
-              {hasLabor && <th className="text-right py-0.5">Labor</th>}
+              {printSnap.lines.some((l: any) => Number(l.laborPrice) > 0) && <th className="text-right py-0.5">Labor</th>}
               <th className="text-right py-0.5">Total</th>
             </tr>
           </thead>
           <tbody>
             {printSnap.lines.map((l: any) => (
               <tr key={l.id} className="border-b">
-                <td className="py-0.5">{l.partNumber}</td>
                 <td className="py-0.5">{l.description}</td>
                 <td className="py-0.5">{l.brand}</td>
                 <td className="py-0.5 text-center">{l.qty}</td>
-                <td className="py-0.5">{l.unit}</td>
                 <td className="py-0.5 text-right">{l.price.toLocaleString()}</td>
-                {hasLabor && <td className="py-0.5 text-right">{(l.laborPrice || 0).toLocaleString()}</td>}
-                <td className="py-0.5 text-right">{(l.qty * l.price + (hasLabor ? (Number(l.laborPrice) || 0) : 0)).toLocaleString()}</td>
+                {printSnap.lines.some((x: any) => Number(x.laborPrice) > 0) && <td className="py-0.5 text-right">{(l.laborPrice || 0).toLocaleString()}</td>}
+                <td className="py-0.5 text-right">{(l.qty * l.price + (Number(l.laborPrice) || 0)).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

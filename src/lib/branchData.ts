@@ -89,6 +89,24 @@ async function pullCloud(key: string): Promise<any | null> {
   }).catch(() => {});
 }
 
+export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
+  const b = branch || currentBranch();
+  if (b === 'admin' || !b) return loadInvoices(b);
+  const key = `anlurich-supplier-invoices-${b}`;
+  const local = loadInvoices(b);
+  const cloud = await pullCloud(key);
+  if (!Array.isArray(cloud)) return local;
+  const byKey = new Map<string, any>();
+  [...local, ...cloud].forEach((inv) => {
+    const k = String(inv.id || `${inv.supplierName}-${inv.invoiceNumber || inv.invoiceNo}`);
+    const prev = byKey.get(k);
+    if (!prev || String(inv.createdAt || '') > String(prev.createdAt || '')) byKey.set(k, inv);
+  });
+  const merged = Array.from(byKey.values());
+  localStorage.setItem(key, JSON.stringify(merged));
+  return merged;
+}
+
 export function updateInvoices(branch: string, invoices: any[]) {
   localStorage.setItem(`anlurich-supplier-invoices-${branch}`, JSON.stringify(invoices));
   pushCloud(`anlurich-supplier-invoices-${branch}`, invoices);

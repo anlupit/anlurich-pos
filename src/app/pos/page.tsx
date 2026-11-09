@@ -319,6 +319,8 @@ export default function POSPage() {
       }
       return [...prev, { id: Date.now().toString(), ...item }];
     });
+    setPriceCheck({ barcode: '', partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
+    setPriceMatches([]);
   };
 
   const lineTotal = (l: Line) => l.qty * l.price;

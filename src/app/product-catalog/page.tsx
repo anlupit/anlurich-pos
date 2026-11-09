@@ -15,6 +15,7 @@ export default function ProductCatalogPage() {
   const [findPart, setFindPart] = useState('');
   const [findBrand, setFindBrand] = useState('');
   const [findName, setFindName] = useState('');
+  const [findDesc, setFindDesc] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -188,9 +189,11 @@ export default function ProductCatalogPage() {
     const part = findPart.trim().toLowerCase();
     const brand = findBrand.trim().toLowerCase();
     const name = findName.trim().toLowerCase();
+    const desc = findDesc.trim().toLowerCase();
     return (!part || p.partNumber.toLowerCase().includes(part))
       && (!brand || String(p.brand || '').toLowerCase().includes(brand))
-      && (!name || String(p.name || '').toLowerCase().includes(name) || String(p.description || '').toLowerCase().includes(name));
+      && (!name || String(p.name || '').toLowerCase().includes(name))
+      && (!desc || String(p.description || '').toLowerCase().includes(desc) || String(p.name || '').toLowerCase().includes(desc));
   }).sort((a, b) =>
     String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }) ||
     String(a.brand || '').localeCompare(String(b.brand || ''), undefined, { sensitivity: 'base' })
@@ -238,6 +241,7 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-3 py-2" placeholder="Search part number, ex. GCT" value={findPart} onChange={(e) => setFindPart(e.target.value)} />
           <input className="border rounded px-3 py-2" placeholder="Search brand" value={findBrand} onChange={(e) => setFindBrand(e.target.value)} />
           <input className="border rounded px-3 py-2" placeholder="Search product name" value={findName} onChange={(e) => setFindName(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search description" value={findDesc} onChange={(e) => setFindDesc(e.target.value)} />
           <div className="text-sm text-gray-500 self-center">{filtered.length} shown</div>
         </div>
         <table className="w-full text-sm">

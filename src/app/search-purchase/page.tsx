@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadInvoices, updateInvoices, currentBranch, formatDate } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -16,10 +16,7 @@ export default function SearchPurchasePage() {
   const [largeImage, setLargeImage] = useState('');
 
   useEffect(() => {
-    setInvoices(loadInvoices());
-    const refresh = () => setInvoices(loadInvoices());
-    window.addEventListener('anlurich-synced', refresh);
-    return () => window.removeEventListener('anlurich-synced', refresh);
+    loadInvoicesCloud().then(setInvoices);
   }, []);
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -30,8 +27,8 @@ export default function SearchPurchasePage() {
     return m ? m[0] : String(date).slice(0, 4);
   };
 
-  const handleSearch = () => {
-    const fresh = loadInvoices();
+  const handleSearch = async () => {
+    const fresh = await loadInvoicesCloud();
     setInvoices(fresh);
     const rows: any[] = [];
     const qPart = part.trim().toLowerCase();
@@ -43,7 +40,7 @@ export default function SearchPurchasePage() {
       const invYear = yearOf(inv.invoiceDate || inv.createdAt || '');
       if (year !== 'All' && invYear && invYear !== year) return;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return;
-      if (qInv && !String(inv.invoiceNumber || '').toLowerCase().includes(qInv)) return;
+      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return;
 
       const lines = inv.lines || [];
       const matching = lines.filter((line: any) => {
@@ -73,6 +70,21 @@ export default function SearchPurchasePage() {
           });
         });
       } else if (qSupplier || qInv) {
+        if (!lines.length) {
+          rows.push({
+            invoiceId: inv.id,
+            supplierName: inv.supplierName,
+            invoiceNumber: inv.invoiceNumber || inv.invoiceNo,
+            invoiceDate: inv.invoiceDate,
+            grandTotal: inv.grandTotal,
+            partNumber: '',
+            brand: '',
+            description: '',
+            qty: '',
+            price: '',
+            invoiceImage: inv.invoiceImage,
+          });
+        }
         lines.forEach((line: any) => {
           rows.push({
             invoiceId: inv.id,
@@ -232,7 +244,7 @@ export default function SearchPurchasePage() {
       )}
 
       {largeImage && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setLargeImage('')}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[80] p-4" onClick={() => setLargeImage('')}>
           <img src={largeImage} alt="Invoice large" className="max-w-full max-h-[90vh] rounded bg-white" />
         </div>
       )}
