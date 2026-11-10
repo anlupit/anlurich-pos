@@ -106,6 +106,13 @@ export default function AdminDashboard() {
     setSearchedPayables(true);
   };
 
+  const moveOldInvoices = async () => {
+    if (!confirm('Move old Anlurich supplier invoices, sales invoices, no-invoice sales, and customers into the new tables and empty the old tables?')) return;
+    const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ migrateOldInvoices: true }) });
+    const data = await res.json().catch(() => ({}));
+    alert(res.ok ? `Moved invoices ${data.moved?.invoices || 0}, sales ${data.moved?.sales || 0}, no-invoice ${data.moved?.noInvoices || 0}, customers ${data.moved?.customers || 0}. Old tables are empty.` : 'Move failed.');
+  };
+
   const clearPhotos = async () => {
     if (!confirm('Delete all stored invoice and expense photos from Supabase?')) return;
     const res = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-clear-photos' }) });
@@ -131,7 +138,7 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-bold mb-1">ADMIN Dashboard</h1>
       <a href="/users" className="inline-block mb-4 bg-black text-white px-4 py-2 rounded-lg text-sm">User and Password Manager</a>
       <a href="/check-voucher" className="inline-block mb-4 ml-2 bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Check Voucher</a>
-      <button onClick={clearPhotos} className="inline-block mb-4 ml-2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Clear All Photos</button>
+      <button onClick={moveOldInvoices} className="inline-block mb-4 ml-2 bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">Move Old Invoices to Anlurich</button>
       <p className="text-gray-500 mb-4">APIS — Auto Parts Inventory System</p>
 
       <div className="bg-white rounded-xl shadow p-5 mb-6">

@@ -152,7 +152,15 @@ export async function GET(req: Request) {
         const { rows } = await pool.query(`SELECT data FROM ${table}_${b} ORDER BY updated_at DESC LIMIT 500`);
         all.push(...rows.map((r) => r.data));
       }
-      return NextResponse.json(all);
+      const legacy = await pool.query(`SELECT data FROM ${table} ORDER BY updated_at DESC LIMIT 2000`).catch(() => ({ rows: [] }));
+      all.push(...legacy.rows.map((r: any) => r.data));
+      const seen = new Set<string>();
+      return NextResponse.json(all.filter((row) => {
+        const id = String(row?.id || '');
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      }));
     }
     const month = url.searchParams.get('month');
     const supplier = url.searchParams.get('supplier');
@@ -170,7 +178,16 @@ export async function GET(req: Request) {
     const limit = table === 'products' || table === 'inventory' ? 5000 : 500;
     const sql = `SELECT data FROM ${physical} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, values);
-    return NextResponse.json(rows.map((r) => r.data));
+    const legacySql = `SELECT data FROM ${table} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
+    const legacy = SPLIT.includes(table) ? await pool.query(legacySql, values).catch(() => ({ rows: [] })) : { rows: [] };
+    const merged = [...rows.map((r) => r.data), ...legacy.rows.map((r: any) => r.data)];
+    const seen = new Set<string>();
+    return NextResponse.json(merged.filter((row) => {
+      const id = String(row?.id || JSON.stringify(row));
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }));
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Supabase failed' }, { status: 500 });
   }
@@ -183,12 +200,43 @@ export async function POST(req: Request) {
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
     if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
-    if (body.migrate && Array.isArray(body.rows)) {
+    if (body.migrateOldInvoices) {
+      const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
+      for (const row of invoices.rows) {
+        const data = { ...(row.data || {}), branch: 'anlurich' };
+        await upsert('supplier_invoices_anlurich', data);
+      }
+      await pool.query(`DELETE FROM supplier_invoices`);
+
+      const sales = await pool.query(`SELECT data FROM sales`);
+      for (const row of sales.rows) {
+        const data = { ...(row.data || {}), branch: 'anlurich' };
+        await upsert('sales_anlurich', data);
+      }
+      await pool.query(`DELETE FROM sales`);
+
+      const noInv = await pool.query(`SELECT data FROM no_invoices`);
+      for (const row of noInv.rows) {
+        const data = { ...(row.data || {}), branch: 'anlurich' };
+        await upsert('no_invoices_anlurich', data);
+      }
+      await pool.query(`DELETE FROM no_invoices`);
+
+      const customers = await pool.query(`SELECT data FROM customers`);
+      for (const row of customers.rows) {
+        const data = { ...(row.data || {}), branch: 'anlurich' };
+        await upsert('customers_anlurich', data);
+      }
+      await pool.query(`DELETE FROM customers`);
+
+      return NextResponse.json({ ok: true, moved: { invoices: invoices.rows.length, sales: sales.rows.length, noInvoices: noInv.rows.length, customers: customers.rows.length } });
+    }
       for (const row of body.rows) await upsert(table, row);
       return NextResponse.json({ ok: true, migrated: body.rows.length });
     }
     const row = body.row || body;
     const physical = tableFor(table, row.branch || body.branch);
+    if (SPLIT.includes(table) && physical === table) return NextResponse.json({ ok: false, error: 'Branch is required. Login to a branch first.' }, { status: 400 });
     if (body.deleteId) {
       await pool.query(`DELETE FROM ${physical} WHERE id = $1`, [String(body.deleteId)]);
       return NextResponse.json({ ok: true });

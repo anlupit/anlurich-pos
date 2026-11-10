@@ -26,11 +26,19 @@ export default function SearchPurchasePage() {
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const monthOf = (value: string) => {
+    const raw = String(value || '');
+    if (/^\d{4}-\d{2}/.test(raw)) return raw.slice(0, 7);
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+  };
+
   const searchInvoices = (list: any[], filters = { monthFrom, monthTo, supplier, invoiceNo }) => {
     const qSupplier = filters.supplier.trim().toLowerCase();
     const qInv = filters.invoiceNo.trim().toLowerCase();
     const rows = list.filter((inv) => {
-      const invDate = String(inv.invoiceDate || inv.createdAt || '').slice(0, 7);
+      const invDate = monthOf(inv.invoiceDate || inv.createdAt || '');
       if (filters.monthFrom && invDate && invDate < filters.monthFrom) return false;
       if (filters.monthTo && invDate && invDate > filters.monthTo) return false;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
