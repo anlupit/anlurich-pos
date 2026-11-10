@@ -119,7 +119,7 @@ export async function deleteInvoiceRecord(invoice: any, branch?: string) {
   await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'supplier_invoices', deleteId: invoice.id }),
+    body: JSON.stringify({ table: 'supplier_invoices', deleteId: invoice.id, branch: invoice.branch || branch || currentBranch() }),
   });
 }
 

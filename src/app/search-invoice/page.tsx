@@ -15,6 +15,7 @@ export default function SearchInvoicePage() {
   const [invoiceNo, setInvoiceNo] = useState('');
   const [contact, setContact] = useState('');
   const [customer, setCustomer] = useState('');
+  const [plate, setPlate] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [searched, setSearched] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -44,6 +45,7 @@ export default function SearchInvoicePage() {
       if (invoiceNo && !String(s.invoiceNo || '').toLowerCase().includes(invoiceNo.toLowerCase())) return false;
       if (contact && !String(s.customerPhone || '').toLowerCase().includes(contact.toLowerCase())) return false;
       if (customer && !String(s.customerName || '').toLowerCase().includes(customer.toLowerCase())) return false;
+      if (plate && !String(s.plateNo || '').toLowerCase().includes(plate.toLowerCase())) return false;
       return true;
     });
     setResults(filtered.sort((a, b) => {
@@ -140,10 +142,40 @@ export default function SearchInvoicePage() {
             <div className="text-xs font-medium text-center mb-1">Customer Name</div>
             <input className="border rounded px-2 py-1" style={{ width: '50ch' }} value={customer} onChange={(e) => setCustomer(e.target.value)} onKeyDown={onEnter} />
           </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Plate No.</div>
+            <input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={plate} onChange={(e) => setPlate(e.target.value)} onKeyDown={onEnter} />
+          </div>
           <button onClick={handleSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search</button>
         </div>
       </div>
 
+      {searched && plate && results.length > 0 && (
+        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+          <table className="w-full text-sm">
+            <thead className="bg-teal-500 text-white">
+              <tr>
+                <th className="text-left p-2">Date</th>
+                <th className="text-left p-2">Plate No.</th>
+                <th className="text-left p-2">Vehicle</th>
+                <th className="text-left p-2">Description</th>
+                <th className="text-right p-2">Labor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.flatMap((s) => (s.items || []).map((item: any, i: number) => (
+                <tr key={`${s.id}-${i}`} className="border-t">
+                  <td className="p-2">{formatDate(s.date)}</td>
+                  <td className="p-2">{s.plateNo || '—'}</td>
+                  <td className="p-2">{s.vehicleType || '—'}</td>
+                  <td className="p-2">{item.description || item.partNumber || '—'}</td>
+                  <td className="p-2 text-right">₱{Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                </tr>
+              )))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {searched && results.length === 0 && (
         <div className="bg-white rounded-xl shadow p-4 text-center text-gray-500">
           No invoices found for this branch. Make sure the sale was saved on this same branch.

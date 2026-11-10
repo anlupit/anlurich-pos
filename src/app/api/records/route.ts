@@ -7,6 +7,14 @@ const pool = new Pool({
   max: 5,
 });
 
+const BRANCHES = ['anlurich', 'dasma', 'sezan', 'timitsu', 'avenders', 'lipa'];
+const SPLIT = ['supplier_invoices', 'sales', 'no_invoices', 'customer_points', 'inventory', 'customers', 'employees', 'expenses'];
+
+function tableFor(base: string, branch?: string | null) {
+  const b = String(branch || '').toLowerCase();
+  if (SPLIT.includes(base) && BRANCHES.includes(b)) return `${base}_${b}`;
+  return base;
+}
 let ready = false;
 async function ensure() {
   if (ready) return;
@@ -97,6 +105,35 @@ async function ensure() {
     );
     CREATE INDEX IF NOT EXISTS customer_points_branch_idx ON customer_points (branch);
   `);
+  for (const b of BRANCHES) {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS supplier_invoices_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, invoice_number TEXT, supplier_name TEXT, invoice_date TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS supplier_invoices_${b}_date_idx ON supplier_invoices_${b} (invoice_date);
+      CREATE TABLE IF NOT EXISTS sales_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, invoice_number TEXT, customer_name TEXT, sale_date TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS no_invoices_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, invoice_number TEXT, sale_date TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS customer_points_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, customer_name TEXT, customer_phone TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS inventory_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, product_id TEXT, qty NUMERIC DEFAULT 0, location TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS customers_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, phone TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS employees_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS expenses_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, expense_date TEXT, category TEXT, payee TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  }
   ready = true;
 }
 
@@ -108,6 +145,15 @@ export async function GET(req: Request) {
     const table = url.searchParams.get('table') || 'supplier_invoices';
     if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
+    const physical = tableFor(table, branch);
+    if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
+      const all: any[] = [];
+      for (const b of BRANCHES) {
+        const { rows } = await pool.query(`SELECT data FROM ${table}_${b} ORDER BY updated_at DESC LIMIT 500`);
+        all.push(...rows.map((r) => r.data));
+      }
+      return NextResponse.json(all);
+    }
     const month = url.searchParams.get('month');
     const supplier = url.searchParams.get('supplier');
     const invoiceNo = url.searchParams.get('invoiceNo');
@@ -122,7 +168,7 @@ export async function GET(req: Request) {
     if (part && table === 'supplier_invoices') { values.push(`%${part}%`); where.push(`data::text ILIKE $${values.length}`); }
     if (brand && table === 'supplier_invoices') { values.push(`%${brand}%`); where.push(`data::text ILIKE $${values.length}`); }
     const limit = table === 'products' || table === 'inventory' ? 5000 : 500;
-    const sql = `SELECT data FROM ${table} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
+    const sql = `SELECT data FROM ${physical} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, values);
     return NextResponse.json(rows.map((r) => r.data));
   } catch (err: any) {
@@ -141,11 +187,13 @@ export async function POST(req: Request) {
       for (const row of body.rows) await upsert(table, row);
       return NextResponse.json({ ok: true, migrated: body.rows.length });
     }
+    const row = body.row || body;
+    const physical = tableFor(table, row.branch || body.branch);
     if (body.deleteId) {
-      await pool.query(`DELETE FROM ${table} WHERE id = $1`, [String(body.deleteId)]);
+      await pool.query(`DELETE FROM ${physical} WHERE id = $1`, [String(body.deleteId)]);
       return NextResponse.json({ ok: true });
     }
-    await upsert(table, body.row || body);
+    await upsert(physical, row);
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Supabase failed' }, { status: 500 });
@@ -155,58 +203,58 @@ export async function POST(req: Request) {
 async function upsert(table: string, row: any) {
   const id = String(row.id || `${row.branch || ''}-${row.invoiceNumber || row.partNumber || Date.now()}`);
   const data = { ...row, id };
-  if (table === 'supplier_invoices') {
+  if (table.startsWith('supplier_invoices')) {
     await pool.query(
-      `INSERT INTO supplier_invoices (id, branch, invoice_number, supplier_name, invoice_date, data, updated_at)
+      `INSERT INTO ${table} (id, branch, invoice_number, supplier_name, invoice_date, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, supplier_name=EXCLUDED.supplier_name, invoice_date=EXCLUDED.invoice_date, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.invoiceNumber || data.invoiceNo || '', data.supplierName || '', data.invoiceDate || '', JSON.stringify(data)]
     );
-  } else if (table === 'sales') {
+  } else if (table.startsWith('sales')) {
     await pool.query(
-      `INSERT INTO sales (id, branch, invoice_number, customer_name, sale_date, data, updated_at)
+      `INSERT INTO ${table} (id, branch, invoice_number, customer_name, sale_date, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, customer_name=EXCLUDED.customer_name, sale_date=EXCLUDED.sale_date, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.invoiceNumber || data.invoiceNo || '', data.customerName || '', data.date || data.dateTime || '', JSON.stringify(data)]
     );
-  } else if (table === 'inventory') {
+  } else if (table.startsWith('inventory')) {
     await pool.query(
-      `INSERT INTO inventory (id, branch, product_id, qty, location, data, updated_at)
+      `INSERT INTO ${table} (id, branch, product_id, qty, location, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, product_id=EXCLUDED.product_id, qty=EXCLUDED.qty, location=EXCLUDED.location, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.productId || data.product_id || '', Number(data.qty || 0), data.location || '', JSON.stringify(data)]
     );
-  } else if (table === 'no_invoices') {
+  } else if (table.startsWith('no_invoices')) {
     await pool.query(
-      `INSERT INTO no_invoices (id, branch, invoice_number, sale_date, data, updated_at)
+      `INSERT INTO ${table} (id, branch, invoice_number, sale_date, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, sale_date=EXCLUDED.sale_date, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.invoiceNo || data.invoiceNumber || '', data.date || '', JSON.stringify(data)]
     );
-  } else if (table === 'expenses') {
+  } else if (table.startsWith('expenses')) {
     await pool.query(
-      `INSERT INTO expenses (id, branch, expense_date, category, payee, data, updated_at)
+      `INSERT INTO ${table} (id, branch, expense_date, category, payee, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, expense_date=EXCLUDED.expense_date, category=EXCLUDED.category, payee=EXCLUDED.payee, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.date || '', data.category || '', data.payee || '', JSON.stringify(data)]
     );
-  } else if (table === 'customer_points') {
+  } else if (table.startsWith('customer_points')) {
     await pool.query(
-      `INSERT INTO customer_points (id, branch, customer_name, customer_phone, data, updated_at)
+      `INSERT INTO ${table} (id, branch, customer_name, customer_phone, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, customer_name=EXCLUDED.customer_name, customer_phone=EXCLUDED.customer_phone, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.customerName || '', data.customerPhone || '', JSON.stringify(data)]
     );
-  } else if (table === 'customers') {
+  } else if (table.startsWith('customers')) {
     await pool.query(
-      `INSERT INTO customers (id, branch, name, phone, data, updated_at)
+      `INSERT INTO ${table} (id, branch, name, phone, data, updated_at)
        VALUES ($1,$2,$3,$4,$5,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, name=EXCLUDED.name, phone=EXCLUDED.phone, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.name || data.customerName || '', data.phone || data.customerPhone || '', JSON.stringify(data)]
     );
-  } else if (table === 'employees') {
+  } else if (table.startsWith('employees')) {
     await pool.query(
-      `INSERT INTO employees (id, branch, name, data, updated_at)
+      `INSERT INTO ${table} (id, branch, name, data, updated_at)
        VALUES ($1,$2,$3,$4,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, name=EXCLUDED.name, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.name || '', JSON.stringify(data)]

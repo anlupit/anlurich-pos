@@ -35,6 +35,8 @@ export default function POSPage() {
   const [enlarged, setEnlarged] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [vehicleType, setVehicleType] = useState('');
+  const [plateNo, setPlateNo] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [saleDateTime, setSaleDateTime] = useState('');
   const [showPrintAsk, setShowPrintAsk] = useState(false);
@@ -333,7 +335,7 @@ export default function POSPage() {
     setPriceMatches([]);
   };
 
-  const hasLabor = ['anlurich', 'avenders'].includes(currentBranch() || '');
+  const hasLabor = true;
   const lineTotal = (l: Line) => l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0);
   const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const discountAmt = parseFloat(discount) || 0;
@@ -342,25 +344,31 @@ export default function POSPage() {
   const vat = Math.round((grandTotal - netOfVAT) * 100) / 100;
   const change = (parseFloat(cashTender) || 0) - grandTotal;
 
-  const checkPoints = async () => {
-    try {
-      if (!customerName.trim() && !customerPhone.trim()) return alert('Enter customer name or contact first');
-      const branch = currentBranch() || 'unknown';
-      const rows = await loadPointsCloud(branch);
-      const key = customerName.trim().toLowerCase();
-      const ph = customerPhone.trim();
-      const match = rows.find((r) => {
-        const n = String(r.customerName || '').trim().toLowerCase();
-        const p = String(r.customerPhone || '').trim();
-        return (key && n === key) || (ph && p && p === ph);
-      });
-      const info = match || { earned: 0, redeemed: 0, balance: 0 };
-      setPointsInfo({ earned: Number(info.earned || 0), redeemed: Number(info.redeemed || 0), balance: Number(info.balance || 0) });
-      setRedeemPts(0);
-    } catch {
-      alert('Could not check points. Supabase is not connected.');
+  useEffect(() => {
+    if (noInvoice) return;
+    const key = customerName.trim().toLowerCase();
+    const ph = customerPhone.trim();
+    if (!key && !ph) {
+      setPointsInfo(null);
+      return;
     }
-  };
+    const timer = setTimeout(async () => {
+      try {
+        const rows = await loadPointsCloud(currentBranch() || 'unknown');
+        const match = rows.find((r) => {
+          const n = String(r.customerName || '').trim().toLowerCase();
+          const p = String(r.customerPhone || '').trim();
+          if (key && ph) return n === key && p === ph;
+          if (ph) return p === ph;
+          return false;
+        });
+        setPointsInfo(match ? { earned: Number(match.earned || 0), redeemed: Number(match.redeemed || 0), balance: Number(match.balance || 0) } : { earned: 0, redeemed: 0, balance: 0 });
+      } catch {
+        setPointsInfo(null);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerName, customerPhone, noInvoice]);
 
   const redeem = () => {
     if (!pointsInfo || pointsInfo.balance <= 0) return alert('No points to redeem');
@@ -379,6 +387,8 @@ export default function POSPage() {
       invoiceNo: invoiceNo.trim(),
       customerName,
       customerPhone,
+      vehicleType,
+      plateNo,
       date: new Date().toISOString(),
       dateTime: saleDateTime,
       branch,
@@ -405,7 +415,7 @@ export default function POSPage() {
         const redeemedNow = redeemPts || 0;
         const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
         const row = {
-          id: `${branch}-${(customerName || customerPhone).trim().toLowerCase()}`,
+          id: `${branch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
           branch,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
@@ -513,6 +523,8 @@ export default function POSPage() {
     setLines([{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }]);
     setCustomerName('');
     setCustomerPhone('');
+    setVehicleType('');
+    setPlateNo('');
     setDiscount('');
     setCashTender('');
     setReferenceNo('');
@@ -546,15 +558,15 @@ export default function POSPage() {
   };
 
   return (
-    <div className="p-4">
-      <div className="print:hidden">
+    <div className="fixed top-0 right-0 bottom-0 left-56 overflow-hidden flex flex-col p-2 print:static print:overflow-visible print:left-0">
+      <div className="print:hidden flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
-        <h1 className="text-xl font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
-        <span className="text-3xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
+        <h1 className="text-lg font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
+        <span className="text-xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
       </div>
-      <div className="text-xs text-gray-500 mb-4 print:hidden">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
+      <div className="text-xs text-gray-500 mb-1 print:hidden">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
 
-      <div className="bg-white rounded-xl shadow p-3 mb-4 grid grid-cols-1 md:grid-cols-12 gap-3 print:hidden">
+      <div className="bg-white rounded-xl shadow p-2 mb-2 grid grid-cols-1 md:grid-cols-12 gap-2 print:hidden">
         <div className="md:col-span-2">
           <label className="block text-[18px] font-medium mb-1">Payment</label>
           <select className="w-full border rounded px-2 py-2" style={{ maxWidth: '20ch' }} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -584,6 +596,8 @@ export default function POSPage() {
         <div className="md:col-span-2">
           <label className="block text-[18px] font-medium mb-1">Contact Number</label>
           <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+          <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} />
+          <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Plate No." value={plateNo} onChange={(e) => setPlateNo(e.target.value)} />
         </div>
         )}
         <div className="md:col-span-2">
@@ -602,18 +616,15 @@ export default function POSPage() {
         </div>
       </div>
 
-      {!noInvoice && (
-      <div className="bg-white rounded-xl shadow p-3 mb-4 flex gap-2 items-center">
-        <button type="button" onClick={checkPoints} className="bg-purple-600 text-white px-5 py-2 rounded-lg font-medium">Check Points</button>
-        {pointsInfo && (
-          <button type="button" onClick={redeem} className="bg-green-600 text-white px-5 py-2 rounded-lg font-medium">Redeem</button>
-        )}
+      {!noInvoice && pointsInfo && pointsInfo.balance > 0 && (
+      <div className="bg-white rounded-xl shadow p-2 mb-2 flex gap-2 items-center">
+        <button type="button" onClick={redeem} className="bg-green-600 text-white px-5 py-2 rounded-lg font-medium">Redeem {pointsInfo.balance} pts</button>
         {redeemPts > 0 && <span className="text-sm text-red-600">₱{redeemPts} in Discount</span>}
       </div>
       )}
 
       {/* Lines */}
-      <div className="bg-white rounded-xl shadow p-2 mb-4 overflow-x-hidden">
+      <div className="bg-white rounded-xl shadow p-2 mb-2 flex-1 min-h-0 overflow-auto">
         <table className="w-full text-sm md:text-[16px] table-fixed">
           <thead className="bg-teal-500 text-white">
             <tr>
@@ -651,9 +662,9 @@ export default function POSPage() {
         <button onClick={addLine} className="mt-3 bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Line</button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-stretch shrink-0 print:hidden">
         {/* Price Check */}
-        <div className="bg-white rounded-xl shadow p-4 print:hidden">
+        <div className="bg-white rounded-xl shadow p-4 h-full print:hidden">
           <h2 className="font-semibold mb-3">Price Check</h2>
           <div className="space-y-2">
             <div className="flex gap-2">
@@ -679,25 +690,27 @@ export default function POSPage() {
         </div>
 
         {/* Totals */}
-        <div className="bg-white rounded-xl shadow p-2 leading-tight">
-          <div className="flex justify-between py-0.5"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-0.5">
-            <span>Discount</span>
-            <input type="number" min={0} className="border rounded px-2 py-0.5 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
+        <div className="bg-white rounded-xl shadow p-4 h-full flex flex-col">
+          <div className="flex-1 flex flex-col justify-between">
+            <div className="flex justify-between"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between items-center">
+              <span>Discount</span>
+              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
+            </div>
+            {redeemPts > 0 && <div className="flex justify-between text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
+            <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between items-center border-t pt-2">
+              <span>CASH TENDER</span>
+              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="flex justify-between font-bold text-red-600 text-lg">
+              <span>CHANGE</span>
+              <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
           </div>
-          {redeemPts > 0 && <div className="flex justify-between py-0.5 text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
-          <div className="flex justify-between py-0.5 font-bold"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-0.5 text-xs text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-0.5 text-xs text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-0.5 border-t mt-1">
-            <span>CASH TENDER</span>
-            <input type="number" min={0} className="border rounded px-2 py-0.5 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="flex justify-between py-0.5 font-bold text-red-600">
-            <span>CHANGE</span>
-            <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-          </div>
-          <button onClick={handleSave} className="w-full mt-1 bg-blue-700 text-white py-1.5 rounded-lg font-bold">Save Sale</button>
+          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-2 rounded-lg font-bold">Save Sale</button>
         </div>
       </div>
 
