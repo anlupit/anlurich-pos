@@ -381,7 +381,7 @@ export default function POSPage() {
     if (!invoiceNo.trim()) return alert('Enter Sales Invoice No.');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
-    const branch = currentBranch() || 'unknown';
+    const branch = currentBranch() || sessionStorage.getItem('anlurich-auth') || 'unknown';
     const sale = {
       id: Date.now().toString(),
       invoiceNo: invoiceNo.trim(),
@@ -410,7 +410,11 @@ export default function POSPage() {
     };
     try {
       await saveSale(sale);
-      if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
+    } catch (err: any) {
+      return alert(err?.message || 'Sale was NOT saved. Supabase is not connected.');
+    }
+    if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
+      try {
         const earnedNow = Math.floor(grandTotal / 200);
         const redeemedNow = redeemPts || 0;
         const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
@@ -425,9 +429,7 @@ export default function POSPage() {
           updatedAt: new Date().toISOString(),
         };
         await savePoints(row);
-      }
-    } catch {
-      return alert('Sale was NOT saved. Supabase is not connected.');
+      } catch {}
     }
     const missed: string[] = [];
     valid.forEach((l) => {
