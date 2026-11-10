@@ -178,11 +178,8 @@ export async function GET(req: Request) {
     const limit = table === 'products' || table === 'inventory' ? 5000 : 500;
     const sql = `SELECT data FROM ${physical} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, values);
-    const legacySql = `SELECT data FROM ${table} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
-    const legacy = SPLIT.includes(table) ? await pool.query(legacySql, values).catch(() => ({ rows: [] })) : { rows: [] };
-    const merged = [...rows.map((r) => r.data), ...legacy.rows.map((r: any) => r.data)];
     const seen = new Set<string>();
-    return NextResponse.json(merged.filter((row) => {
+    return NextResponse.json(rows.map((r) => r.data).filter((row) => {
       const id = String(row?.id || JSON.stringify(row));
       if (seen.has(id)) return false;
       seen.add(id);
