@@ -291,7 +291,7 @@ export default function BranchDashboard() {
                       <input type="number" className="border rounded w-16 text-center" value={line.qty || line.quantity || 0} onChange={(e) => updateViewLine(i, 'qty', parseInt(e.target.value) || 0)} />
                     </td>
                     <td className="p-1 text-right">
-                      <input type="number" step="0.01" className="border rounded w-24 text-right" value={line.price || line.costPrice || 0} onChange={(e) => updateViewLine(i, 'price', parseFloat(e.target.value) || 0)} />
+                      <input className="border rounded w-28 text-right" value={Number(line.price || line.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateViewLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
                     </td>
                   </tr>
                 ))}

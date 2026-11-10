@@ -128,7 +128,7 @@ export default function CorporatePage() {
                 <td className="p-1"><input className="border rounded px-2 py-1 w-full" value={l.description} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, description: e.target.value } : x))} /></td>
                 <td className="p-1"><input type="number" className="border rounded px-2 py-1 w-16 text-center" value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value) || 1 } : x))} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-20" value={l.unit} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, unit: e.target.value } : x))} /></td>
-                <td className="p-1"><input type="number" className="border rounded px-2 py-1 w-24 text-right" value={l.price || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-1 w-28 text-right" value={Number(l.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100 } : x))} /></td>
                 <td className="p-1 text-right">{money(l.qty * l.price)}</td>
                 <td><button onClick={() => removeLine(l.id)} className="text-red-600 text-xs">Delete</button></td>
               </tr>

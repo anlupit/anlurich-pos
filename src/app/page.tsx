@@ -85,15 +85,7 @@ export default function Home() {
     <div className="h-screen overflow-hidden text-gray-900" style={{ background: bg }}>
       <div className="h-full max-w-[1600px] mx-auto px-3 pt-2 pb-2 md:px-[15ch] md:pb-8 flex flex-col">
         <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 md:mb-1">
-          {logo ? <img src={logo} alt="Logo" className="w-12 h-12 md:w-[185px] md:h-[185px] object-contain" /> : (
-          <svg width="48" height="48" viewBox="0 0 64 64" className="md:w-32 md:h-32">
-            <circle cx="32" cy="32" r="28" fill="#e5e7eb" stroke="#111827" strokeWidth="2" />
-            <circle cx="32" cy="32" r="10" fill="#111827" />
-            <circle cx="32" cy="32" r="4" fill="#f4f6fb" />
-            <path d="M32 6v10M32 48v10M6 32h10M48 32h10M12 12l7 7M45 45l7 7M12 52l7-7M45 19l7-7" stroke="#6b7280" strokeWidth="3" />
-            <circle cx="32" cy="32" r="20" fill="none" stroke="#9ca3af" strokeWidth="6" strokeDasharray="8 6" />
-          </svg>
-          )}
+          {logo ? <img src={logo} alt="Logo" className="w-12 h-12 md:w-[185px] md:h-[185px] object-contain bg-transparent" /> : null}
           <h1 className="text-sm leading-tight md:text-3xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
 

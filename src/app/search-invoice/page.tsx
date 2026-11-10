@@ -181,14 +181,14 @@ export default function SearchInvoicePage() {
                       <input type="number" min={1} className="w-16 border rounded px-2 py-1 text-center" value={item.qty} onChange={(e) => updateItem(i, 'qty', parseInt(e.target.value) || 1)} />
                     </td>
                     <td className="p-1 text-right">
-                      <input type="number" min={0} step="0.01" className="w-24 border rounded px-2 py-1 text-right" value={item.price} onChange={(e) => updateItem(i, 'price', parseFloat(e.target.value) || 0)} />
+                      <input className="w-28 border rounded px-2 py-1 text-right" value={Number(item.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
                     </td>
                     <td className="p-1 text-right">₱{item.total?.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right font-bold mb-1">Total: ₱{editing.total?.toLocaleString()}</div>
+            <div className="text-right font-bold mb-1">Total: ₱{Number(editing.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="text-right font-bold text-green-700 mb-3">Points earned: {pointsFor(editing.total)} (₱200 = 1 point)</div>
             <div className="flex gap-3">
               <button onClick={() => setEditing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>

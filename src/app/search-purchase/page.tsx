@@ -105,15 +105,27 @@ export default function SearchPurchasePage() {
     else alert('Invoice record was not found. Search again and try View / Edit.');
   };
 
+  const recalc = (lines: any[], d1: number, d2: number, d3: number) => {
+    const next = lines.map((l) => {
+      const gross = Number(l.grossPrice || l.price || 0);
+      const net = Math.round(gross * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100) * 100) / 100;
+      return { ...l, grossPrice: gross, netPrice: net, price: net, total: Math.round((Number(l.qty) || 0) * net * 100) / 100 };
+    });
+    const subtotal = next.reduce((sum, l) => sum + Number(l.total || 0), 0);
+    return { lines: next, subtotal, grandTotal: Math.round(subtotal * 100) / 100, discount1: d1, discount2: d2, discount3: d3 };
+  };
+
   const updateLine = (index: number, field: string, value: string | number) => {
     if (!viewing) return;
     const lines = [...(viewing.lines || [])];
-    const line = { ...lines[index], [field]: value };
-    line.total = (Number(line.qty) || 0) * (Number(line.price) || 0);
-    lines[index] = line;
-    const subtotal = lines.reduce((sum: number, l: any) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
-    const grandTotal = subtotal * (1 - (viewing.discount1 || 0) / 100) * (1 - (viewing.discount2 || 0) / 100);
-    setViewing({ ...viewing, lines, subtotal, grandTotal });
+    lines[index] = { ...lines[index], [field]: value };
+    setViewing({ ...viewing, ...recalc(lines, Number(viewing.discount1 || 0), Number(viewing.discount2 || 0), Number(viewing.discount3 || 0)) });
+  };
+
+  const updateDiscount = (field: 'discount1' | 'discount2' | 'discount3', value: number) => {
+    if (!viewing) return;
+    const next = { ...viewing, [field]: value };
+    setViewing({ ...next, ...recalc(next.lines || [], Number(next.discount1 || 0), Number(next.discount2 || 0), Number(next.discount3 || 0)) });
   };
 
   const saveEdit = async () => {
@@ -159,8 +171,7 @@ export default function SearchPurchasePage() {
         </div>
         <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().split('T')[0])}</div>
       </div>
-      <div className="flex justify-between items-center mb-1">
-        <h1 className="text-xl font-bold text-yellow-600">Search Purchase Invoice</h1>
+      <div className="flex justify-end items-center mb-1">
         <button onClick={goDashboard} className="text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
       </div>
       <div className="text-xs text-gray-500 mb-4">This branch only</div>
@@ -262,12 +273,26 @@ export default function SearchPurchasePage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-7xl max-h-[90vh] overflow-auto">
             <h3 className="font-bold text-lg mb-3">Invoice {viewing.invoiceNumber}</h3>
+            <div className="flex justify-end gap-2 mb-3">
+              <div>
+                <div className="text-xs text-center mb-1">Discount 1 (%)</div>
+                <input className="border rounded px-2 py-1 w-20 text-center" value={viewing.discount1 || 0} onChange={(e) => updateDiscount('discount1', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div>
+                <div className="text-xs text-center mb-1">Discount 2 (%)</div>
+                <input className="border rounded px-2 py-1 w-20 text-center" value={viewing.discount2 || 0} onChange={(e) => updateDiscount('discount2', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div>
+                <div className="text-xs text-center mb-1">Discount 3 (%)</div>
+                <input className="border rounded px-2 py-1 w-20 text-center" value={viewing.discount3 || 0} onChange={(e) => updateDiscount('discount3', parseFloat(e.target.value) || 0)} />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
               <input className="border rounded px-3 py-2" value={viewing.invoiceNumber || ''} onChange={(e) => setViewing({ ...viewing, invoiceNumber: e.target.value })} />
             </div>
             <table className="w-full text-sm mb-3">
-              <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Price</th></tr></thead>
+              <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Gross Price</th><th className="text-right p-1">Price</th></tr></thead>
               <tbody>
                 {(viewing.lines || []).map((line: any, i: number) => (
                   <tr key={i} className="border-t">
@@ -275,7 +300,8 @@ export default function SearchPurchasePage() {
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
                     <td className="p-1 text-center"><input type="number" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value) || 0)} /></td>
-                    <td className="p-1 text-right"><input type="number" step="0.01" className="w-24 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toFixed(2)} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value) || 0) * 100) / 100)} /></td>
+                    <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.grossPrice || line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'grossPrice', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
+                    <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
                   </tr>
                 ))}
               </tbody>
