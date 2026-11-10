@@ -37,6 +37,11 @@ export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [newAnnouncement, setNewAnnouncement] = useState('');
+  const yearNow = new Date().getFullYear();
+  const [fromMonth, setFromMonth] = useState(`${yearNow}-01`);
+  const [toMonth, setToMonth] = useState(`${yearNow}-12`);
+  const [payables, setPayables] = useState<any[]>([]);
+  const [searchedPayables, setSearchedPayables] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const month = new Date().toISOString().slice(0, 7);
