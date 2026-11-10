@@ -14,19 +14,12 @@ export default function SearchPurchasePage() {
   const [mode, setMode] = useState<'invoice' | 'product'>('invoice');
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
-  const [largeImage, setLargeImage] = useState('');
 
   useEffect(() => {
     stripInvoicePhotos().then(setInvoices).catch(() => loadInvoicesCloud().then(setInvoices));
   }, []);
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const yearOf = (date: string) => {
-    if (!date) return '';
-    const m = String(date).match(/20\d{2}/);
-    return m ? m[0] : String(date).slice(0, 4);
-  };
 
   const searchInvoices = (list: any[]) => {
     const qSupplier = supplier.trim().toLowerCase();
@@ -57,7 +50,7 @@ export default function SearchPurchasePage() {
         const br = String(line.brand || '').toLowerCase();
         const partOk = !qPart || pn.includes(qPart);
         const brandOk = !qBrand || br.includes(qBrand);
-        if (partOk && brandOk && (qPart || qBrand || (!qPart && !qBrand))) {
+        if (partOk && brandOk) {
           rows.push({
             invoiceId: inv.id,
             invoiceDate: inv.invoiceDate,
@@ -77,83 +70,6 @@ export default function SearchPurchasePage() {
       return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
     }));
     setMode('product');
-    setSearched(true);
-  };
-    const rows: any[] = [];
-    const qPart = part.trim().toLowerCase();
-    const qBrand = brand.trim().toLowerCase();
-    const qSupplier = supplier.trim().toLowerCase();
-    const qInv = invoiceNo.trim().toLowerCase();
-
-    list.forEach((inv) => {
-      const invDate = String(inv.invoiceDate || inv.createdAt || '');
-      if (month && !invDate.startsWith(month)) return;
-      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return;
-      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return;
-
-      const lines = inv.lines || [];
-      const matching = lines.filter((line: any) => {
-        const pn = String(line.partNumber || line.partNo || line.oemPartNumber || '').toLowerCase();
-        const bc = String(line.barcode || '').toLowerCase();
-        const desc = String(line.description || '').toLowerCase();
-        const br = String(line.brand || '').toLowerCase();
-        const partOk = !qPart || pn.includes(qPart) || bc.includes(qPart) || desc.includes(qPart);
-        const brandOk = !qBrand || br.includes(qBrand) || desc.includes(qBrand);
-        return partOk && brandOk;
-      });
-
-      if (qPart || qBrand) {
-        matching.forEach((line: any) => {
-          rows.push({
-            invoiceId: inv.id,
-            supplierName: inv.supplierName,
-            invoiceNumber: inv.invoiceNumber,
-            invoiceDate: inv.invoiceDate,
-            grandTotal: inv.grandTotal,
-            partNumber: line.partNumber || line.partNo,
-            brand: line.brand,
-            description: line.description,
-            qty: line.qty || line.quantity,
-            price: line.price || line.costPrice,
-          });
-        });
-      } else {
-        if (!lines.length) {
-          rows.push({
-            invoiceId: inv.id,
-            supplierName: inv.supplierName,
-            invoiceNumber: inv.invoiceNumber || inv.invoiceNo,
-            invoiceDate: inv.invoiceDate,
-            grandTotal: inv.grandTotal,
-            partNumber: '',
-            brand: '',
-            description: '',
-            qty: '',
-            price: '',
-          });
-        }
-        lines.forEach((line: any) => {
-          rows.push({
-            invoiceId: inv.id,
-            supplierName: inv.supplierName,
-            invoiceNumber: inv.invoiceNumber,
-            invoiceDate: inv.invoiceDate,
-            grandTotal: inv.grandTotal,
-            partNumber: line.partNumber || line.partNo,
-            brand: line.brand,
-            description: line.description,
-            qty: line.qty || line.quantity,
-            price: line.price || line.costPrice,
-          });
-        });
-      }
-    });
-
-    setResults(rows.sort((a, b) => {
-      const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
-      if (date) return date;
-      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
-    }));
     setSearched(true);
   };
 
@@ -194,11 +110,11 @@ export default function SearchPurchasePage() {
     try {
       await updateInvoices(branch, updated);
     } catch {
-      return alert('Photo and changes were NOT saved. Supabase is not connected.');
+      return alert('Changes were NOT saved. Supabase is not connected.');
     }
     setInvoices(updated);
     setViewing(null);
-    alert('Invoice and photo saved to Supabase');
+    alert('Invoice saved to Supabase');
     handleInvoiceSearch();
   };
 
@@ -282,7 +198,7 @@ export default function SearchPurchasePage() {
                   <td className="p-2">{r.supplierName}</td>
                   <td className="p-2 text-right">{money(r.grandTotal)}</td>
                   <td className="p-2 text-center">{String(r.status || 'unpaid').toLowerCase() === 'paid' ? 'Paid' : 'UnPaid'}</td>
-                  <td className="p-2 text-center"><button onClick={() => openInvoice(r.id || r.invoiceId)} className="text-blue-600 font-medium">View / Edit</button></td>
+                  <td className="p-2 text-center"><button onClick={() => openInvoice(r.id)} className="text-blue-600 font-medium">View / Edit</button></td>
                 </tr>
               ))}
               {results.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
@@ -290,6 +206,7 @@ export default function SearchPurchasePage() {
           </table>
         </div>
       )}
+
       {searched && mode === 'product' && (
         <div className="bg-white rounded-xl shadow overflow-x-auto">
           <table className="w-full" style={{ fontSize: '20px' }}>
@@ -327,8 +244,6 @@ export default function SearchPurchasePage() {
       {viewing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            <div className="flex gap-4">
-              <div className="flex-1">
             <h3 className="font-bold text-lg mb-3">Invoice {viewing.invoiceNumber}</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
@@ -349,15 +264,10 @@ export default function SearchPurchasePage() {
               </tbody>
             </table>
             <div className="text-right font-bold mb-3">Total: ₱{viewing.grandTotal?.toLocaleString()}</div>
-            <div className="mb-3">
-              <div className="text-sm text-gray-500">Invoice photo removed. Photos will be handled in a separate program.</div>
-            </div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>
               <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>
-            </div>
-              </div>
             </div>
           </div>
         </div>
