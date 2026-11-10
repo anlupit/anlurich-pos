@@ -35,7 +35,9 @@ export default function SearchPurchasePage() {
     }).sort((a, b) => {
       const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
       if (date) return date;
-      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+      const supplierSort = String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+      if (supplierSort) return supplierSort;
+      return String(b.invoiceNumber || b.invoiceNo || '').localeCompare(String(a.invoiceNumber || a.invoiceNo || ''), undefined, { numeric: true });
     });
     setResults(rows);
     setMode('invoice');
@@ -69,6 +71,8 @@ export default function SearchPurchasePage() {
     setResults(rows.sort((a, b) => {
       const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
       if (date) return date;
+      const supplierSort = String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+      if (supplierSort) return supplierSort;
       return String(b.invoiceNumber || '').localeCompare(String(a.invoiceNumber || ''), undefined, { numeric: true });
     }));
     setMode('product');
