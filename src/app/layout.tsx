@@ -1,6 +1,7 @@
 import './globals.css';
 import Sidebar from '../components/Sidebar';
 import CloudSync from '../components/CloudSync';
+import AuthGuard from '../components/AuthGuard';
 
 export const dynamic = 'force-dynamic';
 
