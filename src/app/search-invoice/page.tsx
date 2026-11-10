@@ -9,7 +9,9 @@ function pointsFor(total: number) {
 
 export default function SearchInvoicePage() {
   const [sales, setSales] = useState<any[]>([]);
-  const [year, setYear] = useState('All');
+  const yearNow = new Date().getFullYear();
+  const [monthFrom, setMonthFrom] = useState(`${yearNow}-01`);
+  const [monthTo, setMonthTo] = useState(`${yearNow}-12`);
   const [invoiceNo, setInvoiceNo] = useState('');
   const [contact, setContact] = useState('');
   const [customer, setCustomer] = useState('');
@@ -23,17 +25,23 @@ export default function SearchInvoicePage() {
   }, []);
 
   const handleSearch = async () => {
-    const fresh = await loadSalesCloud();
+    const [pos, noInv] = await Promise.all([loadSalesCloud(), loadNoInvoicesCloud()]);
+    const fresh = [...pos, ...noInv];
     setSales(fresh);
     const filtered = fresh.filter((s) => {
-      const saleYear = (s.date || s.dateTime || '').slice(0, 4);
-      if (year !== 'All' && saleYear && saleYear !== year) return false;
+      const saleMonth = String(s.date || s.dateTime || '').slice(0, 7);
+      if (monthFrom && saleMonth && saleMonth < monthFrom) return false;
+      if (monthTo && saleMonth && saleMonth > monthTo) return false;
       if (invoiceNo && !String(s.invoiceNo || '').toLowerCase().includes(invoiceNo.toLowerCase())) return false;
       if (contact && !String(s.customerPhone || '').toLowerCase().includes(contact.toLowerCase())) return false;
       if (customer && !String(s.customerName || '').toLowerCase().includes(customer.toLowerCase())) return false;
       return true;
     });
-    setResults(filtered.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+    setResults(filtered.sort((a, b) => {
+      const date = String(b.date || b.dateTime || '').localeCompare(String(a.date || a.dateTime || ''));
+      if (date) return date;
+      return String(b.invoiceNo || '').localeCompare(String(a.invoiceNo || ''), undefined, { numeric: true });
+    }));
     setSearched(true);
   };
 
@@ -104,8 +112,12 @@ export default function SearchInvoicePage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex flex-nowrap items-end gap-2 overflow-x-auto">
           <div>
-            <div className="text-xs font-medium text-center mb-1">Year</div>
-            <input className="border rounded px-2 py-1 text-center" style={{ width: '8ch' }} placeholder="All" value={year === 'All' ? '' : year} onChange={(e) => setYear(e.target.value || 'All')} onKeyDown={onEnter} />
+            <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
+            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
+            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Invoice No.</div>

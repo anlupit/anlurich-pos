@@ -60,6 +60,15 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS customers_branch_idx ON customers (branch);
+    CREATE TABLE IF NOT EXISTS no_invoices (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      invoice_number TEXT,
+      sale_date TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS no_invoices_branch_idx ON no_invoices (branch);
     CREATE TABLE IF NOT EXISTS employees (
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
@@ -68,6 +77,16 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS employees_branch_idx ON employees (branch);
+    CREATE TABLE IF NOT EXISTS expenses (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      expense_date TEXT,
+      category TEXT,
+      payee TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS expenses_branch_idx ON expenses (branch);
   `);
   ready = true;
 }
@@ -78,7 +97,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const month = url.searchParams.get('month');
     const supplier = url.searchParams.get('supplier');
@@ -108,7 +127,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrate && Array.isArray(body.rows)) {
       for (const row of body.rows) await upsert(table, row);
       return NextResponse.json({ ok: true, migrated: body.rows.length });
@@ -147,6 +166,20 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, product_id=EXCLUDED.product_id, qty=EXCLUDED.qty, location=EXCLUDED.location, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.productId || data.product_id || '', Number(data.qty || 0), data.location || '', JSON.stringify(data)]
+    );
+  } else if (table === 'no_invoices') {
+    await pool.query(
+      `INSERT INTO no_invoices (id, branch, invoice_number, sale_date, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, sale_date=EXCLUDED.sale_date, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.invoiceNo || data.invoiceNumber || '', data.date || '', JSON.stringify(data)]
+    );
+  } else if (table === 'expenses') {
+    await pool.query(
+      `INSERT INTO expenses (id, branch, expense_date, category, payee, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, expense_date=EXCLUDED.expense_date, category=EXCLUDED.category, payee=EXCLUDED.payee, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.date || '', data.category || '', data.payee || '', JSON.stringify(data)]
     );
   } else if (table === 'customers') {
     await pool.query(

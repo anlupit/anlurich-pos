@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { loadProducts, saveProducts, loadProductsCloud, Product } from '../../lib/products';
+import { searchInvoicesCloud } from '../../lib/branchData';
 
 export default function ProductCatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -19,7 +20,25 @@ export default function ProductCatalogPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadProductsCloud().then(setProducts).catch(() => setProducts(loadProducts()));
+    Promise.all([loadProductsCloud(), searchInvoicesCloud({})]).then(([rows, invoices]) => {
+      const base = rows.length ? rows : loadProducts();
+      const latest = new Map<string, { date: string; net: number; description?: string }>();
+      invoices.forEach((inv: any) => {
+        const date = String(inv.invoiceDate || inv.createdAt || '');
+        (inv.lines || []).forEach((line: any) => {
+          const part = String(line.partNumber || '').trim().toLowerCase();
+          if (!part) return;
+          const net = Number(line.netPrice || line.price || 0);
+          const prev = latest.get(part);
+          if (!prev || date > prev.date) latest.set(part, { date, net, description: line.description });
+        });
+      });
+      setProducts(base.map((p) => {
+        const hit = latest.get(String(p.partNumber || '').trim().toLowerCase());
+        if (!hit || !hit.net) return p;
+        return { ...p, costPrice: Math.round(hit.net * 100) / 100, description: hit.description || p.description, sellingPrice: Math.ceil((hit.net * 1.5) / 100) * 100 };
+      }));
+    }).catch(() => setProducts(loadProducts()));
   }, []);
 
   const saveProduct = async () => {
@@ -189,7 +208,7 @@ export default function ProductCatalogPage() {
     const brand = findBrand.trim().toLowerCase();
     const name = findName.trim().toLowerCase();
     const desc = findDesc.trim().toLowerCase();
-    return (!part || p.partNumber.toLowerCase().includes(part))
+    return (!part || String(p.partNumber || '').toLowerCase().includes(part))
       && (!brand || String(p.brand || '').toLowerCase().includes(brand))
       && (!name || String(p.name || '').toLowerCase().includes(name))
       && (!desc || String(p.description || '').toLowerCase().includes(desc) || String(p.name || '').toLowerCase().includes(desc));

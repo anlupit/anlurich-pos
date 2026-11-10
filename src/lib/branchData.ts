@@ -307,15 +307,26 @@ export async function loadSalesCloud(branch?: string): Promise<any[]> {
 
 export async function saveSale(sale: any) {
   const b = sale.branch || currentBranch() || 'unknown';
+  const table = sale.noInvoice ? 'no_invoices' : 'sales';
   const row = { ...sale, branch: b, id: sale.id || `${b}-${sale.invoiceNo}-${Date.now()}`, updatedAt: new Date().toISOString() };
   const res = await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'sales', row }),
+    body: JSON.stringify({ table, row }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Supabase sale save failed');
   return row;
+}
+
+export async function loadNoInvoicesCloud(branch?: string): Promise<any[]> {
+  const b = branch || currentBranch();
+  const params = new URLSearchParams({ table: 'no_invoices' });
+  if (b && b !== 'admin') params.set('branch', b);
+  const res = await fetch(`/api/records?${params.toString()}`, { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
 
 export async function updateSales(branch: string, sales: any[]) {

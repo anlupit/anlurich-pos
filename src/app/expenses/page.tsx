@@ -49,30 +49,27 @@ const BRANCHES = [
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function loadExpenses(branch: string): Promise<Expense[]> {
-  const key = `anlurich-expenses-${branch}`;
-  try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
-    if (res.ok) {
-      const rows: { key: string; value: string }[] = await res.json();
-      const row = rows.find((r) => r.key === key);
-      if (row?.value) {
-        localStorage.setItem(key, row.value);
-        return JSON.parse(row.value);
-      }
-    }
-  } catch {}
-  return JSON.parse(localStorage.getItem(key) || '[]');
+  const res = await fetch(`/api/records?table=expenses&branch=${branch}`, { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
 
-async function saveExpenses(branch: string, rows: Expense[]) {
-  const key = `anlurich-expenses-${branch}`;
-  const res = await fetch('/api/data', {
+async function saveExpense(item: Expense) {
+  const res = await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, value: JSON.stringify(rows) }),
+    body: JSON.stringify({ table: 'expenses', row: item }),
   });
   if (!res.ok) throw new Error('Supabase save failed');
-  localStorage.setItem(key, JSON.stringify(rows));
+}
+
+async function deleteExpense(id: string) {
+  await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'expenses', deleteId: id }),
+  });
 }
 
 export default function ExpensesPage() {
@@ -88,8 +85,9 @@ export default function ExpensesPage() {
     notes: '',
     image: '',
   });
-  const [year, setYear] = useState(new Date().getFullYear().toString());
-  const [month, setMonth] = useState('');
+  const yearNow = new Date().getFullYear();
+  const [monthFrom, setMonthFrom] = useState(`${yearNow}-01`);
+  const [monthTo, setMonthTo] = useState(`${yearNow}-12`);
   const [editing, setEditing] = useState<string | null>(null);
   const [enlarged, setEnlarged] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -124,7 +122,7 @@ export default function ExpensesPage() {
     };
     const next = editing ? rows.map((r) => (r.id === editing ? item : r)) : [item, ...rows];
     setRows(next);
-    try { await saveExpenses(target, next); } catch { return alert('Expense photo was NOT saved. Supabase is not connected.'); }
+    try { await saveExpense(item); } catch { return alert('Expense was NOT saved. Supabase is not connected.'); }
     setEditing(null);
     setForm({ date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], payee: '', reference: '', amount: '', vat: '', notes: '', image: '' });
   };
@@ -134,13 +132,13 @@ export default function ExpensesPage() {
     const target = branch === 'admin' ? selectedBranch : branch;
     const next = rows.filter((r) => r.id !== id);
     setRows(next);
-    await saveExpenses(target, next);
+    await deleteExpense(id);
   };
 
   const filtered = rows.filter((r) => {
-    const d = String(r.date || '');
-    if (year && !d.startsWith(year)) return false;
-    if (month && d.slice(5, 7) !== month) return false;
+    const d = String(r.date || '').slice(0, 7);
+    if (monthFrom && d && d < monthFrom) return false;
+    if (monthTo && d && d > monthTo) return false;
     return true;
   });
   const total = filtered.reduce((s, r) => s + (r.amount || 0), 0);
@@ -154,14 +152,22 @@ export default function ExpensesPage() {
   };
 
   const printSummary = () => window.print();
-  const download = () => {
-    const header = 'Date,Category,Payee,Reference,Amount,VAT,Notes';
-    const lines = filtered.map((r) => [r.date, r.category, r.payee, r.reference, r.amount.toFixed(2), r.vat.toFixed(2), r.notes].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
-    const csv = [header, ...lines, `"","","","TOTAL","${total.toFixed(2)}","${vatTotal.toFixed(2)}",""`].join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `company-expenses-${branch === 'admin' ? selectedBranch : branch}-${year || 'all'}${month ? '-' + month : ''}.csv`;
-    a.click();
+  const download = async () => {
+    const XLSX = await import('xlsx');
+    const rowsOut = filtered.map((r) => ({
+      Date: r.date,
+      Category: r.category,
+      Payee: r.payee,
+      Reference: r.reference,
+      Amount: Number(Number(r.amount || 0).toFixed(2)),
+      VAT: Number(Number(r.vat || 0).toFixed(2)),
+      Notes: r.notes,
+    }));
+    rowsOut.push({ Date: '', Category: '', Payee: '', Reference: 'TOTAL', Amount: Number(total.toFixed(2)), VAT: Number(vatTotal.toFixed(2)), Notes: '' });
+    const ws = XLSX.utils.json_to_sheet(rowsOut);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+    XLSX.writeFile(wb, `company-expenses-${branch === 'admin' ? selectedBranch : branch}-${monthFrom}-to-${monthTo}.xlsx`);
   };
 
   const savePersonal = async () => {
@@ -180,7 +186,7 @@ export default function ExpensesPage() {
     };
     const next = [item, ...personal];
     setPersonal(next);
-    await saveExpenses('admin-personal', next);
+    await saveExpense(item);
     setForm({ date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], payee: '', reference: '', amount: '', vat: '', notes: '', image: '' });
   };
   const personalFiltered = personal.filter((r) => {
@@ -224,18 +230,21 @@ export default function ExpensesPage() {
             <select className="border rounded px-3 py-2" value={selectedBranch} onChange={(e) => { setSelectedBranch(e.target.value); loadExpenses(e.target.value).then(setRows); }}>
               {BRANCHES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
-            <button onClick={download} className="bg-gray-700 text-white rounded px-4 py-2 text-sm">Download Summary</button>
+            <button onClick={download} className="bg-gray-700 text-white rounded px-4 py-2 text-sm">Download Excel</button>
             <button onClick={printSummary} className="bg-blue-700 text-white rounded px-4 py-2 text-sm">Print Summary</button>
           </div>
         </div>
       )}
-      <div className="flex gap-2 mb-3 items-center">
-        <input className="border rounded px-3 py-2 w-28" placeholder="Year" value={year} onChange={(e) => setYear(e.target.value)} />
-        <select className="border rounded px-3 py-2" value={month} onChange={(e) => setMonth(e.target.value)}>
-          <option value="">All months</option>
-          {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <button onClick={download} className="bg-gray-700 text-white rounded px-4 py-2 text-sm">Download Expense Summary</button>
+      <div className="flex gap-2 mb-3 items-center flex-wrap">
+        <div>
+          <div className="text-xs text-center mb-1">From Month / Year</div>
+          <input type="month" className="border rounded px-3 py-2" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} />
+        </div>
+        <div>
+          <div className="text-xs text-center mb-1">To Month / Year</div>
+          <input type="month" className="border rounded px-3 py-2" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} />
+        </div>
+        <button onClick={download} className="bg-gray-700 text-white rounded px-4 py-2 text-sm">Download Excel</button>
         <div className="ml-auto text-sm">Total: <b>{money(total)}</b> · VAT: <b>{money(vatTotal)}</b></div>
       </div>
 

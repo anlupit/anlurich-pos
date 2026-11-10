@@ -5,7 +5,9 @@ import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatD
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [month, setMonth] = useState('');
+  const year = new Date().getFullYear();
+  const [monthFrom, setMonthFrom] = useState(`${year}-01`);
+  const [monthTo, setMonthTo] = useState(`${year}-12`);
   const [supplier, setSupplier] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [part, setPart] = useState('');
@@ -24,12 +26,13 @@ export default function SearchPurchasePage() {
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const searchInvoices = (list: any[], filters = { month, supplier, invoiceNo }) => {
+  const searchInvoices = (list: any[], filters = { monthFrom, monthTo, supplier, invoiceNo }) => {
     const qSupplier = filters.supplier.trim().toLowerCase();
     const qInv = filters.invoiceNo.trim().toLowerCase();
     const rows = list.filter((inv) => {
-      const invDate = String(inv.invoiceDate || inv.createdAt || '');
-      if (filters.month && !invDate.startsWith(filters.month)) return false;
+      const invDate = String(inv.invoiceDate || inv.createdAt || '').slice(0, 7);
+      if (filters.monthFrom && invDate && invDate < filters.monthFrom) return false;
+      if (filters.monthTo && invDate && invDate > filters.monthTo) return false;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
       if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
       return true;
@@ -83,10 +86,9 @@ export default function SearchPurchasePage() {
   };
 
   const handleInvoiceSearch = async () => {
-    const filters = { month, supplier, invoiceNo };
-    const fresh = await searchInvoicesCloud(filters);
+    const filters = { monthFrom, monthTo, supplier, invoiceNo };
+    const fresh = await searchInvoicesCloud({});
     searchInvoices(fresh, filters);
-    setMonth('');
     setSupplier('');
     setInvoiceNo('');
   };
@@ -179,8 +181,12 @@ export default function SearchPurchasePage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }}>
           <div>
-            <div className="text-xs font-medium text-center mb-1">Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value)} />
+            <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
+            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
+            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Supplier Name</div>

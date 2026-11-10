@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
-import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
 
 type Line = {
   id: string;
@@ -65,22 +65,27 @@ export default function POSPage() {
   const [redeemPts, setRedeemPts] = useState(0);
 
   useEffect(() => {
+    const d = new Date();
+    setSaleDateTime(formatDate(d.toISOString()) + ' ' + d.toLocaleTimeString());
+    if (noInvoice) {
+      const prefix = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getFullYear()).slice(-2)}`;
+      const localUsed = loadSales().filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
+      const localNext = localUsed.reduce((max, s) => Math.max(max, parseInt(String(s.invoiceNo || '').split('-')[1] || '0', 10) || 0), 0) + 1;
+      setInvoiceNo(`${prefix}-${String(localNext).padStart(2, '0')}`);
+    }
     const load = async () => {
       try {
-        await syncOnline();
+        syncOnline().catch(() => {});
         clearOldSalesRecords().catch(() => {});
         const prods = loadProducts();
         const stock = loadStock();
         setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
         setInvoices(loadInvoices());
-        setSaleDateTime(formatDate(new Date().toISOString()) + ' ' + new Date().toLocaleTimeString());
-      } catch {
-        setSaleDateTime(new Date().toLocaleString());
-      }
+      } catch {}
       if (noInvoice) {
-        const d = new Date();
-        const prefix = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getFullYear()).slice(-2)}`;
-        const used = (await loadSalesCloud()).filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
+        const d2 = new Date();
+        const prefix = `${String(d2.getMonth() + 1).padStart(2, '0')}${String(d2.getDate()).padStart(2, '0')}${String(d2.getFullYear()).slice(-2)}`;
+        const used = (await (noInvoice ? loadNoInvoicesCloud() : loadSalesCloud()).catch(() => [])).filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
         const next = used.reduce((max, s) => Math.max(max, parseInt(String(s.invoiceNo || '').split('-')[1] || '0', 10) || 0), 0) + 1;
         setInvoiceNo(`${prefix}-${String(next).padStart(2, '0')}`);
       }
@@ -216,9 +221,12 @@ export default function POSPage() {
     const netFromGross = gross * (1 - (item.discount1 || 0) / 100) * (1 - (item.discount2 || 0) / 100) * (1 - (item.discount3 || 0) / 100);
     const cost = netFromGross || Number(item.price) || Number(item.costPrice) || 0;
     const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
+    const part = String(item.partNumber || priceCheck.partNumber || '').trim();
+    const rawBarcode = String(item.barcode || '').trim();
+    const barcode = rawBarcode && rawBarcode.toLowerCase() !== part.toLowerCase() ? rawBarcode : '';
     setPriceCheck({
-      barcode: item.barcode || priceCheck.barcode,
-      partNumber: item.partNumber || priceCheck.partNumber,
+      barcode,
+      partNumber: part,
       description: item.description || item.name || '',
       brand: item.brand || '',
       costPrice: cost,
@@ -280,7 +288,7 @@ export default function POSPage() {
           const linePn = String(line.partNumber || '').toLowerCase();
           const lineBc = String(line.barcode || '').toLowerCase();
           const partOk = !pn || linePn.includes(pn);
-          const barcodeOk = !bc || lineBc.includes(bc) || linePn.includes(bc);
+          const barcodeOk = !bc || lineBc.includes(bc);
           const key = linePn;
           if (partOk && barcodeOk && linePn && !seen.has(key)) {
             seen.add(key);
@@ -292,7 +300,7 @@ export default function POSPage() {
       const cpn = p.partNumber.toLowerCase();
       const cbc = (p.barcode || '').toLowerCase();
       const partOk = !pn || cpn.includes(pn);
-      const barcodeOk = !bc || cbc.includes(bc) || cpn.includes(bc);
+      const barcodeOk = !bc || cbc.includes(bc);
       if (partOk && barcodeOk && cpn && !seen.has(cpn)) {
         seen.add(cpn);
         found.push(p);
@@ -374,6 +382,7 @@ export default function POSPage() {
       discount: discountAmt,
       pointsRedeemed: noInvoice ? 0 : redeemPts,
       noPoints: noInvoice,
+      noInvoice,
       total: grandTotal,
       paymentMethod,
       referenceNo: referenceNo.trim(),
@@ -559,32 +568,32 @@ export default function POSPage() {
       )}
 
       {/* Lines */}
-      <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
-        <table className="w-full text-[18px]">
+      <div className="bg-white rounded-xl shadow p-2 mb-4 overflow-x-hidden">
+        <table className="w-full text-sm md:text-[16px] table-fixed">
           <thead className="bg-teal-500 text-white">
             <tr>
-              <th className="p-2 text-left">Barcode</th>
-              <th className="p-2 text-left">Part Number</th>
-              <th className="p-2 text-left">Description</th>
-              <th className="p-2 text-left">Brand</th>
-              <th className="p-2 text-center">Qty</th>
-              <th className="p-2 text-left">Unit</th>
-              <th className="p-2 text-right" style={{ width: '10ch' }}>Price</th>
-              {hasLabor && <th className="p-2 text-right">Labor</th>}
-              <th className="p-2 text-right">Total</th>
-              <th className="p-2"></th>
+              <th className="p-1 text-left w-[12%]">Barcode</th>
+              <th className="p-1 text-left w-[12%]">Part Number</th>
+              <th className="p-1 text-left w-[28%]">Description</th>
+              <th className="p-1 text-left w-[12%]">Brand</th>
+              <th className="p-1 text-center w-[6%]">Qty</th>
+              <th className="p-1 text-left w-[6%]">Unit</th>
+              <th className="p-1 text-right w-[10%]">Price</th>
+              {hasLabor && <th className="p-1 text-right w-[8%]">Labor</th>}
+              <th className="p-1 text-right w-[10%]">Total</th>
+              <th className="p-1 w-[4%]"></th>
             </tr>
           </thead>
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1 w-28" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '48ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1 text-[18px]" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={1} className="border rounded px-2 py-1 text-[18px] w-14 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-1 w-16" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1 text-right"><input className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '12ch' }} value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 w-full text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
+                <td className="p-1 text-right"><input className="border rounded px-1 py-1 w-full text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
                 {hasLabor && <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={line.labor || ''} onChange={(e) => updateLine(line.id, 'labor', parseFloat(e.target.value) || 0)} /></td>}
                 <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
@@ -598,28 +607,6 @@ export default function POSPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:hidden">
-        {/* Totals */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex justify-between py-1"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-1">
-            <span>Discount</span>
-            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
-          </div>
-          {redeemPts > 0 && <div className="flex justify-between py-1 text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
-          <div className="flex justify-between py-1 font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-2 border-t mt-2">
-            <span>CASH TENDER</span>
-            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="flex justify-between py-1 text-xl font-bold text-red-600">
-            <span>CHANGE</span>
-            <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-          </div>
-          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
-        </div>
-
         {/* Price Check */}
         <div className="bg-white rounded-xl shadow p-4 print:hidden">
           <h2 className="font-semibold mb-3">Price Check</h2>
@@ -644,6 +631,28 @@ export default function POSPage() {
               <button onClick={addCheckedToCart} className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm">Add to Cart</button>
             </div>
           </div>
+        </div>
+
+        {/* Totals */}
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex justify-between py-1"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between items-center py-1">
+            <span>Discount</span>
+            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
+          </div>
+          {redeemPts > 0 && <div className="flex justify-between py-1 text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
+          <div className="flex justify-between py-1 font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between items-center py-2 border-t mt-2">
+            <span>CASH TENDER</span>
+            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
+          </div>
+          <div className="flex justify-between py-1 text-xl font-bold text-red-600">
+            <span>CHANGE</span>
+            <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          </div>
+          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
         </div>
       </div>
 

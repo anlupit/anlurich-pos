@@ -158,7 +158,7 @@ export default function SupplierReceiptPage() {
       setSaving(false);
       return alert('Invoice was NOT saved. Supabase is not connected. Check the cloud connection and try again.');
     }
-    const catalog = upsertCatalogFromInvoice(invoice.lines);
+    const catalog = await upsertCatalogFromInvoice(invoice.lines);
     const missed: string[] = [];
     valid.forEach((l) => {
       const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);

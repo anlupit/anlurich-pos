@@ -42,19 +42,13 @@ export function loadProducts(): Product[] {
 
 export async function saveProducts(products: Product[]) {
   localStorage.setItem('anlurich-products', JSON.stringify(products));
-  if (typeof window === 'undefined') return false;
-  const res = await fetch('/api/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key: 'anlurich-products', value: JSON.stringify(products) }),
-  });
-  if (!res.ok) {
-    let message = 'Supabase save failed';
-    try { const data = await res.json(); message = data.error || message; } catch {}
-    throw new Error(message);
+  for (const p of products) {
+    await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'products', row: p }),
+    });
   }
-  const data = await res.json();
-  if (!data?.ok) throw new Error(data?.error || 'Supabase save failed');
   return true;
 }
 
@@ -68,17 +62,16 @@ export async function loadProductsCloud(): Promise<Product[]> {
   return loadProducts();
 }
 
-export function upsertCatalogFromInvoice(lines: any[]) {
-  if (typeof window === 'undefined') return { added: 0, updated: 0 };
-  const products = loadProducts();
+export async function upsertCatalogFromInvoice(lines: any[]) {
+  const products = await loadProductsCloud();
   let added = 0;
   let updated = 0;
-  lines.forEach((l) => {
+  for (const l of lines) {
     const part = String(l.partNumber || '').trim();
-    if (!part) return;
+    if (!part) continue;
     const barcode = String(l.barcode || '').trim();
     const existing = products.find((p) =>
-      p.partNumber.toLowerCase() === part.toLowerCase() ||
+      String(p.partNumber || '').toLowerCase() === part.toLowerCase() ||
       (barcode && String(p.barcode || '').toLowerCase() === barcode.toLowerCase())
     );
     const cost = Number(l.netPrice || l.price || 0);
@@ -105,7 +98,7 @@ export function upsertCatalogFromInvoice(lines: any[]) {
       });
       added += 1;
     }
-  });
-  saveProducts(products);
+  }
+  await saveProducts(products);
   return { added, updated };
 }
