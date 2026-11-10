@@ -11,6 +11,7 @@ export default function SearchPurchasePage() {
   const [part, setPart] = useState('');
   const [brand, setBrand] = useState('');
   const [results, setResults] = useState<any[]>([]);
+  const [mode, setMode] = useState<'invoice' | 'product'>('invoice');
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [largeImage, setLargeImage] = useState('');
@@ -27,7 +28,57 @@ export default function SearchPurchasePage() {
     return m ? m[0] : String(date).slice(0, 4);
   };
 
-  const buildResults = (list: any[]) => {
+  const searchInvoices = (list: any[]) => {
+    const qSupplier = supplier.trim().toLowerCase();
+    const qInv = invoiceNo.trim().toLowerCase();
+    const rows = list.filter((inv) => {
+      const invDate = String(inv.invoiceDate || inv.createdAt || '');
+      if (month && !invDate.startsWith(month)) return false;
+      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
+      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
+      return true;
+    }).sort((a, b) => {
+      const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
+      if (date) return date;
+      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+    });
+    setResults(rows);
+    setMode('invoice');
+    setSearched(true);
+  };
+
+  const searchProducts = (list: any[]) => {
+    const qPart = part.trim().toLowerCase();
+    const qBrand = brand.trim().toLowerCase();
+    const rows: any[] = [];
+    list.forEach((inv) => {
+      (inv.lines || []).forEach((line: any) => {
+        const pn = String(line.partNumber || line.partNo || line.oemPartNumber || '').toLowerCase();
+        const br = String(line.brand || '').toLowerCase();
+        const partOk = !qPart || pn.includes(qPart);
+        const brandOk = !qBrand || br.includes(qBrand);
+        if (partOk && brandOk && (qPart || qBrand || (!qPart && !qBrand))) {
+          rows.push({
+            invoiceId: inv.id,
+            invoiceDate: inv.invoiceDate,
+            invoiceNumber: inv.invoiceNumber,
+            supplierName: inv.supplierName,
+            partNumber: line.partNumber || line.partNo,
+            brand: line.brand,
+            qty: line.qty || line.quantity,
+            netAmount: line.netPrice || line.price || line.costPrice,
+          });
+        }
+      });
+    });
+    setResults(rows.sort((a, b) => {
+      const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
+      if (date) return date;
+      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+    }));
+    setMode('product');
+    setSearched(true);
+  };
     const rows: any[] = [];
     const qPart = part.trim().toLowerCase();
     const qBrand = brand.trim().toLowerCase();
@@ -106,13 +157,14 @@ export default function SearchPurchasePage() {
     setSearched(true);
   };
 
-  const handleSearch = async () => {
-    const local = loadInvoices();
-    setInvoices(local);
-    buildResults(local);
-    const fresh = await loadInvoicesCloud();
-    setInvoices(fresh);
-    buildResults(fresh);
+  const handleInvoiceSearch = async () => {
+    searchInvoices(loadInvoices());
+    searchInvoices(await loadInvoicesCloud());
+  };
+
+  const handleProductSearch = async () => {
+    searchProducts(loadInvoices());
+    searchProducts(await loadInvoicesCloud());
   };
 
   const openInvoice = (invoiceId: string) => {
@@ -147,7 +199,7 @@ export default function SearchPurchasePage() {
     setInvoices(updated);
     setViewing(null);
     alert('Invoice and photo saved to Supabase');
-    handleSearch();
+    handleInvoiceSearch();
   };
 
   const deleteInvoice = () => {
@@ -162,7 +214,7 @@ export default function SearchPurchasePage() {
     setInvoices(updated);
     setViewing(null);
     alert('Invoice deleted');
-    handleSearch();
+    handleInvoiceSearch();
   };
 
   const goDashboard = () => {
@@ -181,19 +233,22 @@ export default function SearchPurchasePage() {
       <div className="text-xs text-gray-500 mb-4">This branch only</div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}>
+        <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }}>
           <div>
-            <div className="text-xs font-medium text-center mb-1">Month</div>
+            <div className="text-xs font-medium text-center mb-1">Month / Year</div>
             <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value)} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Supplier Name</div>
-            <input className="border rounded px-2 py-1" style={{ width: '50ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
             <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
           </div>
+          <button onClick={handleInvoiceSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
+        </div>
+        <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">Part Number</div>
             <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} />
@@ -202,29 +257,20 @@ export default function SearchPurchasePage() {
             <div className="text-xs font-medium text-center mb-1">Brand</div>
             <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={brand} onChange={(e) => setBrand(e.target.value)} />
           </div>
-          <button onClick={handleSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search</button>
+          <button onClick={handleProductSearch} className="bg-teal-600 text-white px-5 py-1.5 rounded-lg">Search Product</button>
         </div>
       </div>
 
-      {searched && (
-        <div className="text-sm text-gray-600 mb-2">
-          {results.length} item(s) from {[...new Set(results.map((r) => r.invoiceNumber))].length} invoice(s) — latest to oldest
-        </div>
-      )}
-      {searched && (
+      {searched && mode === 'invoice' && (
         <div className="bg-white rounded-xl shadow overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Supplier</th>
+                <th className="text-left p-2">Invoice Date</th>
                 <th className="text-left p-2">Invoice No.</th>
-                <th className="text-left p-2">Part Number</th>
-                <th className="text-left p-2">Brand</th>
-                <th className="text-left p-2">Description</th>
-                <th className="text-center p-2">Qty</th>
-                <th className="text-right p-2">Price</th>
-                <th className="text-right p-2">Invoice Total</th>
+                <th className="text-left p-2">Supplier Name</th>
+                <th className="text-right p-2">Invoice Grand Total Amount</th>
+                <th className="text-center p-2">Status</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -232,20 +278,47 @@ export default function SearchPurchasePage() {
               {results.map((r, i) => (
                 <tr key={i} className="border-t">
                   <td className="p-2">{formatDate(r.invoiceDate)}</td>
+                  <td className="p-2 font-medium">{r.invoiceNumber || r.invoiceNo}</td>
                   <td className="p-2">{r.supplierName}</td>
-                  <td className="p-2 font-medium">{r.invoiceNumber}</td>
-                  <td className="p-2">{r.partNumber || '—'}</td>
-                  <td className="p-2">{r.brand || '—'}</td>
-                  <td className="p-2">{r.description || '—'}</td>
-                  <td className="p-2 text-center">{r.qty ?? '—'}</td>
-                  <td className="p-2 text-right">{r.price != null ? money(r.price) : '—'}</td>
                   <td className="p-2 text-right">{money(r.grandTotal)}</td>
-                  <td className="p-2 text-center">
-                    <button onClick={() => openInvoice(r.invoiceId)} className="text-blue-600 text-xs font-medium">View / Edit</button>
-                  </td>
+                  <td className="p-2 text-center">{String(r.status || 'unpaid').toLowerCase() === 'paid' ? 'Paid' : 'UnPaid'}</td>
+                  <td className="p-2 text-center"><button onClick={() => openInvoice(r.id || r.invoiceId)} className="text-blue-600 font-medium">View / Edit</button></td>
                 </tr>
               ))}
-              {results.length === 0 && <tr><td colSpan={10} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
+              {results.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {searched && mode === 'product' && (
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
+          <table className="w-full" style={{ fontSize: '20px' }}>
+            <thead className="bg-teal-500 text-white">
+              <tr>
+                <th className="text-left p-2">Invoice Date</th>
+                <th className="text-left p-2">Invoice Number</th>
+                <th className="text-left p-2">Supplier Name</th>
+                <th className="text-left p-2">Part Number</th>
+                <th className="text-left p-2">Brand</th>
+                <th className="text-center p-2">Delivered Qty</th>
+                <th className="text-right p-2">Net Amount</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((r, i) => (
+                <tr key={i} className="border-t">
+                  <td className="p-2">{formatDate(r.invoiceDate)}</td>
+                  <td className="p-2 font-medium">{r.invoiceNumber}</td>
+                  <td className="p-2">{r.supplierName}</td>
+                  <td className="p-2">{r.partNumber || '—'}</td>
+                  <td className="p-2">{r.brand || '—'}</td>
+                  <td className="p-2 text-center">{r.qty ?? '—'}</td>
+                  <td className="p-2 text-right">{r.netAmount != null ? money(r.netAmount) : '—'}</td>
+                  <td className="p-2 text-center"><button onClick={() => openInvoice(r.invoiceId)} className="text-blue-600 font-medium">View / Edit</button></td>
+                </tr>
+              ))}
+              {results.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">No purchase items found</td></tr>}
             </tbody>
           </table>
         </div>
