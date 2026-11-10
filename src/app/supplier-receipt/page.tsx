@@ -143,6 +143,7 @@ export default function SupplierReceiptPage() {
     try {
       await saveInvoice(invoice);
     } catch {
+      setSaving(false);
       return alert('Invoice was NOT saved. Supabase is not connected. Check the cloud connection and try again.');
     }
     const catalog = upsertCatalogFromInvoice(invoice.lines);

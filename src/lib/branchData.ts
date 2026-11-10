@@ -63,7 +63,8 @@ async function pushCloud(key: string, value: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, value: typeof value === 'string' ? value : JSON.stringify(value) }),
   });
-  if (!res.ok) throw new Error('Supabase save failed');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Supabase save failed');
   return true;
 }
 
@@ -81,11 +82,15 @@ async function pullCloud(key: string): Promise<any | null> {
   export async function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
   const key = `anlurich-supplier-invoices-${b}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const cloud = await pullCloud(key);
+  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
   const next = [...existing.filter((i: any) => i.id !== invoice.id && i.invoiceNumber !== invoice.invoiceNumber), invoice];
-  localStorage.setItem(key, JSON.stringify(next));
   await pushCloud(key, next);
-  return next;
+  const saved = await pullCloud(key);
+  const ok = Array.isArray(saved) && saved.some((i: any) => i.invoiceNumber === invoice.invoiceNumber);
+  if (!ok) throw new Error('Supabase did not confirm the invoice');
+  localStorage.setItem(key, JSON.stringify(saved));
+  return saved;
 }
 
 export async function loadInvoicesCloud(branch?: string): Promise<any[]> {

@@ -6,6 +6,7 @@ import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatD
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [year, setYear] = useState('All');
+  const [month, setMonth] = useState('');
   const [supplier, setSupplier] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [part, setPart] = useState('');
@@ -35,8 +36,10 @@ export default function SearchPurchasePage() {
     const qInv = invoiceNo.trim().toLowerCase();
 
     list.forEach((inv) => {
-      const invYear = yearOf(inv.invoiceDate || inv.createdAt || '');
+      const invDate = String(inv.invoiceDate || inv.createdAt || '');
+      const invYear = yearOf(invDate);
       if (year !== 'All' && invYear && invYear !== year) return;
+      if (month && !invDate.startsWith(month)) return;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return;
       if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return;
 
@@ -64,10 +67,9 @@ export default function SearchPurchasePage() {
             description: line.description,
             qty: line.qty || line.quantity,
             price: line.price || line.costPrice,
-            invoiceImage: inv.invoiceImage,
           });
         });
-      } else if (qSupplier || qInv) {
+      } else {
         if (!lines.length) {
           rows.push({
             invoiceId: inv.id,
@@ -80,7 +82,6 @@ export default function SearchPurchasePage() {
             description: '',
             qty: '',
             price: '',
-            invoiceImage: inv.invoiceImage,
           });
         }
         lines.forEach((line: any) => {
@@ -95,13 +96,16 @@ export default function SearchPurchasePage() {
             description: line.description,
             qty: line.qty || line.quantity,
             price: line.price || line.costPrice,
-            invoiceImage: inv.invoiceImage,
           });
         });
       }
     });
 
-    setResults(rows.sort((a, b) => String(b.invoiceDate || b.createdAt || b.invoiceId || '').localeCompare(String(a.invoiceDate || a.createdAt || a.invoiceId || ''))));
+    setResults(rows.sort((a, b) => {
+      const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
+      if (date) return date;
+      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+    }));
     setSearched(true);
   };
 
@@ -180,7 +184,11 @@ export default function SearchPurchasePage() {
       <div className="text-xs text-gray-500 mb-4">This branch only</div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}>
+        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Month</div>
+            <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Year</div>
             <input className="border rounded px-2 py-1 text-center" style={{ width: '8ch' }} placeholder="All" value={year === 'All' ? '' : year} onChange={(e) => setYear(e.target.value || 'All')} />
