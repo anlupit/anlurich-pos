@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos } from '../../lib/branchData';
+import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos, searchInvoicesCloud, loadInvoices } from '../../lib/branchData';
 import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
 
 type Supplier = { id: string; name: string; address?: string; tin?: string; contact?: string; phone?: string; email?: string };
@@ -118,9 +118,21 @@ export default function SupplierReceiptPage() {
     if (!supplierName.trim()) return alert('Enter supplier name');
     if (!invoiceNumber.trim()) return alert('Enter invoice number');
     setSaving(true);
-    if (!invoiceNumber.trim()) return alert('Enter invoice number');
+    const existing = await searchInvoicesCloud({ supplier: supplierName.trim(), invoiceNo: invoiceNumber.trim() }).catch(() => loadInvoices());
+    const oldCloud = await loadInvoicesCloud().catch(() => []);
+    const duplicate = [...loadInvoices(), ...(existing || []), ...(oldCloud || [])].some((inv) =>
+      String(inv.supplierName || '').trim().toLowerCase() === supplierName.trim().toLowerCase() &&
+      String(inv.invoiceNumber || inv.invoiceNo || '').trim().toLowerCase() === invoiceNumber.trim().toLowerCase()
+    );
+    if (duplicate) {
+      setSaving(false);
+      return alert(`Duplicate invoice. ${supplierName} invoice ${invoiceNumber} is already recorded. Do not encode it again.`);
+    }
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
-    if (valid.length === 0) return alert('Add at least one item');
+    if (valid.length === 0) {
+      setSaving(false);
+      return alert('Add at least one item');
+    }
 
     const branch = currentBranch() || 'unknown';
     const invoice = {

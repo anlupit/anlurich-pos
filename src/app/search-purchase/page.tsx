@@ -69,7 +69,7 @@ export default function SearchPurchasePage() {
     setResults(rows.sort((a, b) => {
       const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
       if (date) return date;
-      return String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+      return String(b.invoiceNumber || '').localeCompare(String(a.invoiceNumber || ''), undefined, { numeric: true });
     }));
     setMode('product');
     setSearched(true);
@@ -258,7 +258,7 @@ export default function SearchPurchasePage() {
 
       {viewing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-5 w-full max-w-7xl max-h-[90vh] overflow-auto">
             <h3 className="font-bold text-lg mb-3">Invoice {viewing.invoiceNumber}</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
@@ -269,16 +269,16 @@ export default function SearchPurchasePage() {
               <tbody>
                 {(viewing.lines || []).map((line: any, i: number) => (
                   <tr key={i} className="border-t">
-                    <td className="p-1"><input className="w-28 border rounded px-2 py-1" value={line.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
-                    <td className="p-1"><input className="w-full border rounded px-2 py-1" value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
-                    <td className="p-1"><input className="w-24 border rounded px-2 py-1" value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={line.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
                     <td className="p-1 text-center"><input type="number" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value) || 0)} /></td>
                     <td className="p-1 text-right"><input type="number" className="w-24 border rounded px-2 py-1 text-right" value={line.price} onChange={(e) => updateLine(i, 'price', parseFloat(e.target.value) || 0)} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right font-bold mb-3">Total: ₱{viewing.grandTotal?.toLocaleString()}</div>
+            <div className="text-right font-bold mb-3">Total: ₱{Number(viewing.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>
