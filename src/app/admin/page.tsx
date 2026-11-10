@@ -15,12 +15,13 @@ const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { mi
 
 function saleProfit(sale: any, products: any[]) {
   const items = sale.items || [];
+  const list = Array.isArray(products) ? products : [];
   const itemProfit = items.reduce((sum: number, item: any) => {
     const qty = Number(item.qty) || 0;
     const sell = Number(item.price) || 0;
     let cost = Number(item.costPrice) || 0;
     if (!cost) {
-      const p = products.find((x) => String(x.partNumber || '').toLowerCase() === String(item.partNumber || '').toLowerCase());
+      const p = list.find((x) => String(x.partNumber || '').toLowerCase() === String(item.partNumber || '').toLowerCase());
       cost = Number(p?.costPrice) || 0;
     }
     return sum + (sell - cost) * qty;
@@ -47,7 +48,7 @@ export default function AdminDashboard() {
         const loadTable = async (table: string) => {
           const res = await fetch(`/api/records?table=${table}&branch=admin`, { cache: 'no-store' });
           if (!res.ok) return [];
-          const rows = await res.json();
+          const rows = await res.json().catch(() => []);
           return Array.isArray(rows) ? rows : [];
         };
         const [allSales, allNoInvoice, allInvoices, catalog] = await Promise.all([
@@ -56,16 +57,16 @@ export default function AdminDashboard() {
           loadTable('supplier_invoices'),
           loadTable('products'),
         ]);
-        setSales([...allSales, ...allNoInvoice]);
-        setProducts(catalog);
-        setInvoices(allInvoices);
+        setSales(Array.isArray(allSales) || Array.isArray(allNoInvoice) ? [...(Array.isArray(allSales) ? allSales : []), ...(Array.isArray(allNoInvoice) ? allNoInvoice : [])] : []);
+        setProducts(Array.isArray(catalog) ? catalog : []);
+        setInvoices(Array.isArray(allInvoices) ? allInvoices : []);
         const res = await fetch('/api/data', { cache: 'no-store' });
         const rows: { key: string; value: string }[] = res.ok ? await res.json() : [];
         const get = (key: string) => {
           const row = rows.find((r) => r.key === key);
           return row?.value ? JSON.parse(row.value) : [];
         };
-        setRequests(get('anlurich-stock-requests'));
+        setRequests(Array.isArray(get('anlurich-stock-requests')) ? get('anlurich-stock-requests') : []);
         const ann = get('anlurich-announcements');
         setAnnouncements(Array.isArray(ann) ? ann : []);
       } catch {}
