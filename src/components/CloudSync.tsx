@@ -66,9 +66,15 @@ export default function CloudSync() {
         const serverKeys = new Set(rows.map((r) => r.key));
         for (const row of rows) {
           if (!row.key?.startsWith('anlurich-')) continue;
+          if (row.key.startsWith('anlurich-supplier-invoices') || row.key.startsWith('anlurich-sales') || row.key === 'anlurich-products' || row.key.startsWith('anlurich-stock-')) continue;
           const cloudValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
           origSet(row.key, mergeValue(localStorage.getItem(row.key), cloudValue));
         }
+        await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-clear-old-invoices' }) });
+        await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-clear-old-sales' }) });
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('anlurich-supplier-invoices') || key.startsWith('anlurich-sales')) origRemove(key);
+        });
         const missing: Promise<void>[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);

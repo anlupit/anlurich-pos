@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
-import { loadInvoices, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
 
 type Line = {
   id: string;
@@ -68,6 +68,7 @@ export default function POSPage() {
     const load = async () => {
       try {
         await syncOnline();
+        clearOldSalesRecords().catch(() => {});
         const prods = loadProducts();
         const stock = loadStock();
         setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
@@ -79,7 +80,7 @@ export default function POSPage() {
       if (noInvoice) {
         const d = new Date();
         const prefix = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getFullYear()).slice(-2)}`;
-        const used = loadSales().filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
+        const used = (await loadSalesCloud()).filter((s) => String(s.invoiceNo || '').startsWith(`${prefix}-`));
         const next = used.reduce((max, s) => Math.max(max, parseInt(String(s.invoiceNo || '').split('-')[1] || '0', 10) || 0), 0) + 1;
         setInvoiceNo(`${prefix}-${String(next).padStart(2, '0')}`);
       }

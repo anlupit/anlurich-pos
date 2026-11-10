@@ -60,16 +60,10 @@ export async function saveProducts(products: Product[]) {
 
 export async function loadProductsCloud(): Promise<Product[]> {
   try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
+    const res = await fetch('/api/records?table=products', { cache: 'no-store' });
     if (!res.ok) return loadProducts();
-    const rows: { key: string; value: string }[] = await res.json();
-    const row = rows.find((r) => r.key === 'anlurich-products');
-    if (!row?.value) return loadProducts();
-    const cloud = JSON.parse(row.value);
-    if (Array.isArray(cloud)) {
-      localStorage.setItem('anlurich-products', JSON.stringify(cloud));
-      return cloud;
-    }
+    const rows = await res.json();
+    if (Array.isArray(rows)) return rows;
   } catch {}
   return loadProducts();
 }

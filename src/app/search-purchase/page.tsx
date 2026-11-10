@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord, clearOldInvoiceRecords } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -18,7 +18,8 @@ export default function SearchPurchasePage() {
 
   useEffect(() => {
     setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
-    stripInvoicePhotos().then(setInvoices).catch(() => loadInvoicesCloud().then(setInvoices));
+    clearOldInvoiceRecords().catch(() => {});
+    loadInvoicesCloud().then(setInvoices);
   }, []);
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -83,9 +84,8 @@ export default function SearchPurchasePage() {
 
   const handleInvoiceSearch = async () => {
     const filters = { month, supplier, invoiceNo };
-    searchInvoices(loadInvoices(), filters);
     const fresh = await searchInvoicesCloud(filters);
-    if (fresh.length) searchInvoices(fresh, filters);
+    searchInvoices(fresh, filters);
     setMonth('');
     setSupplier('');
     setInvoiceNo('');
@@ -93,15 +93,14 @@ export default function SearchPurchasePage() {
 
   const handleProductSearch = async () => {
     const filters = { part, brand };
-    searchProducts(loadInvoices(), filters);
     const fresh = await searchInvoicesCloud(filters);
-    if (fresh.length) searchProducts(fresh, filters);
+    searchProducts(fresh, filters);
     setPart('');
     setBrand('');
   };
 
   const openInvoice = (invoiceId: string) => {
-    const inv = results.find((i) => i.id === invoiceId) || invoices.find((i) => i.id === invoiceId) || loadInvoices().find((i) => i.id === invoiceId);
+    const inv = results.find((i) => i.id === invoiceId) || invoices.find((i) => i.id === invoiceId);
     if (inv) setViewing(JSON.parse(JSON.stringify(inv)));
     else alert('Invoice record was not found. Search again and try View / Edit.');
   };
@@ -276,7 +275,7 @@ export default function SearchPurchasePage() {
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
                     <td className="p-1 text-center"><input type="number" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value) || 0)} /></td>
-                    <td className="p-1 text-right"><input type="number" className="w-24 border rounded px-2 py-1 text-right" value={line.price} onChange={(e) => updateLine(i, 'price', parseFloat(e.target.value) || 0)} /></td>
+                    <td className="p-1 text-right"><input type="number" step="0.01" className="w-24 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toFixed(2)} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value) || 0) * 100) / 100)} /></td>
                   </tr>
                 ))}
               </tbody>

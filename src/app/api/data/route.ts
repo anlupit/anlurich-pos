@@ -45,18 +45,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const key = String(body.key || '');
-    if (key === 'anlurich-clear-photos') {
-      const { rows } = await pool.query(`SELECT key, value FROM app_data WHERE key LIKE 'anlurich-supplier-invoices-%' OR key LIKE 'anlurich-expenses-%'`);
+    if (key === 'anlurich-clear-old-sales') {
+      const { rows } = await pool.query(`SELECT key FROM app_data WHERE key LIKE 'anlurich-sales%'`);
       for (const row of rows) {
-        try {
-          const list = JSON.parse(row.value);
-          if (!Array.isArray(list)) continue;
-          const cleaned = list.map((item: any) => {
-            const { invoiceImage, image, photoUrl, ...rest } = item || {};
-            return rest;
-          });
-          await pool.query('UPDATE app_data SET value = $2, updated_at = NOW() WHERE key = $1', [row.key, JSON.stringify(cleaned)]);
-        } catch {}
+        await pool.query('DELETE FROM app_data WHERE key = $1', [row.key]);
+      }
+      return NextResponse.json({ ok: true, cleared: rows.length });
+    }
+    if (key === 'anlurich-clear-old-invoices') {
+      const { rows } = await pool.query(`SELECT key FROM app_data WHERE key LIKE 'anlurich-supplier-invoices%'`);
+      for (const row of rows) {
+        await pool.query('DELETE FROM app_data WHERE key = $1', [row.key]);
       }
       return NextResponse.json({ ok: true, cleared: rows.length });
     }
