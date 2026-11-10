@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -14,19 +14,21 @@ export default function SearchPurchasePage() {
   const [mode, setMode] = useState<'invoice' | 'product'>('invoice');
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
+  const [logo, setLogo] = useState('');
 
   useEffect(() => {
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
     stripInvoicePhotos().then(setInvoices).catch(() => loadInvoicesCloud().then(setInvoices));
   }, []);
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const searchInvoices = (list: any[]) => {
-    const qSupplier = supplier.trim().toLowerCase();
-    const qInv = invoiceNo.trim().toLowerCase();
+  const searchInvoices = (list: any[], filters = { month, supplier, invoiceNo }) => {
+    const qSupplier = filters.supplier.trim().toLowerCase();
+    const qInv = filters.invoiceNo.trim().toLowerCase();
     const rows = list.filter((inv) => {
       const invDate = String(inv.invoiceDate || inv.createdAt || '');
-      if (month && !invDate.startsWith(month)) return false;
+      if (filters.month && !invDate.startsWith(filters.month)) return false;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
       if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
       return true;
@@ -40,9 +42,9 @@ export default function SearchPurchasePage() {
     setSearched(true);
   };
 
-  const searchProducts = (list: any[]) => {
-    const qPart = part.trim().toLowerCase();
-    const qBrand = brand.trim().toLowerCase();
+  const searchProducts = (list: any[], filters = { part, brand }) => {
+    const qPart = filters.part.trim().toLowerCase();
+    const qBrand = filters.brand.trim().toLowerCase();
     const rows: any[] = [];
     list.forEach((inv) => {
       (inv.lines || []).forEach((line: any) => {
@@ -71,16 +73,27 @@ export default function SearchPurchasePage() {
     }));
     setMode('product');
     setSearched(true);
+    setPart('');
+    setBrand('');
   };
 
   const handleInvoiceSearch = async () => {
-    searchInvoices(loadInvoices());
-    searchInvoices(await loadInvoicesCloud());
+    const filters = { month, supplier, invoiceNo };
+    searchInvoices(loadInvoices(), filters);
+    const fresh = await searchInvoicesCloud(filters);
+    if (fresh.length) searchInvoices(fresh, filters);
+    setMonth('');
+    setSupplier('');
+    setInvoiceNo('');
   };
 
   const handleProductSearch = async () => {
-    searchProducts(loadInvoices());
-    searchProducts(await loadInvoicesCloud());
+    const filters = { part, brand };
+    searchProducts(loadInvoices(), filters);
+    const fresh = await searchInvoicesCloud(filters);
+    if (fresh.length) searchProducts(fresh, filters);
+    setPart('');
+    setBrand('');
   };
 
   const openInvoice = (invoiceId: string) => {
@@ -101,19 +114,14 @@ export default function SearchPurchasePage() {
 
   const saveEdit = async () => {
     if (!viewing) return;
+    const current = viewing;
+    setViewing(null);
     const branch = currentBranch() || 'unknown';
-    const all = await loadInvoicesCloud(branch);
-    const next = { ...viewing, updatedAt: new Date().toISOString() };
-    const updated = all.some((inv) => inv.id === next.id)
-      ? all.map((inv) => (inv.id === next.id ? next : inv))
-      : [...all, next];
     try {
-      await updateInvoices(branch, updated);
+      await saveInvoice({ ...current, branch, updatedAt: new Date().toISOString() });
     } catch {
       return alert('Changes were NOT saved. Supabase is not connected.');
     }
-    setInvoices(updated);
-    setViewing(null);
     alert('Invoice saved to Supabase');
     handleInvoiceSearch();
   };
@@ -142,6 +150,13 @@ export default function SearchPurchasePage() {
 
   return (
     <div className="p-4">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+        </div>
+        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().split('T')[0])}</div>
+      </div>
       <div className="flex justify-between items-center mb-1">
         <h1 className="text-xl font-bold text-yellow-600">Search Purchase Invoice</h1>
         <button onClick={goDashboard} className="text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
@@ -185,7 +200,7 @@ export default function SearchPurchasePage() {
                 <th className="text-left p-2">Invoice Date</th>
                 <th className="text-left p-2">Invoice No.</th>
                 <th className="text-left p-2">Supplier Name</th>
-                <th className="text-right p-2">Invoice Grand Total Amount</th>
+                <th className="text-right p-2">Total Amount</th>
                 <th className="text-center p-2">Status</th>
                 <th className="p-2"></th>
               </tr>

@@ -81,19 +81,54 @@ async function pullCloud(key: string): Promise<any | null> {
 }
   export async function saveInvoice(invoice: any) {
   const b = invoice.branch || currentBranch() || 'unknown';
+  const row = { ...invoice, branch: b, id: invoice.id || `${b}-${invoice.invoiceNumber}-${Date.now()}` };
+  const res = await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'supplier_invoices', row }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Supabase save failed');
   const key = `anlurich-supplier-invoices-${b}`;
-  const cloud = await pullCloud(key);
-  const existing = Array.isArray(cloud) ? cloud : JSON.parse(localStorage.getItem(key) || '[]');
-  const next = [...existing.filter((i: any) => i.id !== invoice.id && i.invoiceNumber !== invoice.invoiceNumber), invoice];
-  await pushCloud(key, next);
-  const saved = await pullCloud(key);
-  const ok = Array.isArray(saved) && saved.some((i: any) => i.invoiceNumber === invoice.invoiceNumber);
-  if (!ok) throw new Error('Supabase did not confirm the invoice');
-  localStorage.setItem(key, JSON.stringify(saved));
-  return saved;
+  const local = JSON.parse(localStorage.getItem(key) || '[]');
+  localStorage.setItem(key, JSON.stringify([...local.filter((i: any) => i.id !== row.id && i.invoiceNumber !== row.invoiceNumber), row]));
+  return row;
 }
 
-export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
+export async function searchInvoicesCloud(filters: { month?: string; supplier?: string; invoiceNo?: string; part?: string; brand?: string }, branch?: string) {
+  const b = branch || currentBranch();
+  const params = new URLSearchParams({ table: 'supplier_invoices', branch: b || '' });
+  if (filters.month) params.set('month', filters.month);
+  if (filters.supplier) params.set('supplier', filters.supplier);
+  if (filters.invoiceNo) params.set('invoiceNo', filters.invoiceNo);
+  if (filters.part) params.set('part', filters.part);
+  if (filters.brand) params.set('brand', filters.brand);
+  const res = await fetch(`/api/records?${params.toString()}`, { cache: 'no-store' });
+  if (!res.ok) return loadInvoices(b);
+  const rows = await res.json();
+  if (!Array.isArray(rows) || rows.length === 0) {
+    await migrateInvoices(b);
+    const again = await fetch(`/api/records?${params.toString()}`, { cache: 'no-store' });
+    if (again.ok) {
+      const migrated = await again.json();
+      if (Array.isArray(migrated) && migrated.length) return migrated;
+    }
+  }
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function migrateInvoices(branch?: string) {
+  const b = branch || currentBranch();
+  if (!b) return;
+  const local = loadInvoices(b);
+  if (!local.length) return;
+  await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'supplier_invoices', migrate: true, rows: local }),
+  });
+}
+  export async function loadInvoicesCloud(branch?: string): Promise<any[]> {
   const b = branch || currentBranch();
   if (b === 'admin' || !b) return loadInvoices(b);
   const key = `anlurich-supplier-invoices-${b}`;
@@ -130,8 +165,12 @@ export async function stripInvoicePhotos(branch?: string) {
 }
   export async function updateInvoices(branch: string, invoices: any[]) {
   const key = `anlurich-supplier-invoices-${branch}`;
-  await pushCloud(key, invoices);
   localStorage.setItem(key, JSON.stringify(invoices));
+  await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'supplier_invoices', migrate: true, rows: invoices.map((inv) => ({ ...inv, branch })) }),
+  });
 }
 
 // Inventory (qty + location) — private per branch

@@ -22,16 +22,14 @@ export default function BranchDashboard() {
   const [sales, setSales] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [searchMonth, setSearchMonth] = useState('');
   const [searchSupplier, setSearchSupplier] = useState('');
+  const [searchInvoiceNo, setSearchInvoiceNo] = useState('');
   const [searchPart, setSearchPart] = useState('');
-  const [searchDesc, setSearchDesc] = useState('');
-  const [searchBarcode, setSearchBarcode] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
-  const [searchName, setSearchName] = useState('');
-  const [searchYear, setSearchYear] = useState('');
   const [logo, setLogo] = useState('');
   const [invoiceResults, setInvoiceResults] = useState<any[]>([]);
-  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [mode, setMode] = useState<'invoice' | 'product'>('invoice');
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any | null>(null);
 
@@ -63,46 +61,42 @@ export default function BranchDashboard() {
   const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
   const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
 
-  const handleSearch = () => {
-    const yearInvoices = invoices.filter((i) => {
-      const invYear = String(i.invoiceDate || i.createdAt || '').slice(0, 4);
-      return !searchYear.trim() || invYear === searchYear.trim();
-    });
+  const searchInvoices = () => {
     const qSupplier = searchSupplier.trim().toLowerCase();
+    const qInv = searchInvoiceNo.trim().toLowerCase();
+    const rows = invoices.filter((inv) => {
+      const invDate = String(inv.invoiceDate || inv.createdAt || '');
+      if (searchMonth && !invDate.startsWith(searchMonth)) return false;
+      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
+      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
+      return true;
+    }).sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || '')));
+    setInvoiceResults(rows);
+    setMode('invoice');
+    setSearched(true);
+    setSearchMonth('');
+    setSearchSupplier('');
+    setSearchInvoiceNo('');
+  };
+
+  const searchProducts = () => {
     const qPart = searchPart.trim().toLowerCase();
-    const qName = searchName.trim().toLowerCase();
-    const qDesc = searchDesc.trim().toLowerCase();
-    const qBarcode = searchBarcode.trim().toLowerCase();
     const qBrand = searchBrand.trim().toLowerCase();
-
-    if (qSupplier) {
-      setInvoiceResults(yearInvoices.filter((i) => String(i.supplierName || '').toLowerCase().includes(qSupplier)));
-    } else {
-      setInvoiceResults([]);
-    }
-
-    const history: any[] = [];
-    yearInvoices.forEach((inv) => {
+    const rows: any[] = [];
+    invoices.forEach((inv) => {
       (inv.lines || []).forEach((line: any) => {
-        const part = String(line.partNumber || '').toLowerCase();
-        const name = String(line.productName || line.name || line.description || '').toLowerCase();
-        const desc = String(line.description || '').toLowerCase();
-        const brand = String(line.brand || '').toLowerCase();
-        const barcode = String(line.barcode || '').toLowerCase();
-        const ok =
-          (!qPart || part.includes(qPart)) &&
-          (!qName || name.includes(qName) || desc.includes(qName)) &&
-          (!qDesc || desc.includes(qDesc) || name.includes(qDesc)) &&
-          (!qBarcode || barcode.includes(qBarcode)) &&
-          (!qBrand || brand.includes(qBrand)) &&
-          (!qSupplier || String(inv.supplierName || '').toLowerCase().includes(qSupplier));
-        if (ok && (qPart || qName || qDesc || qBarcode || qBrand)) {
-          history.push({ ...line, supplierName: inv.supplierName, invoiceNumber: inv.invoiceNumber, invoiceDate: inv.invoiceDate, invoiceId: inv.id });
+        const pn = String(line.partNumber || line.partNo || '').toLowerCase();
+        const br = String(line.brand || '').toLowerCase();
+        if ((!qPart || pn.includes(qPart)) && (!qBrand || br.includes(qBrand))) {
+          rows.push({ ...line, supplierName: inv.supplierName, invoiceNumber: inv.invoiceNumber, invoiceDate: inv.invoiceDate, invoiceId: inv.id, netAmount: line.netPrice || line.price || line.costPrice });
         }
       });
     });
-    setPriceHistory(history);
+    setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
+    setMode('product');
     setSearched(true);
+    setSearchPart('');
+    setSearchBrand('');
   };
 
   const updateViewLine = (index: number, field: string, value: number) => {
@@ -116,11 +110,12 @@ export default function BranchDashboard() {
 
   const saveEditedInvoice = () => {
     if (!viewing) return;
-    const updated = invoices.map((inv) => (inv.id === viewing.id ? viewing : inv));
+    const current = viewing;
+    setViewing(null);
+    const updated = invoices.map((inv) => (inv.id === current.id ? current : inv));
     setInvoices(updated);
     updateInvoices(branchId, updated);
-    setInvoiceResults((prev) => prev.map((inv) => (inv.id === viewing.id ? viewing : inv)));
-    setViewing(null);
+    setInvoiceResults((prev) => prev.map((inv) => (inv.id === current.id ? current : inv)));
     alert('Invoice updated');
   };
 
@@ -153,89 +148,95 @@ export default function BranchDashboard() {
       </div>
       <div className="border-b-2 border-black mb-3" />
 
-      <div className="mb-4">
-        <div className="font-semibold mb-2">PRODUCT SEARCH</div>
-        <div className="grid grid-cols-8 gap-1">
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Year" value={searchYear} onChange={(e) => setSearchYear(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Supplier" value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Part Name" value={searchName} onChange={(e) => setSearchName(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
-          <input className="border rounded px-2 py-1 text-[18px] min-w-0" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
-          <button onClick={handleSearch} className="bg-blue-700 text-white px-2 py-1 rounded text-[18px]">Search</button>
+      <div className="bg-white rounded-xl shadow p-4 mb-4">
+        <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchInvoices(); } }}>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Month / Year</div>
+            <input type="month" className="border rounded px-2 py-1" value={searchMonth} onChange={(e) => setSearchMonth(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Supplier Name</div>
+            <input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={searchInvoiceNo} onChange={(e) => setSearchInvoiceNo(e.target.value)} />
+          </div>
+          <button onClick={searchInvoices} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
+        </div>
+        <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchProducts(); } }}>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Part Number</div>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Brand</div>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
+          </div>
+          <button onClick={searchProducts} className="bg-teal-600 text-white px-5 py-1.5 rounded-lg">Search Product</button>
         </div>
       </div>
 
-      {searched && (
-        <div className="mb-4 space-y-4">
-          {invoiceResults.length > 0 && (
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
-              <div className="font-semibold p-3">Supplier Invoices ({year})</div>
-              <table className="w-full text-[18px]">
-                <thead className="bg-teal-500 text-white">
-                  <tr>
-                    <th className="text-left p-2">Supplier Name</th>
-                    <th className="text-left p-2">Invoice Date</th>
-                    <th className="text-right p-2">Total Amount</th>
-                    <th className="text-center p-2">Status</th>
-                    <th className="p-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoiceResults.map((inv) => (
-                    <tr key={inv.id} className="border-t">
-                      <td className="p-2">{inv.supplierName}</td>
-                      <td className="p-2">{formatDate(inv.invoiceDate)}</td>
-                      <td className="p-2 text-right">₱{inv.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td className="p-2 text-center">
-                        <span className={`px-2 py-1 rounded text-xs ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{inv.status || 'unpaid'}</span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <button onClick={() => setViewing(inv)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {priceHistory.length > 0 && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="font-semibold p-3">Purchase Price History {searchYear.trim() || 'ALL YEARS'}</div>
-              <table className="w-full table-fixed text-[18px]">
-                <thead className="bg-blue-600 text-white">
-                  <tr>
-                    <th className="text-left p-2 w-[15%]">Invoice No.</th>
-                    <th className="text-left p-2 w-[15%]">Part Number</th>
-                    <th className="text-left p-2 w-[11%]">Brand</th>
-                    <th className="text-left p-2 w-[37%]">Description</th>
-                    <th className="text-center p-2 w-[4%]">Qty</th>
-                    <th className="text-right p-2 w-[9%]">Cost Price</th>
-                    <th className="text-right p-2 w-[9%]">Selling Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {priceHistory.map((h, i) => {
-                    const cost = Number(h.netPrice || h.price || h.costPrice || 0);
-                    const selling = cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : 0;
-                    return (
-                      <tr key={i} className="border-t">
-                        <td className="p-2 truncate">{h.invoiceNumber || '—'}</td>
-                        <td className="p-2 truncate">{h.partNumber}</td>
-                        <td className="p-2 truncate">{h.brand || '—'}</td>
-                        <td className="p-2 truncate">{h.description || h.name || '—'}</td>
-                        <td className="p-2 text-center">{h.qty || h.quantity || '—'}</td>
-                        <td className="p-2 text-right">₱{cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right">₱{selling.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {invoiceResults.length === 0 && priceHistory.length === 0 && <p className="text-gray-500 text-sm">No results for {searchYear.trim() || 'ALL YEARS'}.</p>}
+      {searched && mode === 'invoice' && (
+        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+          <table className="w-full" style={{ fontSize: '20px' }}>
+            <thead className="bg-teal-500 text-white">
+              <tr>
+                <th className="text-left p-2">Invoice Date</th>
+                <th className="text-left p-2">Invoice No.</th>
+                <th className="text-left p-2">Supplier Name</th>
+                <th className="text-right p-2">Total Amount</th>
+                <th className="text-center p-2">Status</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoiceResults.map((inv, i) => (
+                <tr key={inv.id || i} className="border-t">
+                  <td className="p-2">{formatDate(inv.invoiceDate)}</td>
+                  <td className="p-2 font-medium">{inv.invoiceNumber || inv.invoiceNo}</td>
+                  <td className="p-2">{inv.supplierName}</td>
+                  <td className="p-2 text-right">₱{Number(inv.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="p-2 text-center">{String(inv.status || 'unpaid').toLowerCase() === 'paid' ? 'Paid' : 'UnPaid'}</td>
+                  <td className="p-2 text-center"><button onClick={() => setViewing(inv)} className="text-blue-600 font-medium">View / Edit</button></td>
+                </tr>
+              ))}
+              {invoiceResults.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No purchase invoices found</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {searched && mode === 'product' && (
+        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+          <table className="w-full" style={{ fontSize: '20px' }}>
+            <thead className="bg-teal-500 text-white">
+              <tr>
+                <th className="text-left p-2">Invoice Date</th>
+                <th className="text-left p-2">Invoice Number</th>
+                <th className="text-left p-2">Supplier Name</th>
+                <th className="text-left p-2">Part Number</th>
+                <th className="text-left p-2">Brand</th>
+                <th className="text-center p-2">Delivered Qty</th>
+                <th className="text-right p-2">Net Amount</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoiceResults.map((h, i) => (
+                <tr key={i} className="border-t">
+                  <td className="p-2">{formatDate(h.invoiceDate)}</td>
+                  <td className="p-2 font-medium">{h.invoiceNumber}</td>
+                  <td className="p-2">{h.supplierName}</td>
+                  <td className="p-2">{h.partNumber || '—'}</td>
+                  <td className="p-2">{h.brand || '—'}</td>
+                  <td className="p-2 text-center">{h.qty || h.quantity || '—'}</td>
+                  <td className="p-2 text-right">₱{Number(h.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="p-2 text-center"><button onClick={() => setViewing(invoices.find((inv) => inv.id === h.invoiceId))} className="text-blue-600 font-medium">View / Edit</button></td>
+                </tr>
+              ))}
+              {invoiceResults.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">No purchase items found</td></tr>}
+            </tbody>
+          </table>
         </div>
       )}
 
