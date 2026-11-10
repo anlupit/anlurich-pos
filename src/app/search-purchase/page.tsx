@@ -182,30 +182,30 @@ export default function SearchPurchasePage() {
         <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} />
+            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} />
+            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Supplier Name</div>
-            <input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <button onClick={handleInvoiceSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
         </div>
         <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">Part Number</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Brand</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={brand} onChange={(e) => setBrand(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={brand} onChange={(e) => setBrand(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
           </div>
           <button onClick={handleProductSearch} className="bg-teal-600 text-white px-5 py-1.5 rounded-lg">Search Product</button>
         </div>

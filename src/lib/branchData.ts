@@ -305,6 +305,26 @@ export async function loadSalesCloud(branch?: string): Promise<any[]> {
   return Array.isArray(rows) ? rows : [];
 }
 
+export async function loadPointsCloud(branch?: string): Promise<any[]> {
+  const b = branch || currentBranch();
+  const params = new URLSearchParams({ table: 'customer_points' });
+  if (b && b !== 'admin') params.set('branch', b);
+  const res = await fetch(`/api/records?${params.toString()}`, { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
+export async function savePoints(row: any) {
+  const res = await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'customer_points', row }),
+  });
+  if (!res.ok) throw new Error('Points save failed');
+  return row;
+}
+
 export async function saveSale(sale: any) {
   const b = sale.branch || currentBranch() || 'unknown';
   const table = sale.noInvoice ? 'no_invoices' : 'sales';

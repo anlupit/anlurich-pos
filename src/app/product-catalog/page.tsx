@@ -88,8 +88,8 @@ export default function ProductCatalogPage() {
       carMake: p.carMake || '',
       carModel: p.carModel || '',
       yearModel: p.yearModel || '',
-      costPrice: p.costPrice != null ? String(p.costPrice) : '',
-      sellingPrice: p.sellingPrice != null ? String(p.sellingPrice) : '',
+      costPrice: p.costPrice != null ? Number(p.costPrice).toFixed(2) : '',
+      sellingPrice: p.sellingPrice != null ? Number(p.sellingPrice).toFixed(2) : '',
       bufferOrderQty: p.bufferOrderQty != null ? String(p.bufferOrderQty) : '0',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -243,8 +243,8 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-2 py-1" placeholder="Car Make" list="make-suggestions" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Year Model" value={form.yearModel} onChange={(e) => setForm({ ...form, yearModel: e.target.value })} />
-          <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
-          <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
+          <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} onBlur={() => setForm((f) => ({ ...f, costPrice: f.costPrice ? Number(f.costPrice).toFixed(2) : '' }))} />
+          <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} onBlur={() => setForm((f) => ({ ...f, sellingPrice: f.sellingPrice ? Number(f.sellingPrice).toFixed(2) : '' }))} />
           <input type="number" className="border rounded px-2 py-1" placeholder="Reorder Point Qty" value={form.bufferOrderQty} onChange={(e) => setForm({ ...form, bufferOrderQty: e.target.value })} />
           <button type="button" tabIndex={-1} onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
           <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>

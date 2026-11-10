@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct } from '../../lib/products';
-import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadPointsCloud, savePoints, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
 
 type Line = {
   id: string;
@@ -342,14 +342,23 @@ export default function POSPage() {
   const vat = Math.round((grandTotal - netOfVAT) * 100) / 100;
   const change = (parseFloat(cashTender) || 0) - grandTotal;
 
-  const checkPoints = () => {
+  const checkPoints = async () => {
     try {
       if (!customerName.trim() && !customerPhone.trim()) return alert('Enter customer name or contact first');
-      const info = customerPoints(customerName, customerPhone);
-      setPointsInfo(info);
+      const branch = currentBranch() || 'unknown';
+      const rows = await loadPointsCloud(branch);
+      const key = customerName.trim().toLowerCase();
+      const ph = customerPhone.trim();
+      const match = rows.find((r) => {
+        const n = String(r.customerName || '').trim().toLowerCase();
+        const p = String(r.customerPhone || '').trim();
+        return (key && n === key) || (ph && p && p === ph);
+      });
+      const info = match || { earned: 0, redeemed: 0, balance: 0 };
+      setPointsInfo({ earned: Number(info.earned || 0), redeemed: Number(info.redeemed || 0), balance: Number(info.balance || 0) });
       setRedeemPts(0);
-    } catch (e) {
-      alert('Could not check points. Save a sale for this customer on this branch first.');
+    } catch {
+      alert('Could not check points. Supabase is not connected.');
     }
   };
 
@@ -391,6 +400,22 @@ export default function POSPage() {
     };
     try {
       await saveSale(sale);
+      if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
+        const earnedNow = Math.floor(grandTotal / 200);
+        const redeemedNow = redeemPts || 0;
+        const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
+        const row = {
+          id: `${branch}-${(customerName || customerPhone).trim().toLowerCase()}`,
+          branch,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          earned: Number(prev.earned || 0) + earnedNow,
+          redeemed: Number(prev.redeemed || 0) + redeemedNow,
+          balance: Math.max(0, Number(prev.balance || 0) + earnedNow - redeemedNow),
+          updatedAt: new Date().toISOString(),
+        };
+        await savePoints(row);
+      }
     } catch {
       return alert('Sale was NOT saved. Supabase is not connected.');
     }
@@ -484,6 +509,27 @@ export default function POSPage() {
     XLSX.writeFile(wb, `monthly-sales-${ym}.xlsx`);
   };
 
+  const resetForm = () => {
+    setLines([{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }]);
+    setCustomerName('');
+    setCustomerPhone('');
+    setDiscount('');
+    setCashTender('');
+    setReferenceNo('');
+    setSavedSale(null);
+    setShowPrintAsk(false);
+    setShowLetterhead(false);
+    const d = new Date();
+    setSaleDateTime(formatDate(d.toISOString()) + ' ' + d.toLocaleTimeString());
+    if (noInvoice) {
+      const prefix = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(d.getFullYear()).slice(-2)}`;
+      const current = parseInt(String(invoiceNo || '').split('-')[1] || '0', 10) || 0;
+      setInvoiceNo(`${prefix}-${String(current + 1).padStart(2, '0')}`);
+    } else {
+      setInvoiceNo('');
+    }
+  };
+
   const doPrint = () => {
     setShowLetterhead(false);
     const style = document.createElement('style');
@@ -494,8 +540,7 @@ export default function POSPage() {
       window.print();
       setTimeout(() => {
         style.remove();
-        setSavedSale(null);
-        window.location.reload();
+        resetForm();
       }, 500);
     }, 200);
   };
@@ -519,7 +564,7 @@ export default function POSPage() {
             <option>Credit / Debit Card</option>
             <option>Bank Transfer</option>
             <option>Check</option>
-            <option>Credit</option>
+            {!noInvoice && <option>Credit</option>}
           </select>
           <input className="border rounded px-2 py-2 mt-2 block text-left" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
         </div>
@@ -624,7 +669,7 @@ export default function POSPage() {
             )}
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Description" value={priceCheck.description} readOnly />
             <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" placeholder="Brand" value={priceCheck.brand} readOnly />
-            <div className="flex justify-between text-sm"><span>Cost Price</span><span>₱{Number(priceCheck.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+            <div className="flex justify-between text-[20px] font-bold"><span>Cost Price</span><span>₱{Number(priceCheck.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-sm"><span>Selling Price</span><span>₱{Number(priceCheck.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             <div className="flex gap-2">
               <button onClick={doPriceCheck} className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-sm">Price Check</button>
@@ -634,25 +679,25 @@ export default function POSPage() {
         </div>
 
         {/* Totals */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex justify-between py-1"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-1">
+        <div className="bg-white rounded-xl shadow p-2 leading-tight">
+          <div className="flex justify-between py-0.5"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between items-center py-0.5">
             <span>Discount</span>
-            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
+            <input type="number" min={0} className="border rounded px-2 py-0.5 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
           </div>
-          {redeemPts > 0 && <div className="flex justify-between py-1 text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
-          <div className="flex justify-between py-1 font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between py-1 text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-          <div className="flex justify-between items-center py-2 border-t mt-2">
+          {redeemPts > 0 && <div className="flex justify-between py-0.5 text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
+          <div className="flex justify-between py-0.5 font-bold"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between py-0.5 text-xs text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between py-0.5 text-xs text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between items-center py-0.5 border-t mt-1">
             <span>CASH TENDER</span>
-            <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
+            <input type="number" min={0} className="border rounded px-2 py-0.5 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
           </div>
-          <div className="flex justify-between py-1 text-xl font-bold text-red-600">
+          <div className="flex justify-between py-0.5 font-bold text-red-600">
             <span>CHANGE</span>
             <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
-          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-3 rounded-lg font-bold">Save Sale</button>
+          <button onClick={handleSave} className="w-full mt-1 bg-blue-700 text-white py-1.5 rounded-lg font-bold">Save Sale</button>
         </div>
       </div>
 
@@ -662,7 +707,7 @@ export default function POSPage() {
           <div className="bg-white rounded-xl p-6 text-center max-w-sm">
             <p className="font-semibold mb-4">Sale saved. Print receipt?</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowPrintAsk(false); const b = localStorage.getItem('anlurich-branch'); window.location.href = b ? `/branch/${b}` : '/'; }} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">No</button>
+              <button onClick={resetForm} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">No</button>
               <button onClick={() => { setShowPrintAsk(false); setShowLetterhead(true); }} className="flex-1 bg-blue-700 text-white py-2 rounded-lg">Yes</button>
             </div>
           </div>
@@ -684,7 +729,7 @@ export default function POSPage() {
               <option>TIMITSU BALIWAG AUTO PARTS</option>
             </select>
             <div className="flex gap-3">
-              <button onClick={() => { setShowLetterhead(false); const b = localStorage.getItem('anlurich-branch'); window.location.href = b ? `/branch/${b}` : '/'; }} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Cancel</button>
+              <button onClick={() => { setShowLetterhead(false); resetForm(); }} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Cancel</button>
               <button onClick={doPrint} disabled={!letterhead} className="flex-1 bg-green-600 text-white py-2 rounded-lg disabled:opacity-50">Print</button>
             </div>
           </div>

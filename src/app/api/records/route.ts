@@ -87,6 +87,15 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS expenses_branch_idx ON expenses (branch);
+    CREATE TABLE IF NOT EXISTS customer_points (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      customer_name TEXT,
+      customer_phone TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS customer_points_branch_idx ON customer_points (branch);
   `);
   ready = true;
 }
@@ -97,7 +106,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const month = url.searchParams.get('month');
     const supplier = url.searchParams.get('supplier');
@@ -127,7 +136,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrate && Array.isArray(body.rows)) {
       for (const row of body.rows) await upsert(table, row);
       return NextResponse.json({ ok: true, migrated: body.rows.length });
@@ -180,6 +189,13 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, expense_date=EXCLUDED.expense_date, category=EXCLUDED.category, payee=EXCLUDED.payee, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.date || '', data.category || '', data.payee || '', JSON.stringify(data)]
+    );
+  } else if (table === 'customer_points') {
+    await pool.query(
+      `INSERT INTO customer_points (id, branch, customer_name, customer_phone, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, customer_name=EXCLUDED.customer_name, customer_phone=EXCLUDED.customer_phone, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.customerName || '', data.customerPhone || '', JSON.stringify(data)]
     );
   } else if (table === 'customers') {
     await pool.query(

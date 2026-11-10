@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadSales, loadSalesCloud, updateSales, currentBranch, formatDate } from '../../lib/branchData';
+import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, currentBranch, formatDate } from '../../lib/branchData';
 
 function pointsFor(total: number) {
   return Math.floor((total || 0) / 200);
@@ -21,15 +21,24 @@ export default function SearchInvoicePage() {
   const [logo, setLogo] = useState('');
 
   useEffect(() => {
-    loadSalesCloud().then(setSales);
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
+    handleSearch();
   }, []);
 
+  const monthOf = (value: string) => {
+    const raw = String(value || '');
+    if (/^\d{4}-\d{2}/.test(raw)) return raw.slice(0, 7);
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+  };
+
   const handleSearch = async () => {
-    const [pos, noInv] = await Promise.all([loadSalesCloud(), loadNoInvoicesCloud()]);
+    const [pos, noInv] = await Promise.all([loadSalesCloud().catch(() => []), loadNoInvoicesCloud().catch(() => [])]);
     const fresh = [...pos, ...noInv];
     setSales(fresh);
     const filtered = fresh.filter((s) => {
-      const saleMonth = String(s.date || s.dateTime || '').slice(0, 7);
+      const saleMonth = monthOf(s.date || s.dateTime || s.createdAt || '');
       if (monthFrom && saleMonth && saleMonth < monthFrom) return false;
       if (monthTo && saleMonth && saleMonth > monthTo) return false;
       if (invoiceNo && !String(s.invoiceNo || '').toLowerCase().includes(invoiceNo.toLowerCase())) return false;
@@ -110,14 +119,14 @@ export default function SearchInvoicePage() {
       </div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto">
+        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={onEnter}>
           <div>
             <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} />
+            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} />
+            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
