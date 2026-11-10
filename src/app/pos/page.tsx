@@ -381,7 +381,8 @@ export default function POSPage() {
     if (!invoiceNo.trim()) return alert('Enter Sales Invoice No.');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
-    const branch = currentBranch() || sessionStorage.getItem('anlurich-auth') || 'unknown';
+    const branch = (currentBranch() || sessionStorage.getItem('anlurich-auth') || '').toLowerCase();
+    if (!branch || branch === 'unknown') return alert('Branch is missing. Go back to the branch dashboard, then open POS again.');
     const sale = {
       id: Date.now().toString(),
       invoiceNo: invoiceNo.trim(),

@@ -9,7 +9,16 @@ export function formatDate(value?: string): string {
 
 export function currentBranch(): string {
   if (typeof window === 'undefined') return '';
-  return localStorage.getItem('anlurich-branch') || '';
+  const stored = localStorage.getItem('anlurich-branch') || sessionStorage.getItem('anlurich-auth') || '';
+  return stored.toLowerCase();
+}
+
+function branchId(value?: string) {
+  const raw = value || currentBranch() || (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-auth') : '') || '';
+  const b = raw.toLowerCase();
+  if (!b || b === 'unknown' || b === 'admin') throw new Error('Branch is required. Login to a branch first.');
+  if (typeof window !== 'undefined') localStorage.setItem('anlurich-branch', b);
+  return b;
 }
 
 export function isAdmin(): boolean {
@@ -80,7 +89,7 @@ async function pullCloud(key: string): Promise<any | null> {
   }
 }
   export async function saveInvoice(invoice: any) {
-  const b = invoice.branch || currentBranch() || 'unknown';
+  const b = branchId(invoice.branch);
   const row = { ...invoice, branch: b, id: invoice.id || `${b}-${invoice.invoiceNumber}-${Date.now()}`, updatedAt: new Date().toISOString() };
   const res = await fetch('/api/records', {
     method: 'POST',
@@ -316,17 +325,19 @@ export async function loadPointsCloud(branch?: string): Promise<any[]> {
 }
 
 export async function savePoints(row: any) {
+  const b = branchId(row.branch);
+  const saved = { ...row, branch: b };
   const res = await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'customer_points', row }),
+    body: JSON.stringify({ table: 'customer_points', row: saved }),
   });
   if (!res.ok) throw new Error('Points save failed');
-  return row;
+  return saved;
 }
 
 export async function saveSale(sale: any) {
-  const b = sale.branch || currentBranch() || 'unknown';
+  const b = branchId(sale.branch);
   const table = sale.noInvoice ? 'no_invoices' : 'sales';
   const row = { ...sale, branch: b, id: sale.id || `${b}-${sale.invoiceNo}-${Date.now()}`, updatedAt: new Date().toISOString() };
   const res = await fetch('/api/records', {
