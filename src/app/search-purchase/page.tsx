@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -101,8 +101,9 @@ export default function SearchPurchasePage() {
   };
 
   const openInvoice = (invoiceId: string) => {
-    const inv = invoices.find((i) => i.id === invoiceId) || loadInvoices().find((i) => i.id === invoiceId);
+    const inv = results.find((i) => i.id === invoiceId) || invoices.find((i) => i.id === invoiceId) || loadInvoices().find((i) => i.id === invoiceId);
     if (inv) setViewing(JSON.parse(JSON.stringify(inv)));
+    else alert('Invoice record was not found. Search again and try View / Edit.');
   };
 
   const updateLine = (index: number, field: string, value: string | number) => {
@@ -130,19 +131,17 @@ export default function SearchPurchasePage() {
     handleInvoiceSearch();
   };
 
-  const deleteInvoice = () => {
+  const deleteInvoice = async () => {
     if (!viewing) return;
     const pin = prompt('Enter delete password');
     if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${viewing.invoiceNumber}?`)) return;
     const branch = currentBranch();
-    const all = loadInvoices(branch);
-    const updated = all.filter((inv) => inv.id !== viewing.id);
-    updateInvoices(branch, updated);
-    setInvoices(updated);
+    await deleteInvoiceRecord(viewing, branch);
+    setInvoices((prev) => prev.filter((inv) => inv.id !== viewing.id));
+    setResults((prev) => prev.filter((inv) => inv.id !== viewing.id));
     setViewing(null);
-    alert('Invoice deleted');
-    handleInvoiceSearch();
+    alert('Invoice deleted from this computer and Supabase');
   };
 
   const goDashboard = () => {

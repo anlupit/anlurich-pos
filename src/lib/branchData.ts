@@ -163,7 +163,26 @@ export async function stripInvoicePhotos(branch?: string) {
   await pushCloud(key, cleaned);
   return cleaned;
 }
-  export async function updateInvoices(branch: string, invoices: any[]) {
+  export async function deleteInvoiceRecord(invoice: any, branch?: string) {
+  const b = branch || invoice.branch || currentBranch() || 'unknown';
+  const key = `anlurich-supplier-invoices-${b}`;
+  const local = JSON.parse(localStorage.getItem(key) || '[]').filter((inv: any) => inv.id !== invoice.id && String(inv.invoiceNumber || inv.invoiceNo) !== String(invoice.invoiceNumber || invoice.invoiceNo));
+  localStorage.setItem(key, JSON.stringify(local));
+  if (invoice.id) {
+    await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'supplier_invoices', deleteId: invoice.id }),
+    });
+  }
+  const cloud = await pullCloud(key);
+  if (Array.isArray(cloud)) {
+    const next = cloud.filter((inv: any) => inv.id !== invoice.id && String(inv.invoiceNumber || inv.invoiceNo) !== String(invoice.invoiceNumber || invoice.invoiceNo));
+    await pushCloud(key, next);
+  }
+}
+
+export async function updateInvoices(branch: string, invoices: any[]) {
   const key = `anlurich-supplier-invoices-${branch}`;
   localStorage.setItem(key, JSON.stringify(invoices));
   await fetch('/api/records', {

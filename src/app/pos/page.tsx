@@ -14,6 +14,7 @@ type Line = {
   qty: number;
   unit: string;
   price: number;
+  labor?: number;
 };
 
 export default function POSPage() {
@@ -323,7 +324,8 @@ export default function POSPage() {
     setPriceMatches([]);
   };
 
-  const lineTotal = (l: Line) => l.qty * l.price;
+  const hasLabor = ['anlurich', 'avenders'].includes(currentBranch() || '');
+  const lineTotal = (l: Line) => l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0);
   const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const discountAmt = parseFloat(discount) || 0;
   const grandTotal = Math.max(0, subtotal - discountAmt);
@@ -365,7 +367,7 @@ export default function POSPage() {
       items: valid.map((l, i) => {
         const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
         const cost = Number(catalog?.costPrice) || 0;
-        return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, costPrice: cost, total: l.qty * l.price };
+        return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
       }),
       subtotal,
       discount: discountAmt,
@@ -567,6 +569,7 @@ export default function POSPage() {
               <th className="p-2 text-center">Qty</th>
               <th className="p-2 text-left">Unit</th>
               <th className="p-2 text-right" style={{ width: '10ch' }}>Price</th>
+              {hasLabor && <th className="p-2 text-right">Labor</th>}
               <th className="p-2 text-right">Total</th>
               <th className="p-2"></th>
             </tr>
@@ -581,6 +584,7 @@ export default function POSPage() {
                 <td className="p-1"><input type="number" min={1} className="border rounded px-2 py-1 text-[18px] w-14 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-1 w-16" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={line.price || ''} onChange={(e) => updateLine(line.id, 'price', parseFloat(e.target.value) || 0)} /></td>
+                {hasLabor && <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={line.labor || ''} onChange={(e) => updateLine(line.id, 'labor', parseFloat(e.target.value) || 0)} /></td>}
                 <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button>
