@@ -15,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-gray-50">
         <CloudSync />
+        <AuthGuard />
         <div className="flex min-h-screen">
           <Sidebar />
           <main className="flex-1">{children}</main>

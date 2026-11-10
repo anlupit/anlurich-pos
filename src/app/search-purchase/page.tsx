@@ -5,7 +5,6 @@ import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatD
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [year, setYear] = useState('All');
   const [month, setMonth] = useState('');
   const [supplier, setSupplier] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
@@ -37,8 +36,6 @@ export default function SearchPurchasePage() {
 
     list.forEach((inv) => {
       const invDate = String(inv.invoiceDate || inv.createdAt || '');
-      const invYear = yearOf(invDate);
-      if (year !== 'All' && invYear && invYear !== year) return;
       if (month && !invDate.startsWith(month)) return;
       if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return;
       if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return;
@@ -188,10 +185,6 @@ export default function SearchPurchasePage() {
           <div>
             <div className="text-xs font-medium text-center mb-1">Month</div>
             <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value)} />
-          </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">Year</div>
-            <input className="border rounded px-2 py-1 text-center" style={{ width: '8ch' }} placeholder="All" value={year === 'All' ? '' : year} onChange={(e) => setYear(e.target.value || 'All')} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Supplier Name</div>
