@@ -231,6 +231,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ ok: true, moved: { invoices: invoices.rows.length, sales: sales.rows.length, noInvoices: noInv.rows.length, customers: customers.rows.length } });
     }
+    if (body.migrate && Array.isArray(body.rows)) {
       for (const row of body.rows) await upsert(table, row);
       return NextResponse.json({ ok: true, migrated: body.rows.length });
     }
