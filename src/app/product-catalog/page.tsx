@@ -63,15 +63,15 @@ export default function ProductCatalogPage() {
     const updated = editingId
       ? products.map((p) => (p.id === editingId ? data : p))
       : [...products, data];
+    const emptyForm = { barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '', description: '', category: '', position: '', carMake: '', carModel: '', yearModel: '', costPrice: '', sellingPrice: '', bufferOrderQty: '0' };
     setProducts(updated);
+    setForm(emptyForm);
+    setEditingId(null);
     try {
       await saveProducts(updated);
     } catch {
       alert('Saved on this computer only. Supabase did not save. Check DATABASE_URL.');
-      return;
     }
-    setForm({ barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '', description: '', category: '', position: '', carMake: '', carModel: '', yearModel: '', costPrice: '', sellingPrice: '', bufferOrderQty: '0' });
-    setEditingId(null);
   };
 
   const startEdit = (p: Product) => {
@@ -231,10 +231,10 @@ export default function ProductCatalogPage() {
           </label>
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} onDoubleClick={(e) => e.stopPropagation()}>
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
           <input className="border rounded px-2 py-1" placeholder="Product Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+          <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} />
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -246,7 +246,7 @@ export default function ProductCatalogPage() {
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
           <input type="number" className="border rounded px-2 py-1" placeholder="Reorder Point Qty" value={form.bufferOrderQty} onChange={(e) => setForm({ ...form, bufferOrderQty: e.target.value })} />
-          <button type="button" onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
+          <button type="button" tabIndex={-1} onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
           <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="make-suggestions">{makeSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
           <datalist id="model-suggestions">{modelSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
