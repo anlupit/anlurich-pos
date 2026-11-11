@@ -120,7 +120,7 @@ export default function BranchDashboard() {
   };
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen p-4 overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
           {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
@@ -146,9 +146,9 @@ export default function BranchDashboard() {
           <div className="text-xs text-gray-500">Total Sales Invoice Purchases</div>
         </div>
       </div>
-      <div className="border-b-2 border-black mb-3" />
+      <div className="border-b-2 border-black mb-2 shrink-0" />
 
-      <div className="bg-white rounded-xl shadow p-4 mb-4">
+      <div className="bg-white rounded-xl shadow p-4 mb-2 shrink-0">
         <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchInvoices(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">Month / Year</div>
@@ -178,7 +178,7 @@ export default function BranchDashboard() {
       </div>
 
       {searched && mode === 'invoice' && (
-        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+        <div className="bg-white rounded-xl shadow overflow-auto max-h-40 mb-2 shrink-0">
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
@@ -207,7 +207,7 @@ export default function BranchDashboard() {
         </div>
       )}
       {searched && mode === 'product' && (
-        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+        <div className="bg-white rounded-xl shadow overflow-auto max-h-40 mb-2 shrink-0">
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
@@ -252,7 +252,7 @@ export default function BranchDashboard() {
             </tr>
           </thead>
           <tbody>
-            {products.filter((p) => (p.quantity ?? 0) <= (p.reorderPointQty ?? p.bufferOrderQty ?? 0)).slice(0, 50).map((p) => (
+            {products.filter((p) => (p.quantity ?? 0) <= (p.reorderPointQty ?? p.bufferOrderQty ?? 0)).map((p) => (
               <tr key={p.id} className="border-t">
                 <td className="p-2">{p.partNumber}</td>
                 <td className="p-2 text-center">{p.quantity ?? 0}</td>

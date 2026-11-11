@@ -597,8 +597,8 @@ export default function POSPage() {
   };
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 left-56 overflow-hidden flex flex-col p-2 print:static print:overflow-visible print:left-0">
-      <div className="print:hidden flex-1 min-h-0 flex flex-col">
+    <div className="min-h-full p-2 print:static">
+      <div className="print:hidden">
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
         <h1 className="text-lg font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
         <span className="text-xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
@@ -672,7 +672,7 @@ export default function POSPage() {
       )}
 
       {/* Lines */}
-      <div className="bg-white rounded-xl shadow p-2 mb-2 flex-1 min-h-0 overflow-auto">
+      <div className="bg-white rounded-xl shadow p-2 mb-2 overflow-x-auto">
         <table className="w-full text-sm md:text-[16px] table-fixed">
           <thead className="bg-teal-500 text-white">
             <tr>

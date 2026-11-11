@@ -218,7 +218,7 @@ export default function ProductCatalogPage() {
   );
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen p-4 overflow-x-hidden">
       <h1 className="text-xl font-bold text-yellow-600 mb-1">Product Catalog</h1>
       <div className="text-xs text-gray-500 mb-4">Shared by all branches</div>
 
@@ -296,4 +296,5 @@ export default function ProductCatalogPage() {
       </div>
     </div>
   );
+
 }

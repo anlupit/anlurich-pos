@@ -107,7 +107,7 @@ export default function SearchInvoicePage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col p-2">
+    <div className="min-h-screen p-4 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {logo ? <img src={logo} alt="Logo" className="w-10 h-10 object-contain" /> : null}
@@ -152,7 +152,7 @@ export default function SearchInvoicePage() {
       </div>
 
       {searched && plate && results.length > 0 && (
-        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+        <div className="bg-white rounded-xl shadow overflow-auto max-h-48 mb-2 shrink-0">
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>
@@ -183,7 +183,7 @@ export default function SearchInvoicePage() {
         </div>
       )}
       {searched && results.length > 0 && (
-        <div className="bg-white rounded-xl shadow flex-1 min-h-0 overflow-auto">
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>

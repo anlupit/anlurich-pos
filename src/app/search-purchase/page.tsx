@@ -173,7 +173,7 @@ export default function SearchPurchasePage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen p-4 overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
           {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
@@ -219,6 +219,7 @@ export default function SearchPurchasePage() {
         </div>
       </div>
 
+      <div className="overflow-x-auto">
       {searched && mode === 'invoice' && (
         <div className="bg-white rounded-xl shadow overflow-x-auto">
           <table className="w-full" style={{ fontSize: '20px' }}>
@@ -282,6 +283,7 @@ export default function SearchPurchasePage() {
           </table>
         </div>
       )}
+      </div>
 
       {viewing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

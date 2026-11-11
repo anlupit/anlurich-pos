@@ -98,10 +98,10 @@ export default function ProductSearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 print:bg-white print:p-0">
+    <div className="min-h-screen bg-gray-50 p-4 overflow-x-hidden print:bg-white print:p-0">
       {/* Header - hide on print */}
-      <div className="max-w-6xl mx-auto print:hidden">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-6xl mx-auto w-full print:hidden shrink-0">
+        <div className="flex justify-between items-center mb-2">
           <h1 className="text-2xl font-bold">Product Search</h1>
           <a href="/dashboard" className="text-sm text-blue-600 hover:underline">← Back to Dashboard</a>
           <button
@@ -114,8 +114,8 @@ export default function ProductSearchPage() {
 
         {/* Search Fields */}
         {showSearch && (
-          <div className="bg-white rounded-xl shadow p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl shadow p-4 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
                 <input
@@ -168,7 +168,7 @@ export default function ProductSearchPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-3 mt-3">
               <button
                 onClick={handleSearch}
                 className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700"
@@ -186,7 +186,7 @@ export default function ProductSearchPage() {
         )}
       </div>
 
-      {/* Results */}
+      {/* Results - scrollable */}
       <div className="max-w-6xl mx-auto">
         {searched && (
           <div className="bg-white rounded-xl shadow print:shadow-none print:rounded-none">
@@ -204,27 +204,22 @@ export default function ProductSearchPage() {
                   onClick={handlePrint}
                   className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm print:hidden"
                 >
-                  Print for Inventory
+                  Print
                 </button>
               )}
             </div>
-
             {results.length === 0 ? (
               <p className="p-8 text-center text-gray-500">No products found matching your search.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-100 print:bg-gray-200">
+                  <thead className="bg-teal-500 text-white">
                     <tr>
                       <th className="text-left p-3 font-medium">Category</th>
+                      <th className="text-left p-3 font-medium">Barcode</th>
                       <th className="text-left p-3 font-medium">Part Number</th>
                       <th className="text-left p-3 font-medium">Brand</th>
                       <th className="text-left p-3 font-medium">Description</th>
-                      <th className="text-left p-3 font-medium">Position</th>
-                      <th className="text-left p-3 font-medium">Year Model</th>
-                      <th className="text-center p-3 font-medium">Qty</th>
-                      <th className="text-left p-3 font-medium">Location</th>
-                      <th className="text-right p-3 font-medium">Cost Price</th>
                       <th className="text-right p-3 font-medium">Selling Price</th>
                     </tr>
                   </thead>
@@ -232,19 +227,11 @@ export default function ProductSearchPage() {
                     {results.map((p) => (
                       <tr key={p.id} className="border-t hover:bg-gray-50">
                         <td className="p-3">{p.category || '—'}</td>
+                        <td className="p-3">{p.barcode || '—'}</td>
                         <td className="p-3 font-medium">{p.partNumber}</td>
                         <td className="p-3">{p.brand || '—'}</td>
-                        <td className="p-3">{p.description || p.name}</td>
-                        <td className="p-3">{p.position || '—'}</td>
-                        <td className="p-3">{p.yearModel || '—'}</td>
-                        <td className="p-3 text-center">{p.quantity ?? '—'}</td>
-                        <td className="p-3">{p.location || '—'}</td>
-                        <td className="p-3 text-right">
-                          {p.costPrice != null ? `₱${p.costPrice.toLocaleString()}` : '—'}
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {p.sellingPrice != null ? `₱${p.sellingPrice.toLocaleString()}` : '—'}
-                        </td>
+                        <td className="p-3">{p.description || p.name || '—'}</td>
+                        <td className="p-3 text-right">₱{Number(p.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -254,14 +241,7 @@ export default function ProductSearchPage() {
           </div>
         )}
       </div>
-
-      {/* Print styles */}
-      <style jsx global>{`
-        @media print {
-          body { background: white; }
-          .print\\:hidden { display: none !important; }
-        }
-      `}</style>
     </div>
   );
+
 }

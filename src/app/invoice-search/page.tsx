@@ -19,15 +19,15 @@ export default function InvoiceSearchPage() {
   );
 
   return (
-    <div className="p-4 md:p-6">
-      <h1 className="text-2xl font-bold mb-4">Invoice Search</h1>
+    <div className="min-h-screen p-4 overflow-x-hidden">
+      <h1 className="text-2xl font-bold mb-2 shrink-0">Invoice Search</h1>
       <input
-        className="w-full max-w-md border rounded-lg px-4 py-2 mb-4"
+        className="w-full max-w-md border rounded-lg px-4 py-2 mb-2 shrink-0"
         placeholder="Search invoice #, supplier, or branch..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
-      <div className="bg-white rounded-xl shadow">
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
         {filtered.length === 0 ? (
           <p className="p-6 text-gray-500">No invoices found</p>
         ) : (
