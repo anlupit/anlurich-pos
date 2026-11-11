@@ -472,7 +472,7 @@ export default function POSPage() {
         items: valid.map((l, i) => {
           const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
           const cost = Number(catalog?.costPrice) || 0;
-          return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
+          return { itemNo: i + 1, partNumber: l.partNumber, barcode: l.barcode || '', brand: l.brand || '', description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
         }),
         subtotal,
         discount: discountAmt,
@@ -736,17 +736,16 @@ export default function POSPage() {
           <div className="mt-2">
             <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
             <div className="text-4xl font-black leading-none">{pointsInfo ? pointsInfo.balance : '—'}</div>
+            {pointsInfo && pointsInfo.balance > 0 && (
+              <button type="button" onClick={redeem} className="mt-1 bg-green-600 text-white px-3 py-1 rounded text-xs font-medium">
+                Redeem {pointsInfo.balance} pts
+              </button>
+            )}
+            {redeemPts > 0 && <div className="text-xs text-red-600 mt-1">₱{redeemPts} discount</div>}
           </div>
           )}
         </div>
       </div>
-
-      {!noInvoice && pointsInfo && pointsInfo.balance > 0 && (
-      <div className="bg-white rounded-xl shadow p-2 mb-2 flex gap-2 items-center">
-        <button type="button" onClick={redeem} className="bg-green-600 text-white px-5 py-2 rounded-lg font-medium">Redeem {pointsInfo.balance} pts</button>
-        {redeemPts > 0 && <span className="text-sm text-red-600">₱{redeemPts} in Discount</span>}
-      </div>
-      )}
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-2 mb-2 overflow-x-auto">
