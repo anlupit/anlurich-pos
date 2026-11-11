@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { loadProducts, Product as ManagedProduct } from '../../lib/products';
+import { loadProducts, Product as ManagedProduct, upsertCatalogFromSale } from '../../lib/products';
 import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadPointsCloud, savePoints, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
 
 type Line = {
@@ -65,6 +65,7 @@ export default function POSPage() {
   const [priceCheck, setPriceCheck] = useState({ barcode: '', partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
   const [pointsInfo, setPointsInfo] = useState<{ earned: number; redeemed: number; balance: number } | null>(null);
   const [redeemPts, setRedeemPts] = useState(0);
+  const [salesOutlet, setSalesOutlet] = useState('sezan');
 
   useEffect(() => {
     const d = new Date();
@@ -313,6 +314,11 @@ export default function POSPage() {
     setPriceMatches(found.slice(0, 8));
   };
 
+  const clearPriceCheck = () => {
+    setPriceCheck({ barcode: '', partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
+    setPriceMatches([]);
+  };
+
   const addCheckedToCart = () => {
     if (!priceCheck.partNumber) return;
     const item = {
@@ -335,7 +341,7 @@ export default function POSPage() {
     setPriceMatches([]);
   };
 
-  const hasLabor = true;
+  const hasLabor = ['anlurich', 'avenders'].includes((currentBranch() || (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-auth') : '') || '').toLowerCase());
   const lineTotal = (l: Line) => l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0);
   const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const discountAmt = parseFloat(discount) || 0;
@@ -354,14 +360,30 @@ export default function POSPage() {
     }
     const timer = setTimeout(async () => {
       try {
-        const rows = await loadPointsCloud(currentBranch() || 'unknown');
-        const match = rows.find((r) => {
-          const n = String(r.customerName || '').trim().toLowerCase();
-          const p = String(r.customerPhone || '').trim();
-          if (key && ph) return n === key && p === ph;
-          if (ph) return p === ph;
-          return false;
-        });
+        const branch = currentBranch() || sessionStorage.getItem('anlurich-auth') || '';
+        const rows = await loadPointsCloud(branch);
+        const byName = rows.filter((r) => String(r.customerName || '').trim().toLowerCase() === key);
+        const byPhone = rows.filter((r) => ph && String(r.customerPhone || '').trim() === ph);
+        let match = null;
+        if (key && ph) match = rows.find((r) => String(r.customerName || '').trim().toLowerCase() === key && String(r.customerPhone || '').trim() === ph) || byPhone[0] || null;
+        else if (ph) match = byPhone[0] || null;
+        else if (key && byName.length === 1) match = byName[0];
+        else if (key && byName.length > 1) match = null;
+        if (!match && key) {
+          const sales = await loadSalesCloud(branch);
+          const matchedSales = sales.filter((s) => {
+            const n = String(s.customerName || '').trim().toLowerCase();
+            const p = String(s.customerPhone || '').trim();
+            if (key && ph) return n === key && p === ph;
+            return n === key;
+          }).filter((s) => !s.noPoints && !s.noInvoice);
+          if (matchedSales.length) {
+            const earned = matchedSales.reduce((sum, s) => sum + Math.floor((Number(s.total) || 0) / 200), 0);
+            const redeemed = matchedSales.reduce((sum, s) => sum + (Number(s.pointsRedeemed) || 0), 0);
+            setPointsInfo({ earned, redeemed, balance: Math.max(0, earned - redeemed) });
+            return;
+          }
+        }
         setPointsInfo(match ? { earned: Number(match.earned || 0), redeemed: Number(match.redeemed || 0), balance: Number(match.balance || 0) } : { earned: 0, redeemed: 0, balance: 0 });
       } catch {
         setPointsInfo(null);
@@ -382,7 +404,8 @@ export default function POSPage() {
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
     const branch = (currentBranch() || sessionStorage.getItem('anlurich-auth') || '').toLowerCase();
-    if (!branch || branch === 'unknown') return alert('Branch is missing. Go back to the branch dashboard, then open POS again.');
+    const saleBranch = branch === 'sezan' ? salesOutlet : branch;
+    if (!saleBranch || saleBranch === 'unknown') return alert('Branch is missing. Go back to the branch dashboard, then open POS again.');
     const sale = {
       id: Date.now().toString(),
       invoiceNo: invoiceNo.trim(),
@@ -392,7 +415,7 @@ export default function POSPage() {
       plateNo,
       date: new Date().toISOString(),
       dateTime: saleDateTime,
-      branch,
+      branch: saleBranch,
       items: valid.map((l, i) => {
         const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
         const cost = Number(catalog?.costPrice) || 0;
@@ -411,6 +434,11 @@ export default function POSPage() {
     };
     try {
       await saveSale(sale);
+      // Auto-add missing products to catalog from this sale (POS or No Invoice)
+      const catalogResult = await upsertCatalogFromSale(valid).catch(() => ({ added: 0 }));
+      if (catalogResult.added > 0) {
+        console.log(`Added ${catalogResult.added} new product(s) to catalog from sale`);
+      }
     } catch (err: any) {
       return alert(err?.message || 'Sale was NOT saved. Supabase is not connected.');
     }
@@ -420,8 +448,8 @@ export default function POSPage() {
         const redeemedNow = redeemPts || 0;
         const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
         const row = {
-          id: `${branch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
-          branch,
+          id: `${saleBranch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
+          branch: saleBranch,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           earned: Number(prev.earned || 0) + earnedNow,
@@ -437,7 +465,7 @@ export default function POSPage() {
       const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
       if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
     });
-    if (missed.length) alert(`Sale saved. Stock not deducted for: ${missed.join(', ')}. Add those to Product Catalog first.`);
+    if (missed.length) alert(`Sale saved. Stock not deducted for: ${missed.join(', ')} (product may be new — check Product Catalog).`);
     setSavedSale(sale);
     setShowPrintAsk(true);
   };
@@ -531,9 +559,17 @@ export default function POSPage() {
     setDiscount('');
     setCashTender('');
     setReferenceNo('');
+    setTin('');
+    setPaid(true);
+    setPaymentMethod('Cash');
+    setRedeemPts(0);
+    setPointsInfo(null);
     setSavedSale(null);
     setShowPrintAsk(false);
     setShowLetterhead(false);
+    setPriceCheck({ barcode: '', partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
+    setPriceMatches([]);
+    setSalesOutlet('sezan');
     const d = new Date();
     setSaleDateTime(formatDate(d.toISOString()) + ' ' + d.toLocaleTimeString());
     if (noInvoice) {
@@ -566,6 +602,15 @@ export default function POSPage() {
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
         <h1 className="text-lg font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
         <span className="text-xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
+        {(currentBranch() || '').toLowerCase() === 'sezan' && (
+          <label className="ml-auto flex items-center gap-2 text-sm font-bold">
+            Sales
+            <select className="border rounded px-2 py-1" value={salesOutlet} onChange={(e) => setSalesOutlet(e.target.value)}>
+              <option value="sezan">Sezan Baliwag Auto Parts</option>
+              <option value="timitsu">Timitsu Auto Parts</option>
+            </select>
+          </label>
+        )}
       </div>
       <div className="text-xs text-gray-500 mb-1 print:hidden">AUTO PARTS INVENTORY SYSTEM (APIS)</div>
 
@@ -663,6 +708,7 @@ export default function POSPage() {
           </tbody>
         </table>
         <button onClick={addLine} className="mt-3 bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Line</button>
+        <button onClick={resetForm} className="mt-3 ml-2 bg-gray-500 text-white px-4 py-2 rounded-lg text-sm" title="Clear all products and customer details">Clear Form</button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-stretch shrink-0 print:hidden">
@@ -688,6 +734,7 @@ export default function POSPage() {
             <div className="flex gap-2">
               <button onClick={doPriceCheck} className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-sm">Price Check</button>
               <button onClick={addCheckedToCart} className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm">Add to Cart</button>
+              <button onClick={clearPriceCheck} className="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm">Clear</button>
             </div>
           </div>
         </div>
@@ -713,7 +760,10 @@ export default function POSPage() {
               <span>₱{Math.max(0, change).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
-          <button onClick={handleSave} className="w-full mt-3 bg-blue-700 text-white py-2 rounded-lg font-bold">Save Sale</button>
+          <div className="flex gap-2 mt-3">
+            <button onClick={resetForm} className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium" title="Clear products and customer details">Clear Form</button>
+            <button onClick={handleSave} className="flex-1 bg-blue-700 text-white py-2 rounded-lg font-bold">Save Sale</button>
+          </div>
         </div>
       </div>
 

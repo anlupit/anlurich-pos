@@ -62,6 +62,34 @@ export async function loadProductsCloud(): Promise<Product[]> {
   return loadProducts();
 }
 
+export async function upsertCatalogFromSale(lines: any[]) {
+  const products = await loadProductsCloud();
+  let added = 0;
+  for (const l of lines) {
+    const part = String(l.partNumber || '').trim();
+    if (!part) continue;
+    const barcode = String(l.barcode || '').trim();
+    const existing = products.find((p) =>
+      String(p.partNumber || '').toLowerCase() === part.toLowerCase() ||
+      (barcode && String(p.barcode || '').toLowerCase() === barcode.toLowerCase())
+    );
+    if (existing) continue; // only add if not already in catalog
+    const selling = Number(l.price) > 0 ? Math.round(Number(l.price) * 100) / 100 : undefined;
+    products.push({
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      partNumber: part,
+      barcode: barcode || undefined,
+      brand: l.brand || undefined,
+      name: l.description || part,
+      description: l.description || undefined,
+      sellingPrice: selling,
+    });
+    added += 1;
+  }
+  if (added > 0) await saveProducts(products);
+  return { added };
+}
+
 export async function upsertCatalogFromInvoice(lines: any[]) {
   const products = await loadProductsCloud();
   let added = 0;

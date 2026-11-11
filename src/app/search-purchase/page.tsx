@@ -162,7 +162,7 @@ export default function SearchPurchasePage() {
     setInvoices((prev) => prev.filter((inv) => inv.id !== viewing.id));
     setResults((prev) => prev.filter((inv) => inv.id !== viewing.id));
     setViewing(null);
-    alert('Invoice deleted from this computer and Supabase');
+    setTimeout(() => alert('Invoice deleted from this computer and Supabase'), 50);
   };
 
   const goDashboard = () => {

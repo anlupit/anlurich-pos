@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, currentBranch, formatDate } from '../../lib/branchData';
 
-function pointsFor(total: number) {
-  return Math.floor((total || 0) / 200);
+function pointsFor(sale: any) {
+  if (!sale || sale.noInvoice || sale.noPoints || /^\d{6}-\d{2}$/.test(String(sale.invoiceNo || ''))) return 0;
+  return Math.floor((Number(sale.total) || 0) / 200);
 }
 
 export default function SearchInvoicePage() {
@@ -90,7 +91,7 @@ export default function SearchInvoicePage() {
     setSales(updated);
     setResults((prev) => prev.filter((s) => s.id !== editing.id));
     setEditing(null);
-    alert('Invoice deleted');
+    setTimeout(() => alert('Invoice deleted'), 50);
   };
 
   const saveEdit = async () => {
@@ -106,47 +107,47 @@ export default function SearchInvoicePage() {
   };
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3">
-          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
-          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+    <div className="h-screen overflow-hidden flex flex-col p-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {logo ? <img src={logo} alt="Logo" className="w-10 h-10 object-contain" /> : null}
+          <h1 className="text-lg font-black tracking-wide text-[#1e3a8a] truncate">AUTO PARTS INVENTORY SYSTEM</h1>
         </div>
-        <div className="text-2xl md:text-4xl font-black text-gray-800">{formatDate(new Date().toISOString().slice(0, 10))}</div>
+        <div className="text-xl font-black text-gray-800 shrink-0">{formatDate(new Date().toISOString().slice(0, 10))}</div>
       </div>
-      <div className="border-b-2 border-black mb-3" />
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-2xl font-black text-yellow-600">Search SALES INVOICE</h2>
-        <button onClick={goDashboard} className="text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
+      <div className="border-b-2 border-black my-1" />
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-lg font-black text-yellow-600">Search SALES INVOICE</h2>
+        <button onClick={goDashboard} className="text-xs text-blue-600 hover:underline">← Back to Dashboard</button>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto" onKeyDown={onEnter}>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={onEnter} />
+      <div className="bg-white rounded-xl shadow p-2 mb-2">
+        <div className="flex items-end gap-1" onKeyDown={onEnter}>
+          <div className="shrink-0">
+            <div className="text-[10px] font-medium text-center mb-0.5">From</div>
+            <input type="month" className="border rounded px-1 py-1 w-[9.5rem]" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={onEnter} />
+          <div className="shrink-0">
+            <div className="text-[10px] font-medium text-center mb-0.5">To</div>
+            <input type="month" className="border rounded px-1 py-1 w-[9.5rem]" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={onEnter} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-medium text-center mb-0.5">Invoice No.</div>
+            <input className="border rounded px-1 py-1 w-full" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">Contact No.</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={contact} onChange={(e) => setContact(e.target.value)} onKeyDown={onEnter} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-medium text-center mb-0.5">Contact No.</div>
+            <input className="border rounded px-1 py-1 w-full" value={contact} onChange={(e) => setContact(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">Customer Name</div>
-            <input className="border rounded px-2 py-1" style={{ width: '50ch' }} value={customer} onChange={(e) => setCustomer(e.target.value)} onKeyDown={onEnter} />
+          <div className="min-w-0 flex-[1.4]">
+            <div className="text-[10px] font-medium text-center mb-0.5">Customer Name</div>
+            <input className="border rounded px-1 py-1 w-full" value={customer} onChange={(e) => setCustomer(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <div>
-            <div className="text-xs font-medium text-center mb-1">Plate No.</div>
-            <input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={plate} onChange={(e) => setPlate(e.target.value)} onKeyDown={onEnter} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-medium text-center mb-0.5">Plate No.</div>
+            <input className="border rounded px-1 py-1 w-full" value={plate} onChange={(e) => setPlate(e.target.value)} onKeyDown={onEnter} />
           </div>
-          <button onClick={handleSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search</button>
+          <button onClick={handleSearch} className="bg-blue-700 text-white px-3 py-1.5 rounded-lg shrink-0">Search</button>
         </div>
       </div>
 
@@ -182,7 +183,7 @@ export default function SearchInvoicePage() {
         </div>
       )}
       {searched && results.length > 0 && (
-        <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <div className="bg-white rounded-xl shadow flex-1 min-h-0 overflow-auto">
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>
@@ -203,7 +204,7 @@ export default function SearchInvoicePage() {
                   <td className="p-2">{s.customerName || '—'}</td>
                   <td className="p-2">{s.customerPhone || '—'}</td>
                   <td className="p-2 text-right">₱{s.total?.toLocaleString()}</td>
-                  <td className="p-2 text-center font-bold text-green-700">{pointsFor(s.total)}</td>
+                  <td className="p-2 text-center font-bold text-green-700">{pointsFor(s)}</td>
                   <td className="p-2 text-center">
                     <button onClick={() => setEditing(s)} className="text-blue-600 text-xs font-medium">View / Edit</button>
                   </td>
@@ -242,7 +243,7 @@ export default function SearchInvoicePage() {
               </tbody>
             </table>
             <div className="text-right font-bold mb-1">Total: ₱{Number(editing.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="text-right font-bold text-green-700 mb-3">Points earned: {pointsFor(editing.total)} (₱200 = 1 point)</div>
+            <div className="text-right font-bold text-green-700 mb-3">Points earned: {pointsFor(editing)} (₱200 = 1 point)</div>
             <div className="flex gap-3">
               <button onClick={() => setEditing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>

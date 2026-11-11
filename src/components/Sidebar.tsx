@@ -116,25 +116,25 @@ export default function Sidebar() {
   const title = group ? GROUPS[group].title : 'MENU';
 
   return (
-    <aside className="w-56 min-h-screen bg-gradient-to-b from-blue-500 to-orange-400 text-white p-3 flex flex-col print:hidden">
-      <button onClick={goDashboard} className="text-left mb-4">
-        <div className="text-lg font-bold">Dashboard</div>
-        <div className="text-2xl font-black tracking-wide">{title}</div>
+    <aside className="w-52 h-screen overflow-y-auto bg-gradient-to-b from-blue-500 to-orange-400 text-white p-2 flex flex-col print:hidden">
+      <button onClick={goDashboard} className="text-left mb-2">
+        <div className="text-sm font-bold">Dashboard</div>
+        <div className="text-xl font-black tracking-wide leading-tight">{title}</div>
       </button>
-      {branchName && <div className="bg-blue-700 rounded-lg px-3 py-2 mb-3 text-center font-bold text-[18px] leading-tight break-words">{branchName}</div>}
-      <nav className="flex flex-col gap-2 flex-1">
+      {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
+      <nav className="flex flex-col gap-1 flex-1">
         {menu.map((item) => (
-          <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-3 py-2 text-sm font-medium flex items-center gap-2">
+          <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2">
             <Icon label={item.label} />
             <span className="flex-1 text-left">{item.label}</span>
           </a>
         ))}
-        {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-3 py-2 text-sm font-medium flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
+        {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
       </nav>
-      <button onClick={logout} className="mt-4 bg-purple-600 hover:bg-purple-700 rounded-lg py-2 text-sm font-medium">
+      <button onClick={logout} className="mt-2 bg-purple-600 hover:bg-purple-700 rounded-lg py-1.5 text-xs font-medium">
         LOG OUT
       </button>
-      <div className="text-xs mt-3 opacity-80">Powered & Designed by Anlu</div>
+      <div className="text-[10px] mt-2 opacity-80">Powered & Designed by Anlu</div>
     </aside>
   );
 }

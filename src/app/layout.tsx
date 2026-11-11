@@ -17,9 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-gray-50">
         <CloudSync />
         <AuthGuard />
-        <div className="flex min-h-screen">
+        <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
         </div>
       </body>
     </html>
