@@ -33,6 +33,7 @@ export default function POSPage() {
   const [productHistory, setProductHistory] = useState<any[]>([]);
   const [barcodeResults, setBarcodeResults] = useState<ManagedProduct[]>([]);
   const [enlarged, setEnlarged] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState('');
   const [customerMatches, setCustomerMatches] = useState<any[]>([]);
 
   const searchCustomers = async (name: string) => {
