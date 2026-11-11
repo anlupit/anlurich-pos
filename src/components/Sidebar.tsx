@@ -106,7 +106,7 @@ export default function Sidebar() {
     setBranchName(names[id] || '');
   }, []);
 
-  if (pathname === '/') return null;
+  if (pathname === '/' || pathname.startsWith('/customer')) return null;
 
   const logout = () => {
     localStorage.removeItem('anlurich-branch');
