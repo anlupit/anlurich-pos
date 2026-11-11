@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+function prettyWhen(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value || '';
+  const date = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  return `${date} Time ${time}`;
+}
+
 function addMonths(date: string, months: number) {
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return '';
@@ -118,7 +126,7 @@ export default function CustomerPortal() {
               {history.map((s) => (
                 <div key={s.id} className="bg-white rounded-xl shadow p-4">
                   <div className="flex justify-between">
-                    <div className="font-bold">{s.date} · {s.invoiceNo}</div>
+                    <div className="font-bold">{prettyWhen(s.dateTime || s.date)} INV No.{s.invoiceNo}</div>
                     <div className="font-bold">{money(s.total)}</div>
                   </div>
                   <div className="text-xs text-gray-500 mb-2">{s.plateNo || ''} {s.vehicleType || ''} · {s.branch || ''}</div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { currentBranch, formatDate, loadInvoices, updateInvoices } from '../../lib/branchData';
+import { currentBranch, formatDate, loadInvoices, loadInvoicesCloud, updateInvoices } from '../../lib/branchData';
 
 const BRANCHES = [
   { id: 'anlurich', name: 'ANLURICH OPC' },
@@ -29,6 +29,7 @@ export default function CheckVoucherPage() {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [supplier, setSupplier] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
+  const [ewtRate, setEwtRate] = useState<Record<string, 0 | 1 | 2>>({});
   const [voucherNo, setVoucherNo] = useState('');
   const [checks, setChecks] = useState<CheckLine[]>([{ id: '1', date: new Date().toISOString().slice(0, 10), bank: '', no: '', amount: '' }]);
   const [tab, setTab] = useState<'pay' | 'paid' | 'search'>('pay');
@@ -36,6 +37,7 @@ export default function CheckVoucherPage() {
   const [qSupplier, setQSupplier] = useState('');
   const [qMonth, setQMonth] = useState('');
   const [qYear, setQYear] = useState('');
+  const [searched, setSearched] = useState(false);
 
   const isAdmin = branch === 'admin';
 
@@ -64,6 +66,16 @@ export default function CheckVoucherPage() {
     }).catch(() => setSchedules(JSON.parse(localStorage.getItem('anlurich-check-schedules') || '[]')));
   }, []);
 
+  const searchUnpaid = async () => {
+    if (!supplier.trim()) return alert('Enter supplier name');
+    const source = branch === 'admin'
+      ? (await Promise.all(BRANCHES.map((b) => loadInvoicesCloud(b.id).catch(() => [])))).flat()
+      : await loadInvoicesCloud(branch).catch(() => loadInvoices(branch));
+    setInvoices(Array.isArray(source) ? source : []);
+    setSelected([]);
+    setSearched(true);
+  };
+
   const list = invoices.filter((i) => {
     const paid = String(i.status || '').toLowerCase() === 'paid' || i.paid === true;
     const monthOk = !month || String(i.invoiceDate || i.createdAt || '').startsWith(month);
@@ -72,11 +84,11 @@ export default function CheckVoucherPage() {
   });
 
   const chosen = invoices.filter((i) => selected.includes(i.id));
-  const isSales = (i: any) => String(i.invoiceType || '').toLowerCase().includes('sales');
-  const siTotal = chosen.filter(isSales).reduce((n, i) => n + Number(i.grandTotal || 0), 0);
-  const drTotal = chosen.filter((i) => !isSales(i)).reduce((n, i) => n + Number(i.grandTotal || 0), 0);
-  const ewt = (siTotal / 1.12) * 0.01;
-  const checkAmount = siTotal - ewt + drTotal;
+  const gross = chosen.reduce((n, i) => n + Number(i.grandTotal || 0), 0);
+  const netOfVat = chosen.reduce((n, i) => n + Number(i.grandTotal || 0) / 1.12, 0);
+  const vat = gross - netOfVat;
+  const ewt = chosen.reduce((n, i) => n + (Number(i.grandTotal || 0) / 1.12) * ((ewtRate[i.id] || 0) / 100), 0);
+  const checkAmount = gross - ewt;
   const checksTotal = checks.reduce((n, c) => n + (parseFloat(c.amount) || 0), 0);
 
   const toggle = (id: string) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -97,7 +109,7 @@ export default function CheckVoucherPage() {
     const used = JSON.parse(localStorage.getItem('anlurich-voucher-nos') || '[]');
     localStorage.setItem('anlurich-voucher-nos', JSON.stringify([...used, no]));
     const saved = JSON.parse(localStorage.getItem('anlurich-check-schedules') || '[]');
-    const nextSchedules = [{ id: Date.now().toString(), voucherNo: no, branch, supplier: chosen[0]?.supplierName, invoices: chosen.map((i) => i.invoiceNumber || i.invoiceNo), siTotal, drTotal, ewt, checkAmount, checks, date: new Date().toISOString() }, ...saved];
+    const nextSchedules = [{ id: Date.now().toString(), voucherNo: no, branch, supplier: chosen[0]?.supplierName, invoices: chosen.map((i) => i.invoiceNumber || i.invoiceNo), gross, netOfVat, vat, ewt, checkAmount, checks, date: new Date().toISOString() }, ...saved];
     localStorage.setItem('anlurich-check-schedules', JSON.stringify(nextSchedules));
     setSchedules(nextSchedules);
     setInvoices(Object.values(byBranch).flat());
@@ -163,13 +175,14 @@ export default function CheckVoucherPage() {
       <>
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
         <div>
-          <label className="block text-sm font-medium mb-1">Month</label>
-          <input type="month" className="border rounded px-3 py-2" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <label className="block text-sm font-medium mb-1">Supplier Name</label>
+          <input className="border rounded px-3 py-2" placeholder="Type supplier name" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Supplier</label>
-          <input className="border rounded px-3 py-2" placeholder="Supplier name" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+          <label className="block text-sm font-medium mb-1">Invoice Month</label>
+          <input type="month" className="border rounded px-3 py-2" value={month} onChange={(e) => setMonth(e.target.value)} />
         </div>
+        <button onClick={searchUnpaid} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Search Unpaid</button>
         {tab === 'pay' && <div className="font-bold text-lg">Voucher No. {voucherNo}</div>}
       </div>
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
@@ -183,6 +196,8 @@ export default function CheckVoucherPage() {
               <th className="text-left p-2">Type</th>
               <th className="text-left p-2">Date</th>
               <th className="text-right p-2">Amount</th>
+              {tab === 'pay' && <th className="text-center p-2">1% EWT</th>}
+              {tab === 'pay' && <th className="text-center p-2">2% EWT</th>}
               {tab === 'paid' && <th className="text-left p-2">Voucher No.</th>}
             </tr>
           </thead>
@@ -196,10 +211,12 @@ export default function CheckVoucherPage() {
                 <td className="p-2">{inv.invoiceType || '—'}</td>
                 <td className="p-2">{formatDate(inv.invoiceDate)}</td>
                 <td className="p-2 text-right">{money(inv.grandTotal)}</td>
+                {tab === 'pay' && <td className="p-2 text-center"><input type="checkbox" checked={ewtRate[inv.id] === 1} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: p[inv.id] === 1 ? 0 : 1 }))} /></td>}
+                {tab === 'pay' && <td className="p-2 text-center"><input type="checkbox" checked={ewtRate[inv.id] === 2} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: p[inv.id] === 2 ? 0 : 2 }))} /></td>}
                 {tab === 'paid' && <td className="p-2">{inv.checkVoucherNo || '—'}</td>}
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">No invoices</td></tr>}
+            {list.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">{searched ? 'No unpaid invoices for this supplier and month' : 'Enter supplier name, pick the month, then Search Unpaid'}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -208,10 +225,11 @@ export default function CheckVoucherPage() {
       {tab === 'pay' && (
         <>
           <div className="bg-white rounded-xl shadow p-4 mb-4 text-right space-y-1">
-            <div>Sales Invoice Total: {money(siTotal)}</div>
-            <div>1% EWT (Sales Invoice only): {money(ewt)}</div>
-            <div>DR Invoice Total (no EWT): {money(drTotal)}</div>
-            <div className="text-lg font-bold">Check Amount: {money(checkAmount)}</div>
+            <div>Gross Amount: {money(gross)}</div>
+            <div>Net of VAT: {money(netOfVat)}</div>
+            <div>12% VAT: {money(vat)}</div>
+            <div>EWT on Sales Invoice only (1% or 2% of Net of VAT): {money(ewt)}</div>
+            <div className="text-lg font-bold">Grand Total / Check Amount: {money(checkAmount)}</div>
           </div>
           <div className="bg-white rounded-xl shadow p-4">
             <div className="font-semibold mb-2">Check Schedule — Voucher No. {voucherNo}</div>

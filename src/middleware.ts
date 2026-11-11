@@ -3,9 +3,15 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
+  const path = req.nextUrl.pathname;
+  const lower = path.toLowerCase();
+  if (lower.startsWith('/customer') && path !== '/customer') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/customer';
+    return NextResponse.redirect(url);
+  }
   const isCustomerSite = host.includes('anlurichcustomer.com');
   if (!isCustomerSite) return NextResponse.next();
-  const path = req.nextUrl.pathname;
   if (path === '/' || path === '') {
     const url = req.nextUrl.clone();
     url.pathname = '/customer';
