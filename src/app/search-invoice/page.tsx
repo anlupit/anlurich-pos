@@ -217,17 +217,32 @@ export default function SearchInvoicePage() {
 
       {editing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg mb-3">Invoice {editing.invoiceNo}</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" placeholder="Customer Name" value={editing.customerName || ''} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} />
               <input className="border rounded px-3 py-2" placeholder="Contact" value={editing.customerPhone || ''} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} />
             </div>
             <table className="w-full text-sm mb-3">
-              <thead className="bg-gray-100"><tr><th className="text-left p-1">Description</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Price</th><th className="text-right p-1">Total</th></tr></thead>
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="text-left p-1">Part Number</th>
+                  <th className="text-left p-1">Brand</th>
+                  <th className="text-left p-1">Description</th>
+                  <th className="text-center p-1">Qty</th>
+                  <th className="text-right p-1">Price</th>
+                  <th className="text-right p-1">Total</th>
+                </tr>
+              </thead>
               <tbody>
                 {(editing.items || []).map((item: any, i: number) => (
                   <tr key={i} className="border-t">
+                    <td className="p-1">
+                      <input className="w-full border rounded px-2 py-1" style={{ width: '18ch' }} value={item.partNumber || ''} onChange={(e) => updateItem(i, 'partNumber', e.target.value)} />
+                    </td>
+                    <td className="p-1">
+                      <input className="w-full border rounded px-2 py-1" style={{ width: '14ch' }} value={item.brand || ''} onChange={(e) => updateItem(i, 'brand', e.target.value)} />
+                    </td>
                     <td className="p-1">
                       <input className="w-full border rounded px-2 py-1" value={item.description || ''} onChange={(e) => updateItem(i, 'description', e.target.value)} />
                     </td>

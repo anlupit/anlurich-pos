@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct, upsertCatalogFromSale } from '../../lib/products';
 import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadPointsCloud, savePoints, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
@@ -66,6 +66,8 @@ export default function POSPage() {
   const [pointsInfo, setPointsInfo] = useState<{ earned: number; redeemed: number; balance: number } | null>(null);
   const [redeemPts, setRedeemPts] = useState(0);
   const [salesOutlet, setSalesOutlet] = useState('sezan');
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     const d = new Date();
@@ -400,76 +402,93 @@ export default function POSPage() {
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     if (!invoiceNo.trim()) return alert('Enter Sales Invoice No.');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) return alert('Add at least one item');
     const branch = (currentBranch() || sessionStorage.getItem('anlurich-auth') || '').toLowerCase();
     const saleBranch = branch === 'sezan' ? salesOutlet : branch;
     if (!saleBranch || saleBranch === 'unknown') return alert('Branch is missing. Go back to the branch dashboard, then open POS again.');
-    const sale = {
-      id: Date.now().toString(),
-      invoiceNo: invoiceNo.trim(),
-      customerName,
-      customerPhone,
-      vehicleType,
-      plateNo,
-      date: new Date().toISOString(),
-      dateTime: saleDateTime,
-      branch: saleBranch,
-      items: valid.map((l, i) => {
-        const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
-        const cost = Number(catalog?.costPrice) || 0;
-        return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
-      }),
-      subtotal,
-      discount: discountAmt,
-      pointsRedeemed: noInvoice ? 0 : redeemPts,
-      noPoints: noInvoice,
-      noInvoice,
-      total: grandTotal,
-      paymentMethod,
-      referenceNo: referenceNo.trim(),
-      cashTender: parseFloat(cashTender) || 0,
-      change: Math.max(0, (parseFloat(cashTender) || 0) - grandTotal),
-    };
+
+    savingRef.current = true;
+    setSaving(true);
     try {
+      // Block duplicate invoice numbers already in this branch
+      const existing = await (noInvoice ? loadNoInvoicesCloud() : loadSalesCloud()).catch(() => []);
+      const dup = existing.some((s: any) => String(s.invoiceNo || '').trim().toLowerCase() === invoiceNo.trim().toLowerCase());
+      if (dup) {
+        alert(`Invoice ${invoiceNo.trim()} already exists. Sale was NOT saved again.`);
+        return;
+      }
+
+      const sale = {
+        id: Date.now().toString(),
+        invoiceNo: invoiceNo.trim(),
+        customerName,
+        customerPhone,
+        vehicleType,
+        plateNo,
+        date: new Date().toISOString(),
+        dateTime: saleDateTime,
+        branch: saleBranch,
+        items: valid.map((l, i) => {
+          const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
+          const cost = Number(catalog?.costPrice) || 0;
+          return { itemNo: i + 1, partNumber: l.partNumber, description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
+        }),
+        subtotal,
+        discount: discountAmt,
+        pointsRedeemed: noInvoice ? 0 : redeemPts,
+        noPoints: noInvoice,
+        noInvoice,
+        total: grandTotal,
+        paymentMethod,
+        referenceNo: referenceNo.trim(),
+        cashTender: parseFloat(cashTender) || 0,
+        change: Math.max(0, (parseFloat(cashTender) || 0) - grandTotal),
+        tin,
+        paid: paymentMethod === 'Credit' ? paid : true,
+      };
       await saveSale(sale);
-      // Auto-add missing products to catalog from this sale (POS or No Invoice)
       const catalogResult = await upsertCatalogFromSale(valid).catch(() => ({ added: 0 }));
       if (catalogResult.added > 0) {
         console.log(`Added ${catalogResult.added} new product(s) to catalog from sale`);
       }
+      if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
+        try {
+          const earnedNow = Math.floor(grandTotal / 200);
+          const redeemedNow = redeemPts || 0;
+          const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
+          const row = {
+            id: `${saleBranch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
+            branch: saleBranch,
+            customerName: customerName.trim(),
+            customerPhone: customerPhone.trim(),
+            earned: Number(prev.earned || 0) + earnedNow,
+            redeemed: Number(prev.redeemed || 0) + redeemedNow,
+            balance: Math.max(0, Number(prev.balance || 0) + earnedNow - redeemedNow),
+            updatedAt: new Date().toISOString(),
+          };
+          await savePoints(row);
+        } catch {}
+      }
+      const missed: string[] = [];
+      valid.forEach((l) => {
+        const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
+        if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
+      });
+      if (missed.length) alert(`Sale saved. Stock not deducted for: ${missed.join(', ')} (product may be new — check Product Catalog).`);
+      setSavedSale(sale);
+      setShowPrintAsk(true);
+      // Clear the form immediately so a second click cannot save the same sale again
+      clearEntry();
     } catch (err: any) {
-      return alert(err?.message || 'Sale was NOT saved. Supabase is not connected.');
+      alert(err?.message || 'Sale was NOT saved. Supabase is not connected.');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
-      try {
-        const earnedNow = Math.floor(grandTotal / 200);
-        const redeemedNow = redeemPts || 0;
-        const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
-        const row = {
-          id: `${saleBranch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
-          branch: saleBranch,
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          earned: Number(prev.earned || 0) + earnedNow,
-          redeemed: Number(prev.redeemed || 0) + redeemedNow,
-          balance: Math.max(0, Number(prev.balance || 0) + earnedNow - redeemedNow),
-          updatedAt: new Date().toISOString(),
-        };
-        await savePoints(row);
-      } catch {}
-    }
-    const missed: string[] = [];
-    valid.forEach((l) => {
-      const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
-      if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
-    });
-    if (missed.length) alert(`Sale saved. Stock not deducted for: ${missed.join(', ')} (product may be new — check Product Catalog).`);
-    setSavedSale(sale);
-    setShowPrintAsk(true);
   };
-
   const salesRows = (sales: any[]) => sales
     .slice()
     .sort((a, b) => String(a.dateTime || a.date || '').localeCompare(String(b.dateTime || b.date || '')))
@@ -550,7 +569,7 @@ export default function POSPage() {
     XLSX.writeFile(wb, `monthly-sales-${ym}.xlsx`);
   };
 
-  const resetForm = () => {
+  const clearEntry = () => {
     setLines([{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }]);
     setCustomerName('');
     setCustomerPhone('');
@@ -564,9 +583,6 @@ export default function POSPage() {
     setPaymentMethod('Cash');
     setRedeemPts(0);
     setPointsInfo(null);
-    setSavedSale(null);
-    setShowPrintAsk(false);
-    setShowLetterhead(false);
     setPriceCheck({ barcode: '', partNumber: '', description: '', brand: '', costPrice: 0, sellingPrice: 0 });
     setPriceMatches([]);
     setSalesOutlet('sezan');
@@ -579,6 +595,13 @@ export default function POSPage() {
     } else {
       setInvoiceNo('');
     }
+  };
+
+  const resetForm = () => {
+    clearEntry();
+    setSavedSale(null);
+    setShowPrintAsk(false);
+    setShowLetterhead(false);
   };
 
   const doPrint = () => {
@@ -762,7 +785,7 @@ export default function POSPage() {
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={resetForm} className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium" title="Clear products and customer details">Clear Form</button>
-            <button onClick={handleSave} className="flex-1 bg-blue-700 text-white py-2 rounded-lg font-bold">Save Sale</button>
+            <button onClick={handleSave} disabled={saving} className="flex-1 bg-blue-700 text-white py-2 rounded-lg font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save Sale'}</button>
           </div>
         </div>
       </div>
