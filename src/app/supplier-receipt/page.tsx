@@ -37,6 +37,7 @@ export default function SupplierReceiptPage() {
     { id: '1', barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
   ]);
   const [catalog, setCatalog] = useState<any[]>([]);
+  const [lineSuggest, setLineSuggest] = useState<{ id: string; matches: any[] } | null>(null);
 
   useEffect(() => {
     syncOnline().then(async () => {
@@ -82,7 +83,30 @@ export default function SupplierReceiptPage() {
     }));
   };
 
-  const supplierChoices = suppliers.filter((s) => !supplierName.trim() || s.name.toLowerCase().includes(supplierName.trim().toLowerCase())).slice(0, 10);
+  const suggestForLine = (id: string, text: string) => {
+    const q = text.trim().toLowerCase();
+    if (q.length < 2) { setLineSuggest(null); return; }
+    const matches = catalog.filter((p) =>
+      String(p.partNumber || '').toLowerCase().includes(q) ||
+      String(p.barcode || '').toLowerCase().includes(q) ||
+      String(p.name || '').toLowerCase().includes(q) ||
+      String(p.brand || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+    setLineSuggest(matches.length ? { id, matches } : null);
+  };
+
+  const pickSuggestion = (id: string, p: any) => {
+    setLines((prev) => prev.map((l) => l.id === id ? {
+      ...l,
+      barcode: p.barcode || '',
+      brand: p.brand || '',
+      partNumber: p.partNumber || '',
+      productName: p.name || p.productName || '',
+      description: p.description || p.name || '',
+      grossPrice: Number(p.costPrice || p.sellingPrice || 0),
+    } : l));
+    setLineSuggest(null);
+  };
   const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
@@ -169,7 +193,9 @@ export default function SupplierReceiptPage() {
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
     setSaving(false);
-    upsertCatalogFromInvoice(invoice.lines).catch(() => {});
+    if (String(branch).toLowerCase() !== 'avenders') {
+      upsertCatalogFromInvoice(invoice.lines).catch(() => {});
+    }
     valid.forEach((l) => {
       adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
     });
@@ -263,9 +289,35 @@ export default function SupplierReceiptPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} /></td>
+                <td className="p-1 relative">
+                  <input className="w-full border rounded px-1 py-1" value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  {lineSuggest?.id === line.id && (
+                    <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
+                      {lineSuggest.matches.map((p) => (
+                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
+                          <div className="text-gray-600">{p.description || p.name}</div>
+                          <div className="text-green-700">₱{Number(p.sellingPrice || p.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '35ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
+                <td className="p-1 relative">
+                  <input className="w-full border rounded px-1 py-1" value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  {lineSuggest?.id === line.id && (
+                    <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
+                      {lineSuggest.matches.map((p) => (
+                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
+                          <div className="text-gray-600">{p.description || p.name}</div>
+                          <div className="text-green-700">₱{Number(p.sellingPrice || p.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={1} className="w-full border rounded px-1 py-1 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>

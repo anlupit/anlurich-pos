@@ -79,7 +79,8 @@ export async function upsertCatalogFromSale(lines: any[]) {
   for (const l of lines) {
     const part = String(l.partNumber || '').trim();
     if (!part) continue;
-    const barcode = String(l.barcode || '').trim();
+    const rawBarcode = String(l.barcode || '').trim();
+    const barcode = rawBarcode && rawBarcode.toLowerCase() !== part.toLowerCase() ? rawBarcode : '';
     const existing = products.find((p) =>
       String(p.partNumber || '').toLowerCase() === part.toLowerCase() ||
       (barcode && String(p.barcode || '').toLowerCase() === barcode.toLowerCase())
@@ -108,7 +109,8 @@ export async function upsertCatalogFromInvoice(lines: any[]) {
   for (const l of lines) {
     const part = String(l.partNumber || '').trim();
     if (!part) continue;
-    const barcode = String(l.barcode || '').trim();
+    const rawBarcode = String(l.barcode || '').trim();
+    const barcode = rawBarcode && rawBarcode.toLowerCase() !== part.toLowerCase() ? rawBarcode : '';
     const existing = products.find((p) =>
       String(p.partNumber || '').toLowerCase() === part.toLowerCase() ||
       (barcode && String(p.barcode || '').toLowerCase() === barcode.toLowerCase())

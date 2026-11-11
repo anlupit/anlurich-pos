@@ -119,7 +119,20 @@ export default function ProductCatalogPage() {
     } catch { alert('Deleted here, but Supabase did not save.'); }
   };
 
-  const deleteAll = async () => {
+  const cleanBarcodes = async () => {
+    const cleaned = products.map((p) => {
+      const part = String(p.partNumber || '').trim().toLowerCase();
+      const barcode = String(p.barcode || '').trim();
+      if (barcode && barcode.toLowerCase() === part) return { ...p, barcode: '' };
+      return p;
+    });
+    const changed = cleaned.filter((p, i) => String(p.barcode || '') !== String(products[i]?.barcode || '')).length;
+    if (!changed) return alert('No barcodes match a part number.');
+    if (!confirm(`Clear ${changed} barcodes that are the same as the part number?`)) return;
+    setProducts(cleaned);
+    try { await saveProducts(cleaned); alert(`Cleared ${changed} barcodes.`); }
+    catch { alert('Cleared here, but Supabase did not save.'); }
+  };
     if (!products.length) return;
     if (!confirm(`Delete ALL ${products.length} products in the catalog? This cannot be undone.`)) return;
     const ids = products.map((p) => p.id);
@@ -241,6 +254,7 @@ export default function ProductCatalogPage() {
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
           </label>
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
+          <button onClick={cleanBarcodes} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">Clear Barcode = Part No.</button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} onDoubleClick={(e) => e.stopPropagation()}>
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />

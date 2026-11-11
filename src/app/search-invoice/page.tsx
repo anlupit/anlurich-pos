@@ -72,7 +72,9 @@ export default function SearchInvoicePage() {
     if (!editing) return;
     const items = [...(editing.items || [])];
     const item = { ...items[index], [field]: value };
-    item.total = (Number(item.qty) || 0) * (Number(item.price) || 0);
+    const branch = String(editing.branch || currentBranch() || '').toLowerCase();
+    const withLabor = branch === 'anlurich' || branch === 'avenders';
+    item.total = (Number(item.qty) || 0) * (Number(item.price) || 0) + (withLabor ? Number(item.labor || 0) : 0);
     items[index] = item;
     const subtotal = items.reduce((sum: number, it: any) => sum + (Number(it.total) || 0), 0);
     const total = Math.max(0, subtotal - (editing.discount || 0));
@@ -226,7 +228,10 @@ export default function SearchInvoicePage() {
         </div>
       )}
 
-      {editing && (
+      {editing && (() => {
+        const branch = String(editing.branch || currentBranch() || '').toLowerCase();
+        const showLabor = branch === 'anlurich' || branch === 'avenders';
+        return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg mb-3">Invoice {editing.invoiceNo}</h3>
@@ -242,6 +247,7 @@ export default function SearchInvoicePage() {
                   <th className="text-left p-1">Description</th>
                   <th className="text-center p-1">Qty</th>
                   <th className="text-right p-1">Price</th>
+                  {showLabor && <th className="text-right p-1">Labor</th>}
                   <th className="text-right p-1">Total</th>
                 </tr>
               </thead>
@@ -263,7 +269,12 @@ export default function SearchInvoicePage() {
                     <td className="p-1 text-right">
                       <input className="w-28 border rounded px-2 py-1 text-right" value={Number(item.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
                     </td>
-                    <td className="p-1 text-right">₱{item.total?.toLocaleString()}</td>
+                    {showLabor && (
+                      <td className="p-1 text-right">
+                        <input className="w-24 border rounded px-2 py-1 text-right" value={Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
+                      </td>
+                    )}
+                    <td className="p-1 text-right">₱{Number(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -277,7 +288,8 @@ export default function SearchInvoicePage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

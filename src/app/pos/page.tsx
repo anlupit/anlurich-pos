@@ -506,8 +506,10 @@ export default function POSPage() {
         }).catch(() => {});
       }
 
-      // Everything else runs in the background
-      upsertCatalogFromSale(valid).catch(() => {});
+      // Avenders buys from nearby suppliers — do not add their cart to the shared catalog
+      if (String(branch || saleBranch).toLowerCase() !== 'avenders') {
+        upsertCatalogFromSale(valid).catch(() => {});
+      }
       if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
         const earnedNow = Math.floor(grandTotal / 200);
         const redeemedNow = redeemPts || 0;
@@ -773,7 +775,9 @@ export default function POSPage() {
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
-                          {p.partNumber} — {p.brand || ''} — {p.name || p.description}
+                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
+                          <div className="text-gray-600">{p.description || p.name}</div>
+                          <div className="text-green-700">₱{Number(p.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </button>
                       ))}
                     </div>
@@ -785,7 +789,9 @@ export default function POSPage() {
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
-                          {p.partNumber} — {p.brand || ''} — {p.name || p.description}
+                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
+                          <div className="text-gray-600">{p.description || p.name}</div>
+                          <div className="text-green-700">₱{Number(p.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </button>
                       ))}
                     </div>
