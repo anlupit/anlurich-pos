@@ -173,6 +173,7 @@ export default function SupplierReceiptPage() {
     valid.forEach((l) => {
       adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
     });
+  };
 
   return (
     <div className="p-2 md:p-4 max-w-full">
