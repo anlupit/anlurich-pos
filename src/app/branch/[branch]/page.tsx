@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { loadProducts, Product } from '../../../lib/products';
-import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate, syncOnline } from '../../../lib/branchData';
+import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate, syncOnline, deleteInvoiceRecord, currentBranch } from '../../../lib/branchData';
 
 const BRANCH_NAMES: Record<string, string> = {
   anlurich: 'ANLURICH OPC',
@@ -106,6 +106,23 @@ export default function BranchDashboard() {
     const subtotal = newLines.reduce((sum: number, l: any) => sum + (l.qty || l.quantity || 0) * (l.price || l.costPrice || 0), 0);
     const grandTotal = subtotal * (1 - (viewing.discount1 || 0) / 100) * (1 - (viewing.discount2 || 0) / 100);
     setViewing({ ...viewing, lines: newLines, subtotal, grandTotal });
+  };
+
+  const deleteViewingInvoice = async () => {
+    if (!viewing) return;
+    const pin = prompt('Enter delete password');
+    if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
+    if (!confirm(`Delete invoice ${viewing.invoiceNumber}?`)) return;
+    const target = viewing;
+    setViewing(null);
+    setInvoices((prev) => prev.filter((inv) => inv.id !== target.id));
+    setInvoiceResults((prev) => prev.filter((inv) => inv.id !== target.id && inv.invoiceId !== target.id));
+    try {
+      await deleteInvoiceRecord(target, branchId);
+      setTimeout(() => alert('Invoice deleted'), 50);
+    } catch (err: any) {
+      alert(err?.message || 'Delete failed');
+    }
   };
 
   const saveEditedInvoice = () => {
@@ -300,6 +317,7 @@ export default function BranchDashboard() {
             <div className="text-right font-bold mb-3">Grand Total: ₱{viewing.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
+              <button onClick={deleteViewingInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>
               <button onClick={saveEditedInvoice} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Save Changes</button>
             </div>
           </div>

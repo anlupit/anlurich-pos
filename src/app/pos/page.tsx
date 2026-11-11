@@ -413,14 +413,6 @@ export default function POSPage() {
     savingRef.current = true;
     setSaving(true);
     try {
-      // Block duplicate invoice numbers already in this branch
-      const existing = await (noInvoice ? loadNoInvoicesCloud() : loadSalesCloud()).catch(() => []);
-      const dup = existing.some((s: any) => String(s.invoiceNo || '').trim().toLowerCase() === invoiceNo.trim().toLowerCase());
-      if (dup) {
-        alert(`Invoice ${invoiceNo.trim()} already exists. Sale was NOT saved again.`);
-        return;
-      }
-
       const sale = {
         id: Date.now().toString(),
         invoiceNo: invoiceNo.trim(),
@@ -449,42 +441,36 @@ export default function POSPage() {
         tin,
         paid: paymentMethod === 'Credit' ? paid : true,
       };
+      // Save the sale first, then clear the form so the cashier is not waiting
       await saveSale(sale);
-      const catalogResult = await upsertCatalogFromSale(valid).catch(() => ({ added: 0 }));
-      if (catalogResult.added > 0) {
-        console.log(`Added ${catalogResult.added} new product(s) to catalog from sale`);
-      }
-      if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
-        try {
-          const earnedNow = Math.floor(grandTotal / 200);
-          const redeemedNow = redeemPts || 0;
-          const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
-          const row = {
-            id: `${saleBranch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
-            branch: saleBranch,
-            customerName: customerName.trim(),
-            customerPhone: customerPhone.trim(),
-            earned: Number(prev.earned || 0) + earnedNow,
-            redeemed: Number(prev.redeemed || 0) + redeemedNow,
-            balance: Math.max(0, Number(prev.balance || 0) + earnedNow - redeemedNow),
-            updatedAt: new Date().toISOString(),
-          };
-          await savePoints(row);
-        } catch {}
-      }
-      const missed: string[] = [];
-      valid.forEach((l) => {
-        const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
-        if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
-      });
-      if (missed.length) alert(`Sale saved. Stock not deducted for: ${missed.join(', ')} (product may be new — check Product Catalog).`);
       setSavedSale(sale);
       setShowPrintAsk(true);
-      // Clear the form immediately so a second click cannot save the same sale again
       clearEntry();
+      savingRef.current = false;
+      setSaving(false);
+
+      // Everything else runs in the background
+      upsertCatalogFromSale(valid).catch(() => {});
+      if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
+        const earnedNow = Math.floor(grandTotal / 200);
+        const redeemedNow = redeemPts || 0;
+        const prev = pointsInfo || { earned: 0, redeemed: 0, balance: 0 };
+        savePoints({
+          id: `${saleBranch}-${customerName.trim().toLowerCase()}-${customerPhone.trim()}`,
+          branch: saleBranch,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          earned: Number(prev.earned || 0) + earnedNow,
+          redeemed: Number(prev.redeemed || 0) + redeemedNow,
+          balance: Math.max(0, Number(prev.balance || 0) + earnedNow - redeemedNow),
+          updatedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+      valid.forEach((l) => {
+        adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
+      });
     } catch (err: any) {
       alert(err?.message || 'Sale was NOT saved. Supabase is not connected.');
-    } finally {
       savingRef.current = false;
       setSaving(false);
     }

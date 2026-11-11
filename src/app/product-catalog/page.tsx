@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { loadProducts, saveProducts, loadProductsCloud, Product } from '../../lib/products';
+import { loadProducts, saveProducts, deleteProduct, loadProductsCloud, Product } from '../../lib/products';
 import { searchInvoicesCloud } from '../../lib/branchData';
 
 export default function ProductCatalogPage() {
@@ -100,7 +100,10 @@ export default function ProductCatalogPage() {
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
     setSelected(selected.filter((x) => x !== id));
-    try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
+    try {
+      await deleteProduct(id);
+      localStorage.setItem('anlurich-products', JSON.stringify(updated));
+    } catch { alert('Deleted here, but Supabase did not save.'); }
     if (editingId === id) setEditingId(null);
   };
 
@@ -110,15 +113,22 @@ export default function ProductCatalogPage() {
     const updated = products.filter((p) => !selected.includes(p.id));
     setProducts(updated);
     setSelected([]);
-    try { await saveProducts(updated); } catch { alert('Deleted here, but Supabase did not save.'); }
+    try {
+      await Promise.all(selected.map((id) => deleteProduct(id)));
+      localStorage.setItem('anlurich-products', JSON.stringify(updated));
+    } catch { alert('Deleted here, but Supabase did not save.'); }
   };
 
   const deleteAll = async () => {
     if (!products.length) return;
     if (!confirm(`Delete ALL ${products.length} products in the catalog? This cannot be undone.`)) return;
+    const ids = products.map((p) => p.id);
     setProducts([]);
     setSelected([]);
-    try { await saveProducts([]); } catch { alert('Deleted here, but Supabase did not save.'); }
+    try {
+      await Promise.all(ids.map((id) => deleteProduct(id)));
+      localStorage.setItem('anlurich-products', JSON.stringify([]));
+    } catch { alert('Deleted here, but Supabase did not save.'); }
   };
 
   const handleExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {

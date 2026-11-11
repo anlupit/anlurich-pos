@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { currentBranch, loadStock, setStockQty, getStockQty } from '../../lib/branchData';
 import { compressImage } from '../../lib/compressImage';
-import { loadProducts, saveProducts, Product } from '../../lib/products';
+import { loadProducts, saveProducts, deleteProduct, Product } from '../../lib/products';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -127,11 +127,12 @@ export default function ProductsPage() {
     setEditingId(p.id);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Delete this product?')) return;
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
-    saveProducts(updated);
+    localStorage.setItem('anlurich-products', JSON.stringify(updated));
+    try { await deleteProduct(id); } catch { alert('Deleted here, but Supabase did not save.'); }
   };
 
   const downloadProducts = () => {

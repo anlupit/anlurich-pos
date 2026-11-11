@@ -64,11 +64,11 @@ async function saveExpense(item: Expense) {
   if (!res.ok) throw new Error('Supabase save failed');
 }
 
-async function deleteExpense(id: string) {
+async function deleteExpense(id: string, branch?: string) {
   await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'expenses', deleteId: id }),
+    body: JSON.stringify({ table: 'expenses', deleteId: id, branch }),
   });
 }
 
@@ -132,7 +132,7 @@ export default function ExpensesPage() {
     const target = branch === 'admin' ? selectedBranch : branch;
     const next = rows.filter((r) => r.id !== id);
     setRows(next);
-    await deleteExpense(id);
+    await deleteExpense(id, branch);
   };
 
   const filtered = rows.filter((r) => {

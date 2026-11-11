@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, currentBranch, formatDate } from '../../lib/branchData';
+import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, deleteSaleRecord, currentBranch, formatDate } from '../../lib/branchData';
 
 function pointsFor(sale: any) {
   if (!sale || sale.noInvoice || sale.noPoints || /^\d{6}-\d{2}$/.test(String(sale.invoiceNo || ''))) return 0;
@@ -84,14 +84,14 @@ export default function SearchInvoicePage() {
     const pin = prompt('Enter delete password');
     if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${editing.invoiceNo}?`)) return;
+    const target = editing;
     const branch = currentBranch() || 'unknown';
-    const all = await loadSalesCloud(branch);
-    const updated = all.filter((s: any) => s.id !== editing.id);
-    await updateSales(branch, updated);
-    setSales(updated);
-    setResults((prev) => prev.filter((s) => s.id !== editing.id));
     setEditing(null);
-    setTimeout(() => alert('Invoice deleted'), 50);
+    setResults((prev) => prev.filter((s) => s.id !== target.id));
+    setSales((prev) => prev.filter((s) => s.id !== target.id));
+    deleteSaleRecord(target, branch)
+      .then(() => handleSearch())
+      .catch(() => alert('Delete failed. Please try again.'));
   };
 
   const saveEdit = async () => {

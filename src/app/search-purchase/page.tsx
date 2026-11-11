@@ -157,12 +157,14 @@ export default function SearchPurchasePage() {
     const pin = prompt('Enter delete password');
     if (pin !== '12345') return alert('Wrong delete password. Invoice was not deleted.');
     if (!confirm(`Delete invoice ${viewing.invoiceNumber}?`)) return;
+    const target = viewing;
     const branch = currentBranch();
-    await deleteInvoiceRecord(viewing, branch);
-    setInvoices((prev) => prev.filter((inv) => inv.id !== viewing.id));
-    setResults((prev) => prev.filter((inv) => inv.id !== viewing.id));
     setViewing(null);
-    setTimeout(() => alert('Invoice deleted from this computer and Supabase'), 50);
+    setInvoices((prev) => prev.filter((inv) => inv.id !== target.id));
+    setResults((prev) => prev.filter((inv) => inv.id !== target.id));
+    deleteInvoiceRecord(target, branch)
+      .then(() => handleInvoiceSearch())
+      .catch((err: any) => alert(err?.message || 'Delete failed'));
   };
 
   const goDashboard = () => {

@@ -124,12 +124,20 @@ export async function stripInvoicePhotos(branch?: string) {
 }
 
 export async function deleteInvoiceRecord(invoice: any, branch?: string) {
-  if (!invoice.id) return;
-  await fetch('/api/records', {
+  if (!invoice.id && !invoice.invoiceNumber) return;
+  const res = await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'supplier_invoices', deleteId: invoice.id, branch: invoice.branch || branch || currentBranch() }),
+    body: JSON.stringify({
+      table: 'supplier_invoices',
+      deleteId: invoice.id,
+      deleteInvoiceNo: invoice.invoiceNumber || invoice.invoiceNo || '',
+      branch: invoice.branch || branch || currentBranch(),
+    }),
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Delete failed');
+  return true;
 }
 
 export async function clearOldInvoiceRecords() {
@@ -360,8 +368,28 @@ export async function loadNoInvoicesCloud(branch?: string): Promise<any[]> {
   return Array.isArray(rows) ? rows : [];
 }
 
-export async function updateSales(branch: string, sales: any[]) {
-  for (const sale of sales) await saveSale({ ...sale, branch });
+export async function deleteSaleRecord(sale: any, branch?: string) {
+  const table = sale?.noInvoice ? 'no_invoices' : 'sales';
+  const other = table === 'sales' ? 'no_invoices' : 'sales';
+  const payload = {
+    deleteId: sale.id,
+    deleteInvoiceNo: sale.invoiceNo || sale.invoiceNumber || '',
+    branch: sale.branch || branch || currentBranch(),
+  };
+  const res = await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table, ...payload }),
+  });
+  // Also clear the other sales table so a POS / No Invoice mix cannot leave a copy
+  await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: other, ...payload }),
+  }).catch(() => {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Delete failed');
+  return true;
 }
 
 export async function clearOldSalesRecords() {

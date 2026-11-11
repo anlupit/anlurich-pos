@@ -52,6 +52,17 @@ export async function saveProducts(products: Product[]) {
   return true;
 }
 
+export async function deleteProduct(id: string) {
+  const res = await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'products', deleteId: id }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Product delete failed');
+  return true;
+}
+
 export async function loadProductsCloud(): Promise<Product[]> {
   try {
     const res = await fetch('/api/records?table=products', { cache: 'no-store' });

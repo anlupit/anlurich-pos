@@ -158,17 +158,21 @@ export default function SupplierReceiptPage() {
       setSaving(false);
       return alert('Invoice was NOT saved. Supabase is not connected. Check the cloud connection and try again.');
     }
-    const catalog = await upsertCatalogFromInvoice(invoice.lines);
-    const missed: string[] = [];
-    valid.forEach((l) => {
-      const result = adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
-      if (!result.ok) missed.push(l.partNumber || l.barcode || 'item');
-    });
-    if (missed.length) alert(`Invoice saved. Catalog added ${catalog.added}. Stock not added for: ${missed.join(', ')}.`);
-    else alert(`Invoice saved to Supabase. Catalog added ${catalog.added} new item(s). Purchased quantity added to this branch stock.`);
-    setSaving(false);
+    // Clear the form right away for the next invoice
+    setSupplierName('');
+    setTerms('');
     setInvoiceNumber('');
-  };
+    setInvoiceType('');
+    setDiscount1('');
+    setDiscount2('');
+    setDiscount3('');
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
+    setSaving(false);
+    upsertCatalogFromInvoice(invoice.lines).catch(() => {});
+    valid.forEach((l) => {
+      adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
+    });
 
   return (
     <div className="p-2 md:p-4 max-w-full">

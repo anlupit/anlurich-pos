@@ -235,9 +235,31 @@ export async function POST(req: Request) {
     const row = body.row || body;
     const physical = tableFor(table, row.branch || body.branch);
     if (SPLIT.includes(table) && physical === table) return NextResponse.json({ ok: false, error: 'Branch is required. Login to a branch first.' }, { status: 400 });
-    if (body.deleteId) {
-      await pool.query(`DELETE FROM ${physical} WHERE id = $1`, [String(body.deleteId)]);
-      return NextResponse.json({ ok: true });
+    if (body.deleteId || body.deleteInvoiceNo) {
+      const branch = String(body.branch || '').toLowerCase();
+      const targets = new Set<string>();
+      if (SPLIT.includes(table) && BRANCHES.includes(branch)) {
+        targets.add(`${table}_${branch}`);
+      } else if (SPLIT.includes(table)) {
+        for (const b of BRANCHES) targets.add(`${table}_${b}`);
+        targets.add(table);
+      } else {
+        targets.add(physical);
+      }
+      const id = body.deleteId ? String(body.deleteId) : '';
+      const invoiceNo = body.deleteInvoiceNo ? String(body.deleteInvoiceNo) : '';
+      let deleted = 0;
+      for (const t of targets) {
+        if (id) {
+          const r = await pool.query(`DELETE FROM ${t} WHERE id = $1`, [id]);
+          deleted += r.rowCount || 0;
+        }
+        if (!deleted && invoiceNo) {
+          const r = await pool.query(`DELETE FROM ${t} WHERE invoice_number = $1 OR data->>'invoiceNo' = $1 OR data->>'invoiceNumber' = $1`, [invoiceNo]);
+          deleted += r.rowCount || 0;
+        }
+      }
+      return NextResponse.json({ ok: true, deleted });
     }
     await upsert(physical, row);
     return NextResponse.json({ ok: true });
