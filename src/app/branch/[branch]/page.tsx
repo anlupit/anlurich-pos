@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { loadProducts, Product } from '../../../lib/products';
-import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate, syncOnline, deleteInvoiceRecord, currentBranch } from '../../../lib/branchData';
+import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate, syncOnline, deleteInvoiceRecord, currentBranch, adjustStockByItem } from '../../../lib/branchData';
 
 const BRANCH_NAMES: Record<string, string> = {
   anlurich: 'ANLURICH OPC',
@@ -117,6 +117,14 @@ export default function BranchDashboard() {
     setViewing(null);
     setInvoices((prev) => prev.filter((inv) => inv.id !== target.id));
     setInvoiceResults((prev) => prev.filter((inv) => inv.id !== target.id && inv.invoiceId !== target.id));
+    (target.lines || []).forEach((line: any) => {
+      adjustStockByItem(
+        { partNumber: line.partNumber, barcode: line.barcode },
+        -Number(line.qty || line.quantity || 0),
+        target.branch || branchId,
+        `Purchase cancelled (${target.invoiceNumber})`
+      );
+    });
     try {
       await deleteInvoiceRecord(target, branchId);
       setTimeout(() => alert('Invoice deleted'), 50);

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadProducts, Product as ManagedProduct, upsertCatalogFromSale } from '../../lib/products';
-import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadPointsCloud, savePoints, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, loadStock, saveSale, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadPointsCloud, savePoints, updateSales, currentBranch, customerPoints, formatDate, adjustStockByItem, syncOnline, clearOldSalesRecords, loadCustomersCloud, saveCustomer, logActivity } from '../../lib/branchData';
 
 type Line = {
   id: string;
@@ -33,7 +33,24 @@ export default function POSPage() {
   const [productHistory, setProductHistory] = useState<any[]>([]);
   const [barcodeResults, setBarcodeResults] = useState<ManagedProduct[]>([]);
   const [enlarged, setEnlarged] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
+  const [customerMatches, setCustomerMatches] = useState<any[]>([]);
+
+  const searchCustomers = async (name: string) => {
+    setCustomerName(name);
+    if (name.trim().length < 2) { setCustomerMatches([]); return; }
+    const rows = await loadCustomersCloud().catch(() => []);
+    const q = name.trim().toLowerCase();
+    setCustomerMatches((Array.isArray(rows) ? rows : []).filter((c) => String(c.name || '').toLowerCase().includes(q)).slice(0, 6));
+  };
+
+  const pickCustomer = (c: any) => {
+    setCustomerName(c.name || '');
+    setCustomerPhone(c.phone || '');
+    setPlateNo(c.plateNo || '');
+    setTin(c.tin || '');
+    setVehicleType(c.vehicleType || '');
+    setCustomerMatches([]);
+  };
   const [customerPhone, setCustomerPhone] = useState('');
   const [vehicleType, setVehicleType] = useState('');
   const [plateNo, setPlateNo] = useState('');
@@ -170,6 +187,34 @@ export default function POSPage() {
 
   const updateLine = (id: string, field: keyof Line, value: string | number) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  };
+
+  const [lineSuggest, setLineSuggest] = useState<{ id: string; matches: ManagedProduct[] } | null>(null);
+
+  const suggestForLine = (id: string, text: string) => {
+    const q = text.trim().toLowerCase();
+    if (q.length < 2) { setLineSuggest(null); return; }
+    const list = loadProducts();
+    const matches = list.filter((p) =>
+      String(p.partNumber || '').toLowerCase().includes(q) ||
+      String(p.barcode || '').toLowerCase().includes(q) ||
+      String(p.name || '').toLowerCase().includes(q) ||
+      String(p.description || '').toLowerCase().includes(q) ||
+      String(p.brand || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+    setLineSuggest(matches.length ? { id, matches } : null);
+  };
+
+  const pickSuggestion = (id: string, found: ManagedProduct) => {
+    setLines((prev) => prev.map((l) => l.id === id ? {
+      ...l,
+      barcode: found.barcode || '',
+      partNumber: found.partNumber,
+      description: found.description || found.name || '',
+      brand: found.brand || '',
+      price: found.sellingPrice || 0,
+    } : l));
+    setLineSuggest(null);
   };
 
   const lookupBarcode = (id: string, barcode: string, fromScan = false) => {
@@ -448,6 +493,17 @@ export default function POSPage() {
       clearEntry();
       savingRef.current = false;
       setSaving(false);
+      logActivity({ action: 'Saved sale', invoiceNo: sale.invoiceNo, detail: sale.customerName || sale.paymentMethod, branch: saleBranch });
+      if (customerName.trim()) {
+        saveCustomer({
+          branch: saleBranch,
+          name: customerName.trim(),
+          phone: customerPhone.trim(),
+          plateNo: plateNo.trim(),
+          tin: tin.trim(),
+          vehicleType: vehicleType.trim(),
+        }).catch(() => {});
+      }
 
       // Everything else runs in the background
       upsertCatalogFromSale(valid).catch(() => {});
@@ -640,7 +696,18 @@ export default function POSPage() {
         {!noInvoice && (
         <div className="md:col-span-4">
           <label className="block text-[18px] font-medium mb-1">{paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'}</label>
-          <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Customer Name'} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <div className="relative">
+            <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder={paymentMethod === 'Credit' ? 'Corporate Name' : 'Type to find customer'} value={customerName} onChange={(e) => searchCustomers(e.target.value)} />
+            {customerMatches.length > 0 && (
+              <div className="absolute z-30 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-auto">
+                {customerMatches.map((c) => (
+                  <button type="button" key={c.id} className="block w-full text-left px-2 py-1 text-sm hover:bg-blue-50" onMouseDown={() => pickCustomer(c)}>
+                    {c.name} {c.phone ? `· ${c.phone}` : ''} {c.plateNo ? `· ${c.plateNo}` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {paymentMethod === 'Credit' && (
             <>
               <input className="w-full border rounded px-3 py-2 mt-2" placeholder="TIN No." value={tin} onChange={(e) => setTin(e.target.value)} />
@@ -700,14 +767,36 @@ export default function POSPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.barcode} onChange={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); } }} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.partNumber} onChange={(e) => lookupProduct(line.id, e.target.value)} /></td>
+                <td className="p-1 relative">
+                  <input className="border rounded px-1 py-1 w-full" value={line.barcode} onChange={(e) => { lookupBarcode(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); setLineSuggest(null); } }} />
+                  {lineSuggest?.id === line.id && (
+                    <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
+                      {lineSuggest.matches.map((p) => (
+                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                          {p.partNumber} — {p.brand || ''} — {p.name || p.description}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td className="p-1 relative">
+                  <input className="border rounded px-1 py-1 w-full" value={line.partNumber} onChange={(e) => { lookupProduct(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  {lineSuggest?.id === line.id && (
+                    <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
+                      {lineSuggest.matches.map((p) => (
+                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                          {p.partNumber} — {p.brand || ''} — {p.name || p.description}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 w-full text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1 text-right"><input className="border rounded px-1 py-1 w-full text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
-                {hasLabor && <td className="p-1 text-right"><input type="number" min={0} step="0.01" className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={line.labor || ''} onChange={(e) => updateLine(line.id, 'labor', parseFloat(e.target.value) || 0)} /></td>}
+                {hasLabor && <td className="p-1 text-right"><input className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={Number(line.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>}
                 <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button>
@@ -1076,6 +1165,7 @@ export default function POSPage() {
           <div className="flex justify-between mb-1">
             <div><strong>Customer:</strong> {savedSale.customerName || '—'}</div>
             <div><strong>Contact:</strong> {savedSale.customerPhone || '—'}</div>
+            <div><strong>Plate:</strong> {savedSale.plateNo || '—'}</div>
             {savedSale.tin && <div><strong>TIN:</strong> {savedSale.tin}</div>}
           </div>
           <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
@@ -1101,7 +1191,7 @@ export default function POSPage() {
               {savedSale.items.map((item: any) => (
                 <tr key={item.itemNo} className="border-b">
                   <td className="py-0.5">{item.itemNo}</td>
-                  <td className="py-0.5">{item.partNumber ? `${item.partNumber} ` : ''}{item.description}</td>
+                  <td className="py-0.5">{item.partNumber ? `${item.partNumber} ` : ''}{item.description}{item.brand ? ` (${item.brand})` : ''}</td>
                   <td className="py-0.5 text-center">{item.qty}</td>
                   <td className="py-0.5">{item.unit}</td>
                   <td className="py-0.5 text-right">₱{item.price.toLocaleString()}</td>

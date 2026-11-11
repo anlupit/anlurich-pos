@@ -249,7 +249,7 @@ export function setStockQty(productId: string, qty: number, location?: string, b
   saveStock(b, stock);
 }
 
-export function adjustStockByItem(item: { partNumber?: string; barcode?: string; qty?: number }, delta: number, branch?: string) {
+export function adjustStockByItem(item: { partNumber?: string; barcode?: string; qty?: number }, delta: number, branch?: string, reason?: string) {
   if (typeof window === 'undefined') return { ok: false, reason: 'no-window' };
   const b = branch || currentBranch();
   if (!b || b === 'admin') return { ok: false, reason: 'no-branch' };
@@ -266,7 +266,83 @@ export function adjustStockByItem(item: { partNumber?: string; barcode?: string;
   const current = getStockQty(product.id, b);
   const next = Math.max(0, current + delta);
   setStockQty(product.id, next, product.location, b);
+  recordStockHistory({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    when: new Date().toISOString(),
+    branch: b,
+    who: (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-user') || localStorage.getItem('anlurich-user') || '' : '') || b,
+    partNumber: product.partNumber,
+    barcode: product.barcode || '',
+    name: product.name || product.description || '',
+    brand: product.brand || '',
+    oldQty: current,
+    newQty: next,
+    change: delta,
+    reason: reason || (delta < 0 ? 'Sale' : 'Purchase'),
+  }).catch(() => {});
   return { ok: true, partNumber: product.partNumber, previous: current, next };
+}
+
+export async function recordStockHistory(entry: any) {
+  const key = 'anlurich-stock-history';
+  let list: any[] = [];
+  try {
+    const res = await fetch(`/api/data?key=${key}`, { cache: 'no-store' });
+    if (res.ok) {
+      const rows = await res.json();
+      const row = Array.isArray(rows) ? rows.find((r: any) => r.key === key) : null;
+      if (row?.value) list = JSON.parse(row.value);
+    }
+  } catch {}
+  if (!Array.isArray(list)) list = [];
+  list.unshift(entry);
+  list = list.slice(0, 2000);
+  await fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value: JSON.stringify(list) }),
+  });
+}
+
+export async function loadStockHistory(): Promise<any[]> {
+  try {
+    const res = await fetch('/api/data?key=anlurich-stock-history', { cache: 'no-store' });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    const row = Array.isArray(rows) ? rows.find((r: any) => r.key === 'anlurich-stock-history') : null;
+    const list = row?.value ? JSON.parse(row.value) : [];
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+export async function logActivity(entry: { action: string; invoiceNo?: string; detail?: string; branch?: string }) {
+  const key = 'anlurich-activity-log';
+  let list: any[] = [];
+  try {
+    const res = await fetch(`/api/data?key=${key}`, { cache: 'no-store' });
+    if (res.ok) {
+      const rows = await res.json();
+      const row = Array.isArray(rows) ? rows.find((r: any) => r.key === key) : null;
+      if (row?.value) list = JSON.parse(row.value);
+    }
+  } catch {}
+  if (!Array.isArray(list)) list = [];
+  const who = (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-user') || localStorage.getItem('anlurich-user') || '' : '') || currentBranch() || 'staff';
+  list.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    when: new Date().toISOString(),
+    who,
+    branch: entry.branch || currentBranch() || '',
+    action: entry.action,
+    invoiceNo: entry.invoiceNo || '',
+    detail: entry.detail || '',
+  });
+  list = list.slice(0, 1000);
+  await fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value: JSON.stringify(list) }),
+  }).catch(() => {});
 }
 
 export function loadAllStock(): Record<string, Record<string, Stock>> {

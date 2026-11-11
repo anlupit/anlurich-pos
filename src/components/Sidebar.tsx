@@ -18,6 +18,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
       { href: '/pos', label: 'POS System' },
       { href: '/no-invoice', label: 'No Invoice' },
       { href: '/search-invoice', label: 'Search Sales Invoice' },
+      { href: '/customers', label: 'Customer List' },
       { href: '/quotation', label: 'Quotation' },
       { href: '/unpaid', label: 'Unpaid Invoice' },
       { href: '/download', label: 'Download' },
@@ -29,6 +30,11 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     items: [
       { href: '/product-catalog', label: 'Product Catalog' },
       { href: '/products', label: 'Product Inventory' },
+      { href: '/low-stock', label: 'Low Stock Report' },
+      { href: '/stock-history', label: 'Stock History' },
+      { href: '/backup', label: 'Backup and Restore' },
+      { href: '/activity', label: 'Activity Log' },
+      { href: '/online-sales', label: 'Shopee and Lazada' },
     ],
   },
   accounting: {
@@ -57,6 +63,9 @@ const ICONS: Record<string, string> = {
   'Print Reports': 'M6 8V4h12v4M6 16H4V10h16v6h-2M8 14h8v6H8z',
   'Product Catalog': 'M4 5h16v14H4zM8 9h8M8 13h6',
   'Product Inventory': 'M3 7l9-4 9 4v10l-9 4-9-4V7z',
+  'Low Stock Report': 'M4 19h16M6 16l3-6 3 4 2-3 4 5',
+  'Stock History': 'M4 6h16v12H4zM8 10h8M8 14h5',
+  'Backup and Restore': 'M12 4v8m0 0l-3-3m3 3l3-3M5 18h14',
   'Add Supplier': 'M12 5v14M5 12h14',
   'Record Supplier Invoice': 'M6 3h12v18H6zM9 8h6M9 12h6',
   'Search Purchase Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
@@ -73,8 +82,8 @@ function Icon({ label }: { label: string }) {
 }
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print'].includes(pathname)) return 'sales';
-  if (['/products-menu', '/product-catalog', '/products'].includes(pathname)) return 'products';
+  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/activity', '/online-sales'].includes(pathname)) return 'sales';
+  if (['/products-menu', '/product-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
   if (['/accounting', '/add-supplier', '/supplier-receipt', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
 }

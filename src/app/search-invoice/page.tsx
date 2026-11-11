@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, deleteSaleRecord, currentBranch, formatDate } from '../../lib/branchData';
+import { loadSales, loadSalesCloud, loadNoInvoicesCloud, updateSales, deleteSaleRecord, currentBranch, formatDate, adjustStockByItem, logActivity, saveSale } from '../../lib/branchData';
 
 function pointsFor(sale: any) {
   if (!sale || sale.noInvoice || sale.noPoints || /^\d{6}-\d{2}$/.test(String(sale.invoiceNo || ''))) return 0;
@@ -89,21 +89,32 @@ export default function SearchInvoicePage() {
     setEditing(null);
     setResults((prev) => prev.filter((s) => s.id !== target.id));
     setSales((prev) => prev.filter((s) => s.id !== target.id));
+    (target.items || []).forEach((item: any) => {
+      adjustStockByItem(
+        { partNumber: item.partNumber, barcode: item.barcode },
+        Number(item.qty || 0),
+        target.branch || branch,
+        `Sale cancelled (${target.invoiceNo})`
+      );
+    });
     deleteSaleRecord(target, branch)
-      .then(() => handleSearch())
+      .then(() => { logActivity({ action: 'Deleted sale', invoiceNo: target.invoiceNo, detail: target.customerName || '', branch }); handleSearch(); })
       .catch(() => alert('Delete failed. Please try again.'));
   };
 
   const saveEdit = async () => {
     if (!editing) return;
-    const branch = currentBranch() || 'unknown';
-    const all = await loadSalesCloud(branch);
-    const updated = all.map((s: any) => (s.id === editing.id ? editing : s));
-    await updateSales(branch, updated);
-    setSales(updated);
-    setResults((prev) => prev.map((s) => (s.id === editing.id ? editing : s)));
+    const target = editing;
+    const branch = target.branch || currentBranch() || 'unknown';
     setEditing(null);
-    alert('Invoice updated');
+    setResults((prev) => prev.map((s) => (s.id === target.id ? target : s)));
+    setSales((prev) => prev.map((s) => (s.id === target.id ? target : s)));
+    try {
+      await saveSale({ ...target, branch });
+      logActivity({ action: 'Edited sale', invoiceNo: target.invoiceNo, detail: target.customerName || '', branch });
+    } catch (err: any) {
+      alert(err?.message || 'Save failed. Please try again.');
+    }
   };
 
   return (

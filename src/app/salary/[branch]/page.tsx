@@ -21,6 +21,15 @@ type Advance = {
   note: string;
 };
 
+type Request = {
+  id: string;
+  employeeId: string;
+  date: string;
+  amount: number;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+};
+
 const NAMES: Record<string, string> = {
   anlurich: 'ANLURICH OPC',
   avenders: 'Avenders Auto Parts',
@@ -31,6 +40,25 @@ const NAMES: Record<string, string> = {
 };
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function lastSaturday(from = new Date()) {
+  const d = new Date(from);
+  const day = d.getDay();
+  d.setDate(d.getDate() - ((day + 1) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
+function periodFor(branch: string, from = new Date()) {
+  if (branch === 'sezan') {
+    const d = new Date(from);
+    const day = d.getDate();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const end = day <= 15 ? new Date(y, m, 15) : new Date(y, m + 1, 0);
+    return { label: day <= 15 ? '15th' : '30th', date: end.toISOString().slice(0, 10), kind: 'Semi-monthly' };
+  }
+  return { label: 'Saturday', date: lastSaturday(from), kind: 'Weekly' };
+}
 
 function sssEmployee(basic: number) {
   const msc = Math.min(35000, Math.max(5000, Math.round(basic * 4.333 / 500) * 500));
@@ -90,18 +118,24 @@ export default function BranchSalaryPage() {
   const branch = String(params.branch || '');
   const empKey = `anlurich-employees-${branch}`;
   const advKey = `anlurich-advances-${branch}`;
+  const reqKey = `anlurich-ca-requests-${branch}`;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [form, setForm] = useState({ name: '', position: '', basicWeekly: '', insurance: '' });
   const [editing, setEditing] = useState<string | null>(null);
   const [advanceFor, setAdvanceFor] = useState('');
   const [advanceAmount, setAdvanceAmount] = useState('');
+  const [requestReason, setRequestReason] = useState('');
   const [payAmount, setPayAmount] = useState<Record<string, string>>({});
+  const [slip, setSlip] = useState<any | null>(null);
+  const period = periodFor(branch);
 
   useEffect(() => {
     loadKey(empKey).then((rows) => setEmployees(Array.isArray(rows) ? rows : []));
     loadKey(advKey).then((rows) => setAdvances(Array.isArray(rows) ? rows : []));
-  }, [empKey, advKey]);
+    loadKey(reqKey).then((rows) => setRequests(Array.isArray(rows) ? rows : []));
+  }, [empKey, advKey, reqKey]);
 
   const saveEmployee = async () => {
     if (!form.name.trim()) return alert('Employee name is required');
@@ -127,20 +161,42 @@ export default function BranchSalaryPage() {
     await saveKey(empKey, next);
   };
 
-  const addAdvance = async () => {
+  const submitRequest = async () => {
     if (!advanceFor || !advanceAmount) return alert('Select employee and amount');
-    const item: Advance = {
+    const item: Request = {
       id: Date.now().toString(),
       employeeId: advanceFor,
       date: new Date().toISOString().slice(0, 10),
       amount: Number(advanceAmount) || 0,
-      balance: Number(advanceAmount) || 0,
-      note: 'Cash advance',
+      reason: requestReason.trim() || 'Cash advance',
+      status: 'Pending',
     };
-    const next = [item, ...advances];
-    setAdvances(next);
-    await saveKey(advKey, next);
+    const next = [item, ...requests];
+    setRequests(next);
+    await saveKey(reqKey, next);
     setAdvanceAmount('');
+    setRequestReason('');
+  };
+
+  const decideRequest = async (id: string, status: 'Approved' | 'Rejected') => {
+    const req = requests.find((r) => r.id === id);
+    if (!req) return;
+    const nextReq = requests.map((r) => r.id === id ? { ...r, status } : r);
+    setRequests(nextReq);
+    await saveKey(reqKey, nextReq);
+    if (status === 'Approved') {
+      const item: Advance = {
+        id: `${id}-ca`,
+        employeeId: req.employeeId,
+        date: req.date,
+        amount: req.amount,
+        balance: req.amount,
+        note: req.reason,
+      };
+      const nextAdv = [item, ...advances];
+      setAdvances(nextAdv);
+      await saveKey(advKey, nextAdv);
+    }
   };
 
   const payAdvance = async (id: string) => {
@@ -160,8 +216,9 @@ export default function BranchSalaryPage() {
     const taxable = Math.max(0, e.basicWeekly - sss - ph - pi - ins);
     const tax = weeklyTax(taxable);
     const caBalance = advances.filter((a) => a.employeeId === e.id).reduce((s, a) => s + a.balance, 0);
-    const net = Math.max(0, e.basicWeekly - sss - ph - pi - ins - tax);
-    return { e, sss, ph, pi, ins, tax, caBalance, net };
+    const caThisWeek = Math.min(caBalance, Number(payAmount[e.id] || caBalance) || 0);
+    const net = Math.max(0, e.basicWeekly - sss - ph - pi - ins - tax - caThisWeek);
+    return { e, sss, ph, pi, ins, tax, caBalance, caThisWeek, net };
   });
 
   const gross = payroll.reduce((s, r) => s + r.e.basicWeekly, 0);
@@ -195,7 +252,7 @@ export default function BranchSalaryPage() {
         <div>
           <button onClick={() => (window.location.href = '/salary')} className="text-sm text-blue-600">← Salary Branches</button>
           <h1 className="text-2xl font-bold">{NAMES[branch] || branch} Salary</h1>
-          <p className="text-xs text-gray-500">Weekly Philippine payroll · SSS · PhilHealth · Pag-IBIG · Insurance · Tax</p>
+          <p className="text-xs text-gray-500">{period.kind} · pay date {period.date} ({period.label}) · SSS · PhilHealth · Pag-IBIG</p>
         </div>
         <button onClick={postSalaryExpense} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Post to Salaries and Wages</button>
       </div>
@@ -222,7 +279,7 @@ export default function BranchSalaryPage() {
               <th className="p-2 text-right">Pag-IBIG</th>
               <th className="p-2 text-right">Insurance</th>
               <th className="p-2 text-right">Tax</th>
-              <th className="p-2 text-right">CA Balance</th>
+              <th className="p-2 text-right">CA This Pay</th>
               <th className="p-2 text-right">Net Pay</th>
               <th className="p-2"></th>
             </tr>
@@ -237,9 +294,10 @@ export default function BranchSalaryPage() {
                 <td className="p-2 text-right">{money(r.pi)}</td>
                 <td className="p-2 text-right">{money(r.ins)}</td>
                 <td className="p-2 text-right">{money(r.tax)}</td>
-                <td className="p-2 text-right">{money(r.caBalance)}</td>
+                <td className="p-2 text-right">{money(r.caThisWeek)}</td>
                 <td className="p-2 text-right font-bold">{money(r.net)}</td>
                 <td className="p-2 text-right whitespace-nowrap">
+                  <button onClick={() => setSlip(r)} className="text-green-700 mr-2">Print / Share</button>
                   <button onClick={() => { setEditing(r.e.id); setForm({ name: r.e.name, position: r.e.position, basicWeekly: String(r.e.basicWeekly), insurance: String(r.e.insurance) }); }} className="text-blue-600 mr-2">Edit</button>
                   <button onClick={() => removeEmployee(r.e.id)} className="text-red-600">Delete</button>
                 </td>
@@ -251,15 +309,45 @@ export default function BranchSalaryPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
-        <h2 className="font-semibold mb-3">Cash Advance</h2>
+        <h2 className="font-semibold mb-3">Cash Advance Request</h2>
         <div className="flex flex-wrap gap-2 mb-3">
           <select className="border rounded px-3 py-2" value={advanceFor} onChange={(e) => setAdvanceFor(e.target.value)}>
             <option value="">Select employee</option>
             {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
           </select>
           <input type="number" step="0.01" className="border rounded px-3 py-2" placeholder="Amount" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} />
-          <button onClick={addAdvance} className="bg-orange-600 text-white rounded px-4 py-2">Add Cash Advance</button>
+          <input className="border rounded px-3 py-2 flex-1" placeholder="Reason" value={requestReason} onChange={(e) => setRequestReason(e.target.value)} />
+          <button onClick={submitRequest} className="bg-orange-600 text-white rounded px-4 py-2">Submit Request</button>
         </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Employee</th><th className="p-2 text-left">Reason</th><th className="p-2 text-right">Amount</th><th className="p-2">Status</th><th className="p-2"></th></tr>
+          </thead>
+          <tbody>
+            {requests.map((r) => (
+              <tr key={r.id} className="border-t">
+                <td className="p-2">{r.date}</td>
+                <td className="p-2">{employees.find((e) => e.id === r.employeeId)?.name || '—'}</td>
+                <td className="p-2">{r.reason}</td>
+                <td className="p-2 text-right">{money(r.amount)}</td>
+                <td className="p-2">{r.status}</td>
+                <td className="p-2 text-right">
+                  {r.status === 'Pending' && (
+                    <>
+                      <button onClick={() => decideRequest(r.id, 'Approved')} className="text-green-700 mr-2">Approve</button>
+                      <button onClick={() => decideRequest(r.id, 'Rejected')} className="text-red-600">Reject</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {requests.length === 0 && <tr><td colSpan={6} className="p-3 text-center text-gray-400">No requests yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4 mb-4">
+        <h2 className="font-semibold mb-3">Cash Advance Balances</h2>
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
             <tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Employee</th><th className="p-2 text-right">Amount</th><th className="p-2 text-right">Balance</th><th className="p-2">Partial Payment</th></tr>
@@ -282,6 +370,35 @@ export default function BranchSalaryPage() {
           </tbody>
         </table>
       </div>
+
+      {slip && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div id="salary-slip" className="bg-white rounded-xl p-5 w-full max-w-md">
+            <div className="text-center font-black">{NAMES[branch] || branch}</div>
+            <div className="text-center text-sm">Salary Slip · {period.kind} · {period.date}</div>
+            <div className="font-bold mt-3">{slip.e.name}</div>
+            <div className="text-xs text-gray-500">{slip.e.position}</div>
+            <table className="w-full text-sm mt-3">
+              <tbody>
+                <tr><td>Basic Pay</td><td className="text-right">{money(slip.e.basicWeekly)}</td></tr>
+                <tr><td>SSS</td><td className="text-right">-{money(slip.sss)}</td></tr>
+                <tr><td>PhilHealth</td><td className="text-right">-{money(slip.ph)}</td></tr>
+                <tr><td>Pag-IBIG</td><td className="text-right">-{money(slip.pi)}</td></tr>
+                <tr><td>Insurance</td><td className="text-right">-{money(slip.ins)}</td></tr>
+                <tr><td>Tax</td><td className="text-right">-{money(slip.tax)}</td></tr>
+                <tr><td>Cash Advance</td><td className="text-right">-{money(slip.caThisWeek)}</td></tr>
+                <tr className="border-t font-black"><td>NET PAY</td><td className="text-right">{money(slip.net)}</td></tr>
+              </tbody>
+            </table>
+            <div className="flex gap-2 mt-4 print:hidden">
+              <button onClick={() => setSlip(null)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
+              <button onClick={() => window.print()} className="flex-1 bg-blue-700 text-white py-2 rounded">Print / Screenshot</button>
+              <a className="flex-1 bg-green-600 text-white py-2 rounded text-center" href={`mailto:?subject=${encodeURIComponent(`${NAMES[branch]} salary ${period.date} - ${slip.e.name}`)}&body=${encodeURIComponent(`${NAMES[branch]}\nSalary ${period.kind} ${period.date}\n${slip.e.name}\nBasic ${slip.e.basicWeekly}\nSSS ${slip.sss}\nPhilHealth ${slip.ph}\nPag-IBIG ${slip.pi}\nInsurance ${slip.ins}\nTax ${slip.tax}\nCash Advance ${slip.caThisWeek}\nNET ${slip.net}`)}`}>Email</a>
+            </div>
+            <p className="text-xs text-gray-500 mt-2 print:hidden">Print, then screenshot and send in Messenger. Or use Email.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord, clearOldInvoiceRecords } from '../../lib/branchData';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord, clearOldInvoiceRecords, adjustStockByItem } from '../../lib/branchData';
 
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -162,6 +162,14 @@ export default function SearchPurchasePage() {
     setViewing(null);
     setInvoices((prev) => prev.filter((inv) => inv.id !== target.id));
     setResults((prev) => prev.filter((inv) => inv.id !== target.id));
+    (target.lines || []).forEach((line: any) => {
+      adjustStockByItem(
+        { partNumber: line.partNumber, barcode: line.barcode },
+        -Number(line.qty || line.quantity || 0),
+        target.branch || branch,
+        `Purchase cancelled (${target.invoiceNumber})`
+      );
+    });
     deleteInvoiceRecord(target, branch)
       .then(() => handleInvoiceSearch())
       .catch((err: any) => alert(err?.message || 'Delete failed'));

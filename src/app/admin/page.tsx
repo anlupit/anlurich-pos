@@ -144,6 +144,9 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-bold mb-1">ADMIN Dashboard</h1>
       <a href="/users" className="inline-block mb-4 bg-black text-white px-4 py-2 rounded-lg text-sm">User and Password Manager</a>
       <a href="/check-voucher" className="inline-block mb-4 ml-2 bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Check Voucher</a>
+      <a href="/backup" className="inline-block mb-4 ml-2 bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Backup and Restore</a>
+      <a href="/low-stock" className="inline-block mb-4 ml-2 bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">Low Stock</a>
+      <a href="/stock-history" className="inline-block mb-4 ml-2 bg-teal-600 text-white px-4 py-2 rounded-lg text-sm">Stock History</a>
       <p className="text-gray-500 mb-4">APIS — Auto Parts Inventory System</p>
 
       <div className="bg-white rounded-xl shadow p-5 mb-6">

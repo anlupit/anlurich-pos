@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const BRANCHES = [
-  { id: 'anlurich', name: 'ANLURICH OPC', location: 'Silang Cavite', pay: 'Weekly' },
-  { id: 'avenders', name: 'Avenders Auto Parts', location: 'Sta.Rosa Laguna', pay: 'Weekly' },
-  { id: 'dasma', name: 'Dasma Auto Parts', location: 'Dasma Cavite', pay: 'Weekly' },
-  { id: 'lipa', name: 'Lipa Auto Parts', location: 'Lipa Batangas', pay: 'Weekly' },
-  { id: 'sezan', name: 'Sezan Baliwag Auto Parts', location: 'Baliwag Bulacan', pay: 'Weekly' },
-  { id: 'timitsu', name: 'Timitsu Baliwag Auto Parts', location: 'Baliwag Bulacan', pay: 'Weekly' },
+  { id: 'anlurich', name: 'ANLURICH OPC', location: 'Silang Cavite', pay: 'Every Saturday' },
+  { id: 'avenders', name: 'Avenders Auto Parts', location: 'Sta.Rosa Laguna', pay: 'Every Saturday' },
+  { id: 'dasma', name: 'Dasma Auto Parts', location: 'Dasma Cavite', pay: 'Every Saturday' },
+  { id: 'lipa', name: 'Lipa Auto Parts', location: 'Lipa Batangas', pay: 'Every Saturday' },
+  { id: 'sezan', name: 'Sezan Baliwag Auto Parts', location: 'Baliwag Bulacan', pay: 'Every 15th and 30th' },
 ];
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

@@ -223,8 +223,9 @@ export default function ProductCatalogPage() {
       && (!name || String(p.name || '').toLowerCase().includes(name))
       && (!desc || String(p.description || '').toLowerCase().includes(desc) || String(p.name || '').toLowerCase().includes(desc));
   }).sort((a, b) =>
-    String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }) ||
-    String(a.brand || '').localeCompare(String(b.brand || ''), undefined, { sensitivity: 'base' })
+    String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base', numeric: true }) ||
+    String(a.brand || '').localeCompare(String(b.brand || ''), undefined, { sensitivity: 'base', numeric: true }) ||
+    String(a.partNumber || '').localeCompare(String(b.partNumber || ''), undefined, { sensitivity: 'base', numeric: true })
   );
 
   return (

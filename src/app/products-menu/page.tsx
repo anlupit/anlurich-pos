@@ -8,6 +8,9 @@ export default function ProductsMenuPage() {
       items={[
         { href: '/product-catalog', label: 'Product Catalog' },
         { href: '/products', label: 'Product Inventory' },
+        { href: '/low-stock', label: 'Low Stock Report' },
+        { href: '/stock-history', label: 'Stock History' },
+        { href: '/backup', label: 'Backup and Restore' },
       ]}
     />
   );
