@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -14,10 +14,17 @@ function addMonths(date: string, months: number) {
 export default function CustomerPortal() {
   const [phone, setPhone] = useState('');
   const [plate, setPlate] = useState('');
+  const [logo, setLogo] = useState('/logo.png');
+  const [banner, setBanner] = useState('/banner.png');
   const [customer, setCustomer] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
+    setBanner(localStorage.getItem('anlurich-index-banner') || '/banner.png');
+  }, []);
 
   const login = async () => {
     const ph = phone.trim();
@@ -60,8 +67,18 @@ export default function CustomerPortal() {
   return (
     <div className="min-h-screen bg-slate-50 p-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-black text-[#1e3a8a]">My Vehicle History</h1>
-        <p className="text-sm text-gray-500 mb-4">Anlurich OPC · Avenders · Dasma · Lipa</p>
+        <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+          <div className="h-36 md:h-48 bg-gray-100">
+            <img src={banner} alt="Banner" className="w-full h-full object-cover object-center" />
+          </div>
+          <div className="flex items-center gap-3 p-4">
+            <img src={logo} alt="Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain" />
+            <div>
+              <h1 className="text-2xl font-black text-[#1e3a8a]">My Vehicle History</h1>
+              <p className="text-sm text-gray-500">Anlurich OPC · Avenders · Dasma · Lipa</p>
+            </div>
+          </div>
+        </div>
 
         {!customer && (
           <div className="bg-white rounded-xl shadow p-4 space-y-3">

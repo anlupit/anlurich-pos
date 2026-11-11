@@ -133,6 +133,8 @@ export default function ProductCatalogPage() {
     try { await saveProducts(cleaned); alert(`Cleared ${changed} barcodes.`); }
     catch { alert('Cleared here, but Supabase did not save.'); }
   };
+
+  const deleteAll = async () => {
     if (!products.length) return;
     if (!confirm(`Delete ALL ${products.length} products in the catalog? This cannot be undone.`)) return;
     const ids = products.map((p) => p.id);
