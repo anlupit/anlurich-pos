@@ -29,7 +29,7 @@ export default function CheckVoucherPage() {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [supplier, setSupplier] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
-  const [ewtRate, setEwtRate] = useState<Record<string, 0 | 1 | 2>>({});
+  const [ewtRate, setEwtRate] = useState<Record<string, boolean>>({});
   const [voucherNo, setVoucherNo] = useState('');
   const [checks, setChecks] = useState<CheckLine[]>([{ id: '1', date: new Date().toISOString().slice(0, 10), bank: '', no: '', amount: '' }]);
   const [tab, setTab] = useState<'pay' | 'paid' | 'search'>('pay');
@@ -38,6 +38,8 @@ export default function CheckVoucherPage() {
   const [qMonth, setQMonth] = useState('');
   const [qYear, setQYear] = useState('');
   const [searched, setSearched] = useState(false);
+  const [printVoucher, setPrintVoucher] = useState<any | null>(null);
+  const [editingVoucher, setEditingVoucher] = useState<any | null>(null);
 
   const isAdmin = branch === 'admin';
 
@@ -87,7 +89,8 @@ export default function CheckVoucherPage() {
   const gross = chosen.reduce((n, i) => n + Number(i.grandTotal || 0), 0);
   const netOfVat = chosen.reduce((n, i) => n + Number(i.grandTotal || 0) / 1.12, 0);
   const vat = gross - netOfVat;
-  const ewt = chosen.reduce((n, i) => n + (Number(i.grandTotal || 0) / 1.12) * ((ewtRate[i.id] || 0) / 100), 0);
+  const isSales = (i: any) => String(i.invoiceType || '').toLowerCase().includes('sales');
+  const ewt = chosen.reduce((n, i) => n + (isSales(i) && ewtRate[i.id] ? (Number(i.grandTotal || 0) / 1.12) * 0.01 : 0), 0);
   const checkAmount = gross - ewt;
   const checksTotal = checks.reduce((n, c) => n + (parseFloat(c.amount) || 0), 0);
 
@@ -109,14 +112,42 @@ export default function CheckVoucherPage() {
     const used = JSON.parse(localStorage.getItem('anlurich-voucher-nos') || '[]');
     localStorage.setItem('anlurich-voucher-nos', JSON.stringify([...used, no]));
     const saved = JSON.parse(localStorage.getItem('anlurich-check-schedules') || '[]');
-    const nextSchedules = [{ id: Date.now().toString(), voucherNo: no, branch, supplier: chosen[0]?.supplierName, invoices: chosen.map((i) => i.invoiceNumber || i.invoiceNo), gross, netOfVat, vat, ewt, checkAmount, checks, date: new Date().toISOString() }, ...saved];
+    const savedVoucher = { id: Date.now().toString(), voucherNo: no, branch, supplier: chosen[0]?.supplierName, invoices: chosen.map((i) => ({ no: i.invoiceNumber || i.invoiceNo, type: i.invoiceType, amount: i.grandTotal, ewt: isSales(i) && ewtRate[i.id] })), gross, netOfVat, vat, ewt, checkAmount, checks, date: new Date().toISOString() };
+    const nextSchedules = [savedVoucher, ...saved];
     localStorage.setItem('anlurich-check-schedules', JSON.stringify(nextSchedules));
     setSchedules(nextSchedules);
     setInvoices(Object.values(byBranch).flat());
     setSelected([]);
     setChecks([{ id: Date.now().toString(), date: new Date().toISOString().slice(0, 10), bank: '', no: '', amount: '' }]);
     setVoucherNo(nextVoucherNo());
-    alert(`Payment recorded. Voucher No. ${no}`);
+    setPrintVoucher(savedVoucher);
+  };
+
+  const saveSchedules = (next: any[]) => {
+    setSchedules(next);
+    localStorage.setItem('anlurich-check-schedules', JSON.stringify(next));
+    fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'anlurich-check-schedules', value: JSON.stringify(next) }) }).catch(() => {});
+  };
+
+  const saveEditedVoucher = () => {
+    if (!editingVoucher) return;
+    saveSchedules(schedules.map((s) => s.id === editingVoucher.id ? editingVoucher : s));
+    setEditingVoucher(null);
+  };
+
+  const deleteVoucher = () => {
+    if (!editingVoucher) return;
+    if (!confirm(`Delete voucher ${editingVoucher.voucherNo}?`)) return;
+    saveSchedules(schedules.filter((s) => s.id !== editingVoucher.id));
+    setEditingVoucher(null);
+  };
+
+  const printNow = () => {
+    const style = document.createElement('style');
+    style.innerHTML = '@media print { @page { size: A5 portrait; margin: 8mm; } .no-print { display: none !important; } }';
+    document.head.appendChild(style);
+    window.print();
+    style.remove();
   };
 
   const voucherResults = schedules.filter((s) => {
@@ -165,6 +196,7 @@ export default function CheckVoucherPage() {
                   <td className="p-2">{formatDate(s.date)}</td>
                   <td className="p-2">{s.supplier}</td>
                   <td className="p-2 text-right">{money(s.checkAmount)}</td>
+                  <td className="p-2 text-right"><button onClick={() => setEditingVoucher(s)} className="text-blue-700">View / Edit</button></td>
                 </tr>
               ))}
               {voucherResults.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No vouchers found</td></tr>}
@@ -197,7 +229,6 @@ export default function CheckVoucherPage() {
               <th className="text-left p-2">Date</th>
               <th className="text-right p-2">Amount</th>
               {tab === 'pay' && <th className="text-center p-2">1% EWT</th>}
-              {tab === 'pay' && <th className="text-center p-2">2% EWT</th>}
               {tab === 'paid' && <th className="text-left p-2">Voucher No.</th>}
             </tr>
           </thead>
@@ -211,8 +242,7 @@ export default function CheckVoucherPage() {
                 <td className="p-2">{inv.invoiceType || '—'}</td>
                 <td className="p-2">{formatDate(inv.invoiceDate)}</td>
                 <td className="p-2 text-right">{money(inv.grandTotal)}</td>
-                {tab === 'pay' && <td className="p-2 text-center"><input type="checkbox" checked={ewtRate[inv.id] === 1} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: p[inv.id] === 1 ? 0 : 1 }))} /></td>}
-                {tab === 'pay' && <td className="p-2 text-center"><input type="checkbox" checked={ewtRate[inv.id] === 2} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: p[inv.id] === 2 ? 0 : 2 }))} /></td>}
+                {tab === 'pay' && <td className="p-2 text-center">{isSales(inv) ? <input type="checkbox" checked={!!ewtRate[inv.id]} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: !p[inv.id] }))} /> : '—'}</td>}
                 {tab === 'paid' && <td className="p-2">{inv.checkVoucherNo || '—'}</td>}
               </tr>
             ))}
@@ -228,7 +258,7 @@ export default function CheckVoucherPage() {
             <div>Gross Amount: {money(gross)}</div>
             <div>Net of VAT: {money(netOfVat)}</div>
             <div>12% VAT: {money(vat)}</div>
-            <div>EWT on Sales Invoice only (1% or 2% of Net of VAT): {money(ewt)}</div>
+            <div>1% EWT on Sales Invoice only: {money(ewt)}</div>
             <div className="text-lg font-bold">Grand Total / Check Amount: {money(checkAmount)}</div>
           </div>
           <div className="bg-white rounded-xl shadow p-4">
@@ -246,6 +276,60 @@ export default function CheckVoucherPage() {
             <div className="text-right font-bold mt-3">Total Checks Issued: {money(checksTotal)}</div>
           </div>
         </>
+      )}
+      {editingVoucher && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-5 w-full max-w-lg">
+            <h3 className="font-bold text-lg mb-3">Voucher {editingVoucher.voucherNo}</h3>
+            <input className="w-full border rounded px-3 py-2 mb-2" value={editingVoucher.supplier || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, supplier: e.target.value })} />
+            <div className="text-sm mb-2">Date: {formatDate(editingVoucher.date)}</div>
+            <div className="text-sm">Gross {money(editingVoucher.gross)} · EWT {money(editingVoucher.ewt)} · Check {money(editingVoucher.checkAmount)}</div>
+            <div className="text-sm mt-2">{(editingVoucher.invoices || []).map((inv: any) => inv.no || inv).join(', ')}</div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setEditingVoucher(null)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
+              <button onClick={deleteVoucher} className="flex-1 bg-red-600 text-white py-2 rounded">Delete</button>
+              <button onClick={saveEditedVoucher} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {printVoucher && (
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+          <div className="bg-white max-w-[148mm] mx-auto p-4">
+            <div className="text-center">
+              <img src="/logo.png" alt="Anlurich" className="h-16 mx-auto object-contain" />
+              <div className="font-bold">Auto Parts Inventory</div>
+              <div className="text-lg font-black mt-1">CHECK VOUCHER</div>
+            </div>
+            <div className="flex justify-between text-sm mt-3">
+              <div>Voucher No. {printVoucher.voucherNo}</div>
+              <div>{formatDate(printVoucher.date)}</div>
+            </div>
+            <div className="text-sm mb-2">Supplier: {printVoucher.supplier}</div>
+            <table className="w-full text-sm border-collapse">
+              <thead><tr className="border-b"><th className="text-left">Invoice</th><th className="text-left">Type</th><th className="text-right">Amount</th></tr></thead>
+              <tbody>
+                {(printVoucher.invoices || []).map((inv: any, i: number) => (
+                  <tr key={i} className="border-b"><td>{inv.no}</td><td>{inv.type}</td><td className="text-right">{money(inv.amount)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="text-right text-sm mt-2">
+              <div>Gross: {money(printVoucher.gross)}</div>
+              <div>Net of VAT: {money(printVoucher.netOfVat)}</div>
+              <div>12% VAT: {money(printVoucher.vat)}</div>
+              <div>1% EWT: {money(printVoucher.ewt)}</div>
+              <div className="font-bold">Check Amount: {money(printVoucher.checkAmount)}</div>
+            </div>
+            <div className="text-sm mt-2">
+              {(printVoucher.checks || []).map((c: any) => <div key={c.id}>{c.date} · {c.bank} · {c.no} · {money(c.amount)}</div>)}
+            </div>
+            <div className="flex gap-2 mt-4 no-print">
+              <button onClick={() => setPrintVoucher(null)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
+              <button onClick={printNow} className="flex-1 bg-blue-700 text-white py-2 rounded">Print A5</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
