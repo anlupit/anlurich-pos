@@ -15,7 +15,9 @@ async function loadTools(): Promise<Tool[]> {
   return Array.isArray(rows) ? rows : [];
 }
 async function saveTool(row: Tool) {
-  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row }) });
+  const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row }) });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the Bosch catalog quantity');
 }
 async function loadInvoices() {
   const res = await fetch('/api/records?table=bosch_invoices', { cache: 'no-store' });
@@ -76,25 +78,38 @@ export default function BoschSupplierInvoicePage() {
     }
     const invoice = { id: Date.now().toString(), branch: 'anlurich', supplier: supplier.trim(), invoiceNo: invoiceNo.trim(), date, lines: valid, total, createdAt: new Date().toISOString() };
     await saveBoschInvoice(invoice);
-    const tools = [...catalog];
+    const latest = await loadTools();
+    const tools = [...latest];
+    const added: string[] = [];
     valid.forEach((l) => {
       const found = tools.find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase());
       if (found) {
-        found.qty = Number(found.qty || 0) + l.qty;
+        found.qty = Number(found.qty || 0) + Number(l.qty || 0);
         if (l.price > 0) found.costPrice = l.price;
-        if (!found.name) found.name = l.name || l.partNumber;
+        if (l.name) found.name = l.name;
+        added.push(`${found.partNumber}: +${l.qty} = ${found.qty}`);
       } else {
-        tools.push({ id: Date.now().toString() + l.partNumber, partNumber: l.partNumber, name: l.name || l.partNumber, category: '', description: l.name || '', costPrice: l.price, sellingPrice: l.price ? Math.ceil((l.price * 1.5) / 100) * 100 : 0, qty: l.qty });
+        const item = { id: Date.now().toString() + l.partNumber, partNumber: l.partNumber, name: l.name || l.partNumber, category: '', description: l.name || '', costPrice: l.price, sellingPrice: l.price ? Math.ceil((l.price * 1.5) / 100) * 100 : 0, qty: Number(l.qty || 0) };
+        tools.push(item);
+        added.push(`${item.partNumber}: +${item.qty} = ${item.qty}`);
       }
     });
     setCatalog(tools);
-    await Promise.all(tools.map((t) => saveTool(t)));
+    try {
+      await Promise.all(valid.map((l) => {
+        const saved = tools.find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase());
+        return saved ? saveTool(saved) : Promise.resolve();
+      }));
+    } catch (err: any) {
+      setSaving(false);
+      return alert(err?.message || 'Invoice saved, but Bosch catalog quantity was not saved to Supabase.');
+    }
     setSupplier('');
     setInvoiceNo('');
     setDate(new Date().toISOString().slice(0, 10));
     setLines([{ id: Date.now().toString(), partNumber: '', name: '', qty: 1, price: 0 }]);
     setSaving(false);
-    alert('Bosch supplier invoice saved. Items added to Bosch catalog.');
+    alert(`Bosch supplier invoice saved.\nCatalog stock updated:\n${added.join('\n')}`);
   };
 
   if (!allowed) return null;

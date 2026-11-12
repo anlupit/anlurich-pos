@@ -197,7 +197,8 @@ export default function SupplierReceiptPage() {
     setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
     setSaving(false);
     const result = await upsertCatalogFromInvoice(invoice.lines).catch(() => null);
-    if (result?.added) alert(`${result.added} new part${result.added === 1 ? '' : 's'} added to the product catalog.`);
+    if (result) alert(`Catalog details saved. Inventory for this branch updated.`);
+    else alert('Invoice saved. Inventory updated. Catalog details were not saved.');
     valid.forEach((l) => {
       adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
     });

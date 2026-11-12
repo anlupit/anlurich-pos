@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { currentBranch } from '../../lib/branchData';
 
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
@@ -27,6 +27,7 @@ export default function BoschCatalogPage() {
   const [form, setForm] = useState({ partNumber: '', name: '', category: '', description: '', costPrice: '', sellingPrice: '', qty: '0' });
   const [editing, setEditing] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const branch = (currentBranch() || '').toLowerCase();
@@ -65,14 +66,75 @@ export default function BoschCatalogPage() {
     await deleteTool(id);
   };
 
+  const downloadTemplate = async () => {
+    const XLSX = await import('xlsx');
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Part Number', 'Name', 'Category', 'Description', 'Cost', 'Selling', 'Qty'],
+      ['06019F6000', 'Drill GSB 13 RE', 'Drills', 'Impact drill 600W', 2500, 3990, 5],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Bosch');
+    XLSX.writeFile(wb, 'bosch-catalog-template.xlsx');
+  };
+
+  const handleExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const XLSX = await import('xlsx');
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data);
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const incoming: any[] = XLSX.utils.sheet_to_json(sheet);
+    const text = (row: any, names: string[]) => {
+      const keys = Object.keys(row);
+      const want = names.map((n) => n.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const key = keys.find((k) => want.includes(k.toLowerCase().replace(/[^a-z0-9]/g, '')));
+      return key ? String(row[key] ?? '').trim() : '';
+    };
+    const num = (row: any, names: string[]) => {
+      const raw = text(row, names).replace(/[^0-9.]/g, '');
+      return raw ? Number(raw) : 0;
+    };
+    const items = incoming.map((r, i) => ({
+      id: Date.now().toString() + i,
+      partNumber: text(r, ['Part Number', 'Part No']),
+      name: text(r, ['Name', 'Product Name']),
+      category: text(r, ['Category']),
+      description: text(r, ['Description']),
+      costPrice: num(r, ['Cost', 'Cost Price']),
+      sellingPrice: num(r, ['Selling', 'Selling Price']),
+      qty: num(r, ['Qty', 'Quantity']),
+    })).filter((r) => r.partNumber && r.name);
+    if (!items.length) return alert('No valid rows. Need Part Number and Name.');
+    const next = [...rows];
+    let added = 0;
+    let updated = 0;
+    for (const item of items) {
+      const index = next.findIndex((p) => p.partNumber.toLowerCase() === item.partNumber.toLowerCase());
+      if (index >= 0) {
+        const merged = { ...next[index], ...item, id: next[index].id };
+        next[index] = merged;
+        await saveTool(merged);
+        updated += 1;
+      } else {
+        next.push(item);
+        await saveTool(item);
+        added += 1;
+      }
+    }
+    setRows(next);
+    if (fileRef.current) fileRef.current.value = '';
+    alert(`Saved to Supabase. Added ${added}, updated ${updated}.`);
+  };
+
   const shown = rows.filter((r) => `${r.partNumber} ${r.name} ${r.category} ${r.description}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name) || a.partNumber.localeCompare(b.partNumber));
 
   return (
-    <div className="p-4 min-h-screen" style={{ background: 'linear-gradient(135deg, #dbeafe, #e9d5ff, #d1fae5)' }}>
-      <h1 className="text-2xl font-bold text-red-700">Bosch Catalog</h1>
-      <p className="text-sm text-gray-500 mb-4">Shared by Anlurich and Baliwag Auto Parts. Not mixed with auto parts.</p>
-      <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">
+    <div className="p-4 min-h-screen" style={{ background: 'linear-gradient(180deg, #7dd3fc 0%, #bae6fd 28%, #e0f2fe 55%, #ffffff 100%)' }}>
+      <h1 className="text-2xl font-bold" style={{ color: '#4169e1' }}>Bosch Catalog</h1>
+      <p className="text-sm text-gray-600 mb-4">Shared by Anlurich and Baliwag Auto Parts. Not mixed with auto parts.</p>
+      <div className="bg-white/80 rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">
         <input className="border rounded px-3 py-2" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} />
         <input className="border rounded px-3 py-2" placeholder="Product Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className="border rounded px-3 py-2" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
@@ -80,12 +142,19 @@ export default function BoschCatalogPage() {
         <input type="number" className="border rounded px-3 py-2" placeholder="Cost" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
         <input type="number" className="border rounded px-3 py-2" placeholder="Selling" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
         <input type="number" className="border rounded px-3 py-2" placeholder="Qty" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} />
-        <button onClick={save} className="bg-red-700 text-white rounded px-3 py-2">{editing ? 'Update' : 'Add Bosch Item'}</button>
+        <button onClick={save} className="text-white rounded px-3 py-2" style={{ background: '#7aa2f7' }}>{editing ? 'Update' : 'Add Bosch Item'}</button>
+      </div>
+      <div className="flex gap-2 mb-3">
+        <button onClick={downloadTemplate} className="text-white px-4 py-2 rounded" style={{ background: '#4169e1' }}>Download Template</button>
+        <label className="text-white px-4 py-2 rounded cursor-pointer" style={{ background: '#7aa2f7' }}>
+          Mass Upload Excel
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
+        </label>
       </div>
       <input className="border rounded px-3 py-2 mb-3" placeholder="Search part, name, category" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-red-700 text-white">
+          <thead className="text-white" style={{ background: '#7aa2f7' }}>
             <tr>
               <th className="p-2 text-left">Part Number</th>
               <th className="p-2 text-left">Name</th>

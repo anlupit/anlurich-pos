@@ -17,6 +17,8 @@ export default function ProductCatalogPage() {
   const [findBrand, setFindBrand] = useState('');
   const [findName, setFindName] = useState('');
   const [findDesc, setFindDesc] = useState('');
+  const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [zoom, setZoom] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,7 +65,61 @@ export default function ProductCatalogPage() {
         saveProducts(next).catch(() => {});
       }
     }).catch(() => setProducts(loadProducts()));
+    fetch('/api/records?table=product_images', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((rows) => {
+        const map: Record<string, string> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+          if (row.partNumber && row.thumb) {
+            map[String(row.partNumber).toLowerCase()] = row.thumb;
+            if (row.zoom) map[`${String(row.partNumber).toLowerCase()}-zoom`] = row.zoom;
+          }
+        });
+        setPhotos(map);
+      })
+      .catch(() => {});
   }, []);
+
+  const compress = (file: File, max: number, targetKb: number) => new Promise<string>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+      let quality = 0.82;
+      let out = canvas.toDataURL('image/jpeg', quality);
+      while (out.length > targetKb * 1024 * 1.37 && quality > 0.42) {
+        quality = Math.round((quality - 0.06) * 100) / 100;
+        out = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(out);
+    };
+    img.onerror = () => reject(new Error('Cannot read this image. Use JPG, PNG, or WEBP.'));
+    img.src = URL.createObjectURL(file);
+  });
+
+  const savePhoto = async (partNumber: string, file: File) => {
+    if (!file.type.startsWith('image/')) return alert('Please choose an image file.');
+    try {
+      const [thumb, zoomImg] = await Promise.all([compress(file, 120, 12), compress(file, 480, 60)]);
+      const part = partNumber.trim();
+      await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'product_images', row: { id: part.toLowerCase(), partNumber: part, thumb, zoom: zoomImg, format: 'jpeg' } }),
+      });
+      setPhotos((prev) => ({ ...prev, [part.toLowerCase()]: thumb, [`${part.toLowerCase()}-zoom`]: zoomImg }));
+    } catch (err: any) {
+      alert(err?.message || 'Image could not be converted.');
+    }
+  };
 
   const saveProduct = async () => {
     if (!form.partNumber.trim() || !form.name.trim()) return alert('Part Number and Name are required');
@@ -318,6 +374,7 @@ export default function ProductCatalogPage() {
             <tr>
               <th className="p-2"><input type="checkbox" checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id))} onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...filtered.map((p) => p.id)])) : selected.filter((id) => !filtered.some((p) => p.id === id)))} /></th>
               <th className="text-left p-2" style={{ width: '25ch' }}>Part Number</th>
+              <th className="p-2">Photo</th>
               <th className="text-left p-2" style={{ width: '25ch' }}>Product Name</th>
               <th className="text-left p-2">Brand</th>
               <th className="text-left p-2">Description</th>
@@ -331,6 +388,16 @@ export default function ProductCatalogPage() {
               <tr key={p.id} className="border-t">
                 <td className="p-2"><input type="checkbox" checked={selected.includes(p.id)} onChange={(e) => setSelected(e.target.checked ? [...selected, p.id] : selected.filter((id) => id !== p.id))} /></td>
                 <td className="p-2 font-medium" style={{ width: '25ch' }} title={p.partNumber}>{p.partNumber}</td>
+                <td className="p-2">
+                  {photos[String(p.partNumber || '').toLowerCase()] ? (
+                    <img src={photos[String(p.partNumber || '').toLowerCase()]} alt={p.partNumber} className="h-10 w-10 object-cover rounded cursor-zoom-in" onClick={() => setZoom(photos[`${String(p.partNumber || '').toLowerCase()}-zoom`] || photos[String(p.partNumber || '').toLowerCase()])} />
+                  ) : (
+                    <label className="text-xs text-blue-700 cursor-pointer">
+                      Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) savePhoto(p.partNumber, f); }} />
+                    </label>
+                  )}
+                </td>
                 <td className="p-2" style={{ width: '25ch', maxWidth: '25ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name}</td>
                 <td className="p-2">{p.brand || '—'}</td>
                 <td className="p-2">{p.description || '—'}</td>
@@ -345,6 +412,11 @@ export default function ProductCatalogPage() {
           </tbody>
         </table>
       </div>
+      {zoom && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
+          <img src={zoom} alt="Product" className="max-w-full max-h-full rounded shadow-2xl" />
+        </div>
+      )}
     </div>
   );
 

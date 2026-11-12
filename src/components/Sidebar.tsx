@@ -135,9 +135,9 @@ export default function Sidebar() {
 
   return (
     <aside className="w-52 h-screen overflow-y-auto bg-gradient-to-b from-blue-500 to-orange-400 text-white p-2 flex flex-col print:hidden">
-      <button onClick={goDashboard} className="text-left mb-2">
-        <div className="text-sm font-bold">Dashboard</div>
-        <div className="text-xl font-black tracking-wide leading-tight">{title}</div>
+      <button onClick={goDashboard} className="text-left mb-2 bg-blue-800 hover:bg-blue-900 rounded-lg px-3 py-3 w-full">
+        <div className="text-lg font-black">Main Page</div>
+        <div className="text-sm font-bold opacity-90">{title}</div>
       </button>
       {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-1 flex-1">
@@ -147,7 +147,7 @@ export default function Sidebar() {
             <span className="flex-1 text-left">{item.label}</span>
           </a>
         ))}
-        {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
+        {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-3 py-3 text-base font-bold flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
       </nav>
       <button onClick={logout} className="mt-2 bg-purple-600 hover:bg-purple-700 rounded-lg py-1.5 text-xs font-medium">
         LOG OUT

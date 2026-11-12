@@ -41,8 +41,9 @@ export function loadProducts(): Product[] {
 }
 
 export async function saveProducts(products: Product[]) {
-  localStorage.setItem('anlurich-products', JSON.stringify(products));
-  for (const p of products) {
+  const clean = products.map(({ quantity, ...p }) => p);
+  localStorage.setItem('anlurich-products', JSON.stringify(clean));
+  for (const p of clean) {
     await fetch('/api/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

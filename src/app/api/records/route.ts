@@ -134,6 +134,13 @@ async function ensure() {
     );
     CREATE INDEX IF NOT EXISTS bosch_sales_branch_idx ON bosch_sales (branch);
     CREATE INDEX IF NOT EXISTS bosch_sales_date_idx ON bosch_sales (sale_date);
+    CREATE TABLE IF NOT EXISTS product_images (
+      id TEXT PRIMARY KEY,
+      part_number TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS product_images_part_idx ON product_images (part_number);
   `);
   for (const b of BRANCHES) {
     await pool.query(`
@@ -173,7 +180,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -226,7 +233,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {
@@ -377,6 +384,13 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,$4,$5,$6,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, customer_name=EXCLUDED.customer_name, sale_date=EXCLUDED.sale_date, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.invoiceNo || '', data.customerName || '', data.date || '', JSON.stringify(data)]
+    );
+  } else if (table === 'product_images') {
+    await pool.query(
+      `INSERT INTO product_images (id, part_number, data, updated_at)
+       VALUES ($1,$2,$3,NOW())
+       ON CONFLICT (id) DO UPDATE SET part_number=EXCLUDED.part_number, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.partNumber || '', JSON.stringify(data)]
     );
   } else {
     await pool.query(
