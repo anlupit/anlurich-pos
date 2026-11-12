@@ -45,6 +45,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     items: [
       { href: '/add-supplier', label: 'Add Supplier' },
       { href: '/supplier-receipt', label: 'Record Supplier Invoice' },
+      { href: '/bosch-supplier', label: 'Record Bosch Invoice' },
       { href: '/search-purchase', label: 'Search Purchase Invoice' },
       { href: '/supplier-return', label: 'Supplier Return' },
       { href: '/expenses', label: 'Company Expense' },

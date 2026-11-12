@@ -249,7 +249,7 @@ export function setStockQty(productId: string, qty: number, location?: string, b
   saveStock(b, stock);
 }
 
-export function adjustStockByItem(item: { partNumber?: string; barcode?: string; qty?: number }, delta: number, branch?: string, reason?: string) {
+export async function adjustStockByItem(item: { partNumber?: string; barcode?: string; qty?: number }, delta: number, branch?: string, reason?: string) {
   if (typeof window === 'undefined') return { ok: false, reason: 'no-window' };
   const b = branch || currentBranch();
   if (!b || b === 'admin') return { ok: false, reason: 'no-branch' };
@@ -258,14 +258,26 @@ export function adjustStockByItem(item: { partNumber?: string; barcode?: string;
   if (!part && !barcode) return { ok: false, reason: 'no-key' };
   let products: any[] = [];
   try { products = JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { products = []; }
-  const product = products.find((p) =>
+  if (!products.length) {
+    try { products = await loadProductsCloud(); } catch { products = []; }
+  }
+  let product = products.find((p) =>
     (part && String(p.partNumber || '').trim().toLowerCase() === part) ||
     (barcode && String(p.barcode || '').trim().toLowerCase() === barcode)
   );
+  if (!product && part) {
+    const cloud = await loadProductsCloud().catch(() => []);
+    product = cloud.find((p) => String(p.partNumber || '').trim().toLowerCase() === part);
+  }
   if (!product) return { ok: false, reason: 'not-found', partNumber: item.partNumber };
   const current = getStockQty(product.id, b);
   const next = Math.max(0, current + delta);
   setStockQty(product.id, next, product.location, b);
+  await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'inventory', row: { id: `${b}-${product.id}`, branch: b, productId: product.id, partNumber: product.partNumber, qty: next, location: product.location || '' } }),
+  });
   recordStockHistory({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     when: new Date().toISOString(),
@@ -386,6 +398,37 @@ export async function syncOnline(branch?: string) {
       localStorage.setItem(key, JSON.stringify(cloud));
     }
   }
+}
+
+export async function migrateBranchToSupabase(branch?: string) {
+  const b = branch || currentBranch();
+  if (!b || b === 'admin' || typeof window === 'undefined') return { sales: 0, invoices: 0, stock: 0 };
+  const sales = loadSales(b);
+  const invoices = loadInvoices(b);
+  const stock = loadStock(b);
+  let products: any[] = [];
+  try { products = JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { products = []; }
+  for (const sale of sales) {
+    await saveSale({ ...sale, branch: b }).catch(() => {});
+  }
+  for (const inv of invoices) {
+    await saveInvoice({ ...inv, branch: b }).catch(() => {});
+  }
+  for (const [productId, item] of Object.entries(stock)) {
+    await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'inventory', row: { id: `${b}-${productId}`, branch: b, productId, qty: item.qty, location: item.location || '' } }),
+    }).catch(() => {});
+  }
+  if (products.length) {
+    await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'products', migrate: true, rows: products }),
+    }).catch(() => {});
+  }
+  return { sales: sales.length, invoices: invoices.length, stock: Object.keys(stock).length };
 }
 
 export async function loadSalesCloud(branch?: string): Promise<any[]> {

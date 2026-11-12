@@ -199,9 +199,9 @@ export default function SupplierReceiptPage() {
     const result = await upsertCatalogFromInvoice(invoice.lines).catch(() => null);
     if (result) alert(`Catalog details saved. Inventory for this branch updated.`);
     else alert('Invoice saved. Inventory updated. Catalog details were not saved.');
-    valid.forEach((l) => {
-      adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
-    });
+    for (const l of valid) {
+      await adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
+    }
   };
 
   return (
@@ -322,8 +322,8 @@ export default function SupplierReceiptPage() {
                 </td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '60ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={1} className="w-full border rounded px-1 py-1 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '50ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 text-center" style={{ width: '5ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
                 <td className="p-1 text-center font-medium">{money(netPrice(line))}</td>

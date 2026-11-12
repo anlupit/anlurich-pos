@@ -20,6 +20,8 @@ type Line = {
 export default function POSPage() {
   const pathname = usePathname();
   const noInvoice = pathname === '/no-invoice';
+  const bosch = pathname === '/bosch-pos';
+  const [boschCatalog, setBoschCatalog] = useState<any[]>([]);
   const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -100,10 +102,23 @@ export default function POSPage() {
       try {
         syncOnline().catch(() => {});
         clearOldSalesRecords().catch(() => {});
-        const prods = loadProducts();
-        const stock = loadStock();
-        setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
-        setInvoices(loadInvoices());
+        if (bosch) {
+          const branch = (currentBranch() || sessionStorage.getItem('anlurich-auth') || '').toLowerCase();
+          if (!['anlurich', 'sezan', 'admin'].includes(branch)) {
+            alert('Bosch sales are only for Anlurich and Baliwag Auto Parts.');
+            window.location.href = '/';
+            return;
+          }
+          const res = await fetch('/api/records?table=bosch_products', { cache: 'no-store' });
+          const rows = res.ok ? await res.json() : [];
+          setBoschCatalog(Array.isArray(rows) ? rows : []);
+          setProducts((Array.isArray(rows) ? rows : []).map((p: any) => ({ ...p, name: p.name, brand: p.brand || 'Bosch', sellingPrice: p.sellingPrice || 0, costPrice: p.costPrice || 0 })));
+        } else {
+          const prods = loadProducts();
+          const stock = loadStock();
+          setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
+          setInvoices(loadInvoices());
+        }
       } catch {}
       if (noInvoice) {
         const d2 = new Date();
@@ -192,10 +207,12 @@ export default function POSPage() {
 
   const [lineSuggest, setLineSuggest] = useState<{ id: string; matches: ManagedProduct[] } | null>(null);
 
+  const catalogList = () => bosch ? boschCatalog.map((p) => ({ ...p, name: p.name, brand: p.brand || 'Bosch' })) : loadProducts();
+
   const suggestForLine = (id: string, text: string) => {
     const q = text.trim().toLowerCase();
     if (q.length < 2) { setLineSuggest(null); return; }
-    const list = loadProducts();
+    const list = catalogList();
     const matches = list.filter((p) =>
       String(p.partNumber || '').toLowerCase().includes(q) ||
       String(p.barcode || '').toLowerCase().includes(q) ||
@@ -225,7 +242,7 @@ export default function POSPage() {
       return;
     }
     if (!code) return;
-    const list = loadProducts();
+    const list = catalogList();
     const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase());
     if (!found) {
       updateLine(id, 'barcode', code);
@@ -255,7 +272,7 @@ export default function POSPage() {
   };
     const lookupProduct = (id: string, partNumber: string) => {
     updateLine(id, 'partNumber', partNumber);
-    const found = loadProducts().find((p) => p.partNumber.toLowerCase() === partNumber.toLowerCase());
+    const found = catalogList().find((p) => p.partNumber.toLowerCase() === partNumber.toLowerCase());
     if (found) {
       setLines((prev) =>
         prev.map((l) =>
@@ -292,7 +309,7 @@ export default function POSPage() {
       setPriceCheck((prev) => ({ ...prev, barcode: code }));
       if (code.length < 6) return;
     }
-    const list = loadProducts();
+    const list = catalogList();
     const found = list.find((p) => String(p.barcode || '').trim().toLowerCase() === code.toLowerCase());
     if (!found) {
       if (force) alert('Barcode not found in Product Catalog');
@@ -328,7 +345,7 @@ export default function POSPage() {
         }
       }
     } catch {}
-    const freshProducts = loadProducts();
+    const freshProducts = catalogList();
     const found: any[] = [];
     const seen = new Set<string>();
     freshInvoices
@@ -389,7 +406,7 @@ export default function POSPage() {
     setPriceMatches([]);
   };
 
-  const hasLabor = ['anlurich', 'avenders'].includes((currentBranch() || (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-auth') : '') || '').toLowerCase());
+  const hasLabor = !bosch && ['anlurich', 'avenders'].includes((currentBranch() || (typeof window !== 'undefined' ? sessionStorage.getItem('anlurich-auth') : '') || '').toLowerCase());
   const lineTotal = (l: Line) => l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0);
   const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const discountAmt = parseFloat(discount) || 0;
@@ -470,7 +487,7 @@ export default function POSPage() {
         dateTime: saleDateTime,
         branch: saleBranch,
         items: valid.map((l, i) => {
-          const catalog = loadProducts().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
+          const catalog = catalogList().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
           const cost = Number(catalog?.costPrice) || 0;
           return { itemNo: i + 1, partNumber: l.partNumber, barcode: l.barcode || '', brand: l.brand || '', description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
         }),
@@ -488,7 +505,11 @@ export default function POSPage() {
         paid: paymentMethod === 'Credit' ? paid : true,
       };
       // Save the sale first, then clear the form so the cashier is not waiting
-      await saveSale(sale);
+      if (bosch) {
+        await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_sales', row: { ...sale, source: 'bosch' } }) });
+      } else {
+        await saveSale(sale);
+      }
       setSavedSale(sale);
       setShowPrintAsk(true);
       clearEntry();
@@ -507,9 +528,19 @@ export default function POSPage() {
       }
 
       // Avenders POS and No Invoice do not add to the shared catalog. All other branches do.
-      if (String(branch || saleBranch).toLowerCase() !== 'avenders') {
+      if (!bosch && String(branch || saleBranch).toLowerCase() !== 'avenders') {
         const result = await upsertCatalogFromSale(valid).catch(() => null);
         if (result?.added) alert(`${result.added} new part${result.added === 1 ? '' : 's'} added to the product catalog.`);
+      }
+      if (bosch) {
+        const next = boschCatalog.map((p) => {
+          const sold = valid.find((l) => l.partNumber.toLowerCase() === String(p.partNumber || '').toLowerCase());
+          return sold ? { ...p, qty: Math.max(0, Number(p.qty || 0) - Number(sold.qty || 0)) } : p;
+        });
+        setBoschCatalog(next);
+        await Promise.all(next.filter((p) => valid.some((l) => l.partNumber.toLowerCase() === String(p.partNumber || '').toLowerCase())).map((p) =>
+          fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row: p }) })
+        )).catch(() => {});
       }
       if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
         const earnedNow = Math.floor(grandTotal / 200);
@@ -526,7 +557,7 @@ export default function POSPage() {
           updatedAt: new Date().toISOString(),
         }).catch(() => {});
       }
-      valid.forEach((l) => {
+      if (!bosch) valid.forEach((l) => {
         adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, -Number(l.qty || 0), branch);
       });
     } catch (err: any) {
@@ -669,7 +700,7 @@ export default function POSPage() {
     <div className="min-h-full p-2 print:static">
       <div className="print:hidden">
       <div className="flex items-baseline gap-3 mb-1 print:hidden">
-        <h1 className="text-lg font-bold text-yellow-600">{noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
+        <h1 className="text-lg font-bold text-yellow-600">{bosch ? 'Bosch Power Tool Invoice Sales' : noInvoice ? 'No Invoice' : 'Point of Sale'}</h1>
         <span className="text-xl font-black tracking-wide">{noInvoice ? 'Walk-in without invoice' : 'WALK-IN Customer Invoicing'}</span>
         {(currentBranch() || '').toLowerCase() === 'sezan' && (
           <label className="ml-auto flex items-center gap-2 text-sm font-bold">
@@ -724,8 +755,8 @@ export default function POSPage() {
         <div className="md:col-span-2">
           <label className="block text-[18px] font-medium mb-1">Contact Number</label>
           <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="09xx-xxx-xxxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
-          <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} />
-          <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Plate No." value={plateNo} onChange={(e) => setPlateNo(e.target.value)} />
+          {!bosch && <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} />}
+          {!bosch && <input className="w-full border rounded px-3 py-2 mt-2 text-[18px]" placeholder="Plate No." value={plateNo} onChange={(e) => setPlateNo(e.target.value)} />}
         </div>
         )}
         <div className="md:col-span-2">

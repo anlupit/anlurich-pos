@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { currentBranch, formatDate, loadSales } from '../../lib/branchData';
+import { currentBranch, formatDate, loadSales, loadSalesCloud } from '../../lib/branchData';
 
 export default function DownloadPage() {
   const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
@@ -16,7 +16,8 @@ export default function DownloadPage() {
     const XLSX = await import('xlsx');
     const branch = (currentBranch() || 'branch').toUpperCase();
     const groups = ['Cash', 'GCash', 'Maya', 'Credit / Debit Card', 'Bank Transfer', 'Check'];
-    const sales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === day);
+    const cloud = await loadSalesCloud().catch(() => []);
+    const sales = (cloud.length ? cloud : loadSales()).filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === day);
     const header = ['Invoice No.', 'Time', 'Customer Name', 'Ref No./Check No.', 'Net of VAT', '12% VAT', 'Total', 'Amount Tendered', 'Change'];
     const data: any[][] = [[branch], [formatDate(day)], [], header];
     groups.forEach((g) => {
@@ -38,7 +39,8 @@ export default function DownloadPage() {
   const downloadMonthly = async () => {
     const XLSX = await import('xlsx');
     const branch = (currentBranch() || 'branch').toUpperCase();
-    const sales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 7) === month);
+    const cloud = await loadSalesCloud().catch(() => []);
+    const sales = (cloud.length ? cloud : loadSales()).filter((s) => String(s.date || s.dateTime || '').slice(0, 7) === month);
     const header = ['Invoice Date', 'Invoice No.', 'Customer Name', 'Payment Type', 'Ref No./Check No.', 'Net of VAT', '12% VAT', 'Total Amount'];
     const data: any[][] = [[branch], [month], [], header];
     sales.forEach((s) => {

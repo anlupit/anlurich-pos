@@ -19,16 +19,18 @@ export default function LowStockPage() {
         const stockRes = await fetch('/api/records?table=inventory&branch=admin', { cache: 'no-store' });
         const stock = stockRes.ok ? await stockRes.json() : [];
         const byKey = new Map<string, number>();
+        const byPart = new Map<string, number>();
         (Array.isArray(stock) ? stock : []).forEach((s: any) => {
           const key = `${String(s.branch || '').toLowerCase()}|${s.productId || s.product_id || ''}`;
           byKey.set(key, Number(s.qty || 0));
+          if (s.partNumber) byPart.set(`${String(s.branch || '').toLowerCase()}|${String(s.partNumber).toLowerCase()}`, Number(s.qty || 0));
         });
         const list: any[] = [];
         (Array.isArray(products) ? products : []).forEach((p: any) => {
           const reorder = Number(p.bufferOrderQty || p.reorderPointQty || 0);
           if (reorder <= 0) return;
           BRANCHES.forEach((b) => {
-            const qty = byKey.get(`${b}|${p.id}`) ?? 0;
+            const qty = byKey.get(`${b}|${p.id}`) ?? byPart.get(`${b}|${String(p.partNumber || '').toLowerCase()}`) ?? 0;
             if (qty <= reorder) {
               list.push({
                 branch: b,

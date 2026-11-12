@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { loadProducts, Product } from '../../../lib/products';
-import { loadInvoices, updateInvoices, loadSales, loadStock, formatDate, syncOnline, deleteInvoiceRecord, currentBranch, adjustStockByItem } from '../../../lib/branchData';
+import { loadProducts, loadProductsCloud, Product } from '../../../lib/products';
+import { loadInvoices, loadInvoicesCloud, updateInvoices, loadSales, loadSalesCloud, loadNoInvoicesCloud, loadStock, loadStockCloud, formatDate, syncOnline, deleteInvoiceRecord, currentBranch, adjustStockByItem, searchInvoicesCloud, migrateBranchToSupabase } from '../../../lib/branchData';
 
 const BRANCH_NAMES: Record<string, string> = {
   anlurich: 'ANLURICH OPC',
@@ -43,34 +43,55 @@ export default function BranchDashboard() {
     const load = async () => {
       try {
         await syncOnline(branchId);
-        setSales(loadSales(branchId));
-        const prods = loadProducts();
-        const stock = loadStock(branchId);
-        setProducts(prods.map((p) => ({ ...p, quantity: stock[p.id]?.qty ?? 0, location: stock[p.id]?.location })));
-        setInvoices(loadInvoices(branchId));
+        await migrateBranchToSupabase(branchId).catch(() => {});
+        const [posSales, noInvSales] = await Promise.all([
+          loadSalesCloud(branchId).catch(() => []),
+          loadNoInvoicesCloud(branchId).catch(() => []),
+        ]);
+        const cloudSales = [...posSales, ...noInvSales];
+        setSales(cloudSales.length ? cloudSales : loadSales(branchId));
+        const prods = await loadProductsCloud().catch(() => loadProducts());
+        const stockRowsRes = await fetch(`/api/records?table=inventory&branch=${branchId}`, { cache: 'no-store' }).catch(() => null);
+        const stockRows = stockRowsRes && stockRowsRes.ok ? await stockRowsRes.json() : [];
+        const byId = new Map<string, number>();
+        const byPart = new Map<string, number>();
+        (Array.isArray(stockRows) ? stockRows : []).forEach((s: any) => {
+          if (s.productId) byId.set(String(s.productId), Number(s.qty || 0));
+          if (s.partNumber) byPart.set(String(s.partNumber).toLowerCase(), Number(s.qty || 0));
+        });
+        setProducts((Array.isArray(prods) ? prods : []).map((p) => ({
+          ...p,
+          quantity: byId.get(String(p.id)) ?? byPart.get(String(p.partNumber || '').toLowerCase()) ?? 0,
+        })));
+        const cloudInvoices = await loadInvoicesCloud(branchId).catch(() => []);
+        setInvoices(cloudInvoices.length ? cloudInvoices : loadInvoices(branchId));
       } catch {}
     };
     load();
   }, [branchId]);
 
+  const saleDay = (s: any) => String(s.date || s.dateTime || s.createdAt || '').slice(0, 10);
   const branchSales = sales.filter((s) => !s.branch || s.branch === branchId);
-  const dailyTotal = branchSales.filter((s) => s.date?.startsWith(today)).reduce((sum, s) => sum + (s.total || 0), 0);
-  const monthlyTotal = branchSales.filter((s) => s.date?.startsWith(month)).reduce((sum, s) => sum + (s.total || 0), 0);
-  const monthInvoices = invoices.filter((i) => String(i.invoiceDate || i.createdAt || '').startsWith(month));
-  const totalMonthlyPurchases = monthInvoices.reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
-  const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
-  const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+  const dailyTotal = branchSales.filter((s) => saleDay(s) === today).reduce((sum, s) => sum + Number(s.total || 0), 0);
+  const monthlyTotal = branchSales.filter((s) => saleDay(s).startsWith(month)).reduce((sum, s) => sum + Number(s.total || 0), 0);
+  const monthInvoices = invoices.filter((i) => String(i.invoiceDate || i.date || i.createdAt || '').startsWith(month));
+  const totalMonthlyPurchases = monthInvoices.reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
+  const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
+  const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
 
-  const searchInvoices = () => {
-    const qSupplier = searchSupplier.trim().toLowerCase();
-    const qInv = searchInvoiceNo.trim().toLowerCase();
-    const rows = invoices.filter((inv) => {
+  const searchInvoices = async () => {
+    const qSupplier = searchSupplier.trim();
+    const qInv = searchInvoiceNo.trim();
+    const cloud = await searchInvoicesCloud({ month: searchMonth, supplier: qSupplier, invoiceNo: qInv }, branchId).catch(() => []);
+    const source = cloud.length ? cloud : invoices;
+    const rows = source.filter((inv) => {
       const invDate = String(inv.invoiceDate || inv.createdAt || '');
       if (searchMonth && !invDate.startsWith(searchMonth)) return false;
-      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier)) return false;
-      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
+      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier.toLowerCase())) return false;
+      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv.toLowerCase())) return false;
       return true;
     }).sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || '')));
+    setInvoices(source);
     setInvoiceResults(rows);
     setMode('invoice');
     setSearched(true);
@@ -82,17 +103,19 @@ export default function BranchDashboard() {
   const searchProducts = () => {
     const qPart = searchPart.trim().toLowerCase();
     const qBrand = searchBrand.trim().toLowerCase();
-    const rows: any[] = [];
-    invoices.forEach((inv) => {
-      (inv.lines || []).forEach((line: any) => {
-        const pn = String(line.partNumber || line.partNo || '').toLowerCase();
-        const br = String(line.brand || '').toLowerCase();
-        if ((!qPart || pn.includes(qPart)) && (!qBrand || br.includes(qBrand))) {
-          rows.push({ ...line, supplierName: inv.supplierName, invoiceNumber: inv.invoiceNumber, invoiceDate: inv.invoiceDate, invoiceId: inv.id, netAmount: line.netPrice || line.price || line.costPrice });
-        }
-      });
-    });
-    setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
+    if (!qPart && !qBrand) return alert('Enter a part number or brand');
+    const rows = products.filter((p) => {
+      const pn = String(p.partNumber || '').toLowerCase();
+      const br = String(p.brand || '').toLowerCase();
+      const name = String(p.name || p.description || '').toLowerCase();
+      return (!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand));
+    }).map((p) => ({
+      partNumber: p.partNumber,
+      brand: p.brand,
+      name: p.name || p.description,
+      qty: p.quantity ?? 0,
+    }));
+    setInvoiceResults(rows.sort((a, b) => String(a.brand || '').localeCompare(String(b.brand || '')) || String(a.partNumber || '').localeCompare(String(b.partNumber || ''))));
     setMode('product');
     setSearched(true);
     setSearchPart('');
@@ -236,30 +259,22 @@ export default function BranchDashboard() {
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Invoice Date</th>
-                <th className="text-left p-2">Invoice Number</th>
-                <th className="text-left p-2">Supplier Name</th>
                 <th className="text-left p-2">Part Number</th>
                 <th className="text-left p-2">Brand</th>
-                <th className="text-center p-2">Delivered Qty</th>
-                <th className="text-right p-2">Net Amount</th>
-                <th className="p-2"></th>
+                <th className="text-left p-2">Product Name</th>
+                <th className="text-right p-2">Available Qty</th>
               </tr>
             </thead>
             <tbody>
               {invoiceResults.map((h, i) => (
                 <tr key={i} className="border-t">
-                  <td className="p-2">{formatDate(h.invoiceDate)}</td>
-                  <td className="p-2 font-medium">{h.invoiceNumber}</td>
-                  <td className="p-2">{h.supplierName}</td>
                   <td className="p-2">{h.partNumber || '—'}</td>
                   <td className="p-2">{h.brand || '—'}</td>
-                  <td className="p-2 text-center">{h.qty || h.quantity || '—'}</td>
-                  <td className="p-2 text-right">₱{Number(h.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="p-2 text-center"><button onClick={() => setViewing(invoices.find((inv) => inv.id === h.invoiceId))} className="text-blue-600 font-medium">View / Edit</button></td>
+                  <td className="p-2">{h.name || '—'}</td>
+                  <td className="p-2 text-right font-bold">{h.qty ?? 0}</td>
                 </tr>
               ))}
-              {invoiceResults.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">No purchase items found</td></tr>}
+              {invoiceResults.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-gray-400">No products found</td></tr>}
             </tbody>
           </table>
         </div>

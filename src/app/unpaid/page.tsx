@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { currentBranch, formatDate, loadSales, updateSales } from '../../lib/branchData';
+import { currentBranch, formatDate, loadSales, loadSalesCloud, updateSales } from '../../lib/branchData';
 
 export default function UnpaidPage() {
   const [search, setSearch] = useState('');
@@ -9,13 +9,15 @@ export default function UnpaidPage() {
   const [payCheck, setPayCheck] = useState({ no: '', bank: '', date: '' });
   const [tick, setTick] = useState(0);
   const [logo, setLogo] = useState('');
+  const [rows, setRows] = useState<any[]>([]);
   const branch = currentBranch() || 'unknown';
-  const unpaid = loadSales(branch).filter((s) => s.paymentMethod === 'Credit' && s.paid === false && (!search.trim() || String(s.customerName || '').toLowerCase().includes(search.trim().toLowerCase())));
+  const unpaid = rows.filter((s) => s.paymentMethod === 'Credit' && s.paid === false && (!search.trim() || String(s.customerName || '').toLowerCase().includes(search.trim().toLowerCase())));
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   useEffect(() => {
     setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
-  }, []);
+    loadSalesCloud(branch).then((sales) => setRows(sales.length ? sales : loadSales(branch))).catch(() => setRows(loadSales(branch)));
+  }, [tick]);
 
   const recordPayment = () => {
     if (!payCheck.no || !payCheck.bank || !payCheck.date) return alert('Enter check no., bank name, and check date');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { loadSales, loadInvoices, formatDate } from '../../lib/branchData';
+import { loadSales, loadSalesCloud, loadInvoices, loadInvoicesCloud, formatDate } from '../../lib/branchData';
 
 export default function PrintReportsPage() {
   const [report, setReport] = useState<'sales' | 'purchases' | null>(null);
@@ -19,7 +19,8 @@ export default function PrintReportsPage() {
   }, []);
 
   const runDailySales = () => {
-    const sales = loadSales().filter((s) => (s.date || s.dateTime || '').slice(0, 10) === salesDate);
+    const cloud = await loadSalesCloud().catch(() => []);
+    const sales = (cloud.length ? cloud : loadSales()).filter((s) => (s.date || s.dateTime || '').slice(0, 10) === salesDate);
     const list: any[] = [];
     let total = 0;
     sales.forEach((s) => {
@@ -46,7 +47,8 @@ export default function PrintReportsPage() {
 
   const runMonthlyPurchases = () => {
     const ym = `${year}-${month}`;
-    const invoices = loadInvoices().filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
+    const cloud = await loadInvoicesCloud().catch(() => []);
+    const invoices = (cloud.length ? cloud : loadInvoices()).filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
     const list = invoices.map((i) => {
       const due = i.dueDate ? new Date(i.dueDate) : null;
       let status = i.paid ? 'Paid' : 'Unpaid';
@@ -69,7 +71,8 @@ export default function PrintReportsPage() {
 
   const runSupplierInvoice = () => {
     const ym = `${year}-${month}`;
-    const invoices = loadInvoices().filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
+    const cloud = await loadInvoicesCloud().catch(() => []);
+    const invoices = (cloud.length ? cloud : loadInvoices()).filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
     const money = (n: number) => Number(n || 0);
     const mapped = invoices.map((i) => {
       const total = money(i.grandTotal);
