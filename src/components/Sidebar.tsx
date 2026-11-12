@@ -30,6 +30,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     title: 'Products',
     items: [
       { href: '/product-catalog', label: 'Product Catalog' },
+      { href: '/bosch-catalog', label: 'Bosch Catalog' },
       { href: '/products', label: 'Product Inventory' },
       { href: '/low-stock', label: 'Low Stock Report' },
       { href: '/stock-history', label: 'Stock History' },
@@ -83,15 +84,16 @@ function Icon({ label }: { label: string }) {
 }
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
-  if (['/products-menu', '/product-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
-  if (['/accounting', '/add-supplier', '/supplier-receipt', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
+  if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
+  if (['/products-menu', '/product-catalog', '/bosch-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
+  if (['/accounting', '/add-supplier', '/supplier-receipt', '/bosch-supplier', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [branchName, setBranchName] = useState('');
+  const [branchId, setBranchId] = useState('');
 
   useEffect(() => {
     const names: Record<string, string> = {
@@ -104,6 +106,7 @@ export default function Sidebar() {
       admin: 'ADMIN',
     };
     const id = localStorage.getItem('anlurich-branch') || '';
+    setBranchId(id);
     setBranchName(names[id] || '');
   }, []);
 
@@ -122,7 +125,10 @@ export default function Sidebar() {
   };
 
   const group = groupOf(pathname);
-  const menu = (group ? GROUPS[group].items : MAIN).filter((item) => item.href !== pathname);
+  const boschOk = ['anlurich', 'sezan', 'admin'].includes(branchId);
+  const menu = (group ? GROUPS[group].items : MAIN)
+    .filter((item) => item.href !== pathname)
+    .filter((item) => boschOk || !item.href.startsWith('/bosch'));
   const title = group ? GROUPS[group].title : 'MENU';
 
   return (

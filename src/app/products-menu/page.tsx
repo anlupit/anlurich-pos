@@ -7,6 +7,7 @@ export default function ProductsMenuPage() {
       title="Products"
       items={[
         { href: '/product-catalog', label: 'Product Catalog' },
+        { href: '/bosch-catalog', label: 'Bosch Catalog' },
         { href: '/products', label: 'Product Inventory' },
         { href: '/low-stock', label: 'Low Stock Report' },
         { href: '/stock-history', label: 'Stock History' },
