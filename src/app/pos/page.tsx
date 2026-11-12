@@ -506,9 +506,10 @@ export default function POSPage() {
         }).catch(() => {});
       }
 
-      // Avenders buys from nearby suppliers — do not add their cart to the shared catalog
+      // Avenders POS and No Invoice do not add to the shared catalog. All other branches do.
       if (String(branch || saleBranch).toLowerCase() !== 'avenders') {
-        upsertCatalogFromSale(valid).catch(() => {});
+        const result = await upsertCatalogFromSale(valid).catch(() => null);
+        if (result?.added) alert(`${result.added} new part${result.added === 1 ? '' : 's'} added to the product catalog.`);
       }
       if (!noInvoice && (customerName.trim() || customerPhone.trim())) {
         const earnedNow = Math.floor(grandTotal / 200);

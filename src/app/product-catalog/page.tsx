@@ -38,6 +38,30 @@ export default function ProductCatalogPage() {
         if (!hit || !hit.net) return p;
         return { ...p, costPrice: Math.round(hit.net * 100) / 100, description: hit.description || p.description, sellingPrice: Math.ceil((hit.net * 1.5) / 100) * 100 };
       }));
+      const known = new Set(base.map((p) => String(p.partNumber || '').trim().toLowerCase()));
+      const missing: Product[] = [];
+      invoices.forEach((inv: any) => {
+        (inv.lines || []).forEach((line: any) => {
+          const part = String(line.partNumber || '').trim();
+          if (!part || known.has(part.toLowerCase())) return;
+          known.add(part.toLowerCase());
+          const cost = Number(line.netPrice || line.price || 0);
+          missing.push({
+            id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+            partNumber: part,
+            brand: line.brand || undefined,
+            name: line.productName || line.description || part,
+            description: line.description || undefined,
+            costPrice: cost > 0 ? Math.round(cost * 100) / 100 : undefined,
+            sellingPrice: cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : undefined,
+          });
+        });
+      });
+      if (missing.length) {
+        const next = [...base, ...missing];
+        setProducts(next);
+        saveProducts(next).catch(() => {});
+      }
     }).catch(() => setProducts(loadProducts()));
   }, []);
 

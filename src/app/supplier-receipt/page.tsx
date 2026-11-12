@@ -196,9 +196,8 @@ export default function SupplierReceiptPage() {
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
     setSaving(false);
-    if (String(branch).toLowerCase() !== 'avenders') {
-      upsertCatalogFromInvoice(invoice.lines).catch(() => {});
-    }
+    const result = await upsertCatalogFromInvoice(invoice.lines).catch(() => null);
+    if (result?.added) alert(`${result.added} new part${result.added === 1 ? '' : 's'} added to the product catalog.`);
     valid.forEach((l) => {
       adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
     });
