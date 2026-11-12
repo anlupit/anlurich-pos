@@ -100,22 +100,32 @@ export default function BranchDashboard() {
     setSearchInvoiceNo('');
   };
 
-  const searchProducts = () => {
+  const searchProducts = async () => {
     const qPart = searchPart.trim().toLowerCase();
     const qBrand = searchBrand.trim().toLowerCase();
     if (!qPart && !qBrand) return alert('Enter a part number or brand');
-    const rows = products.filter((p) => {
-      const pn = String(p.partNumber || '').toLowerCase();
-      const br = String(p.brand || '').toLowerCase();
-      const name = String(p.name || p.description || '').toLowerCase();
-      return (!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand));
-    }).map((p) => ({
-      partNumber: p.partNumber,
-      brand: p.brand,
-      name: p.name || p.description,
-      qty: p.quantity ?? 0,
-    }));
-    setInvoiceResults(rows.sort((a, b) => String(a.brand || '').localeCompare(String(b.brand || '')) || String(a.partNumber || '').localeCompare(String(b.partNumber || ''))));
+    const cloud = await searchInvoicesCloud({ part: qPart, brand: qBrand }, branchId).catch(() => []);
+    const source = Array.isArray(cloud) ? cloud : [];
+    const rows: any[] = [];
+    source.forEach((inv) => {
+      if (inv.branch && inv.branch !== branchId) return;
+      (inv.lines || []).forEach((line: any) => {
+        const pn = String(line.partNumber || line.partNo || '').toLowerCase();
+        const br = String(line.brand || '').toLowerCase();
+        const name = String(line.productName || line.description || '').toLowerCase();
+        if ((!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand) || name.includes(qBrand))) {
+          rows.push({
+            ...line,
+            supplierName: inv.supplierName,
+            invoiceNumber: inv.invoiceNumber || inv.invoiceNo,
+            invoiceDate: inv.invoiceDate,
+            invoiceId: inv.id,
+            netAmount: line.netPrice || line.price || line.costPrice,
+          });
+        }
+      });
+    });
+    setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
     setMode('product');
     setSearched(true);
     setSearchPart('');
@@ -259,22 +269,30 @@ export default function BranchDashboard() {
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
+                <th className="text-left p-2">Invoice Date</th>
+                <th className="text-left p-2">Invoice No.</th>
+                <th className="text-left p-2">Supplier</th>
                 <th className="text-left p-2">Part Number</th>
                 <th className="text-left p-2">Brand</th>
-                <th className="text-left p-2">Product Name</th>
-                <th className="text-right p-2">Available Qty</th>
+                <th className="text-left p-2">Description</th>
+                <th className="text-center p-2">Qty</th>
+                <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {invoiceResults.map((h, i) => (
                 <tr key={i} className="border-t">
+                  <td className="p-2">{formatDate(h.invoiceDate)}</td>
+                  <td className="p-2">{h.invoiceNumber || '—'}</td>
+                  <td className="p-2">{h.supplierName || '—'}</td>
                   <td className="p-2">{h.partNumber || '—'}</td>
                   <td className="p-2">{h.brand || '—'}</td>
-                  <td className="p-2">{h.name || '—'}</td>
-                  <td className="p-2 text-right font-bold">{h.qty ?? 0}</td>
+                  <td className="p-2">{h.productName || h.description || '—'}</td>
+                  <td className="p-2 text-center">{h.qty || h.quantity || '—'}</td>
+                  <td className="p-2 text-center"><button onClick={() => setViewing(invoices.find((inv) => inv.id === h.invoiceId) || { ...h, id: h.invoiceId, lines: [h] })} className="text-blue-600 font-medium">View</button></td>
                 </tr>
               ))}
-              {invoiceResults.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-gray-400">No products found</td></tr>}
+              {invoiceResults.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">No supplier invoice items found</td></tr>}
             </tbody>
           </table>
         </div>

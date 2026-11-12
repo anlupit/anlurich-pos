@@ -206,17 +206,29 @@ export async function GET(req: Request) {
     const brand = url.searchParams.get('brand');
     const values: any[] = [];
     const where: string[] = [];
-    if (branch && table !== 'products') { values.push(branch); where.push(`branch = $${values.length}`); }
+    const branchTable = physical !== table;
+    if (branch && table !== 'products' && !branchTable) { values.push(branch); where.push(`branch = $${values.length}`); }
     if (month && table === 'supplier_invoices') { values.push(`${month}%`); where.push(`invoice_date LIKE $${values.length}`); }
     if (supplier && table === 'supplier_invoices') { values.push(`%${supplier}%`); where.push(`supplier_name ILIKE $${values.length}`); }
     if (invoiceNo && table === 'supplier_invoices') { values.push(`%${invoiceNo}%`); where.push(`invoice_number ILIKE $${values.length}`); }
     if (part && table === 'supplier_invoices') { values.push(`%${part}%`); where.push(`data::text ILIKE $${values.length}`); }
     if (brand && table === 'supplier_invoices') { values.push(`%${brand}%`); where.push(`data::text ILIKE $${values.length}`); }
-    const limit = table === 'products' || table === 'inventory' ? 5000 : 500;
+    const limit = table === 'products' || table === 'inventory' ? 5000 : 1000;
     const sql = `SELECT data FROM ${physical} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, values);
+    let extra: any[] = [];
+    if (branchTable && table === 'supplier_invoices') {
+      const legacyWhere = [`(branch = $1 OR data->>'branch' = $1)`];
+      const legacyValues: any[] = [branch];
+      if (part) { legacyValues.push(`%${part}%`); legacyWhere.push(`data::text ILIKE $${legacyValues.length}`); }
+      if (brand) { legacyValues.push(`%${brand}%`); legacyWhere.push(`data::text ILIKE $${legacyValues.length}`); }
+      if (invoiceNo) { legacyValues.push(`%${invoiceNo}%`); legacyWhere.push(`invoice_number ILIKE $${legacyValues.length}`); }
+      if (supplier) { legacyValues.push(`%${supplier}%`); legacyWhere.push(`supplier_name ILIKE $${legacyValues.length}`); }
+      const legacy = await pool.query(`SELECT data FROM supplier_invoices WHERE ${legacyWhere.join(' AND ')} ORDER BY updated_at DESC LIMIT 1000`, legacyValues).catch(() => ({ rows: [] }));
+      extra = legacy.rows.map((r: any) => r.data);
+    }
     const seen = new Set<string>();
-    return NextResponse.json(rows.map((r) => r.data).filter((row) => {
+    return NextResponse.json([...rows.map((r) => r.data), ...extra].filter((row) => {
       const id = String(row?.id || JSON.stringify(row));
       if (seen.has(id)) return false;
       seen.add(id);
