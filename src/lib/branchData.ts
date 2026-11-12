@@ -257,18 +257,13 @@ export async function adjustStockByItem(item: { partNumber?: string; barcode?: s
   const barcode = String(item.barcode || '').trim().toLowerCase();
   if (!part && !barcode) return { ok: false, reason: 'no-key' };
   let products: any[] = [];
+  const cloud = await loadProductsCloud().catch(() => []);
   try { products = JSON.parse(localStorage.getItem('anlurich-products') || '[]'); } catch { products = []; }
-  if (!products.length) {
-    try { products = await loadProductsCloud(); } catch { products = []; }
-  }
+  products = [...cloud, ...products];
   let product = products.find((p) =>
     (part && String(p.partNumber || '').trim().toLowerCase() === part) ||
     (barcode && String(p.barcode || '').trim().toLowerCase() === barcode)
   );
-  if (!product && part) {
-    const cloud = await loadProductsCloud().catch(() => []);
-    product = cloud.find((p) => String(p.partNumber || '').trim().toLowerCase() === part);
-  }
   if (!product) return { ok: false, reason: 'not-found', partNumber: item.partNumber };
   const current = getStockQty(product.id, b);
   const next = Math.max(0, current + delta);

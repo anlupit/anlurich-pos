@@ -59,11 +59,34 @@ export default function BranchDashboard() {
           if (s.productId) byId.set(String(s.productId), Number(s.qty || 0));
           if (s.partNumber) byPart.set(String(s.partNumber).toLowerCase(), Number(s.qty || 0));
         });
-        setProducts((Array.isArray(prods) ? prods : []).map((p) => ({
-          ...p,
-          quantity: byId.get(String(p.id)) ?? byPart.get(String(p.partNumber || '').toLowerCase()) ?? 0,
-        })));
-        const cloudInvoices = await loadInvoicesCloud(branchId).catch(() => []);
+        const invoicesForStock = await loadInvoicesCloud(branchId).catch(() => []);
+        const received = new Map<string, number>();
+        (Array.isArray(invoicesForStock) ? invoicesForStock : []).forEach((inv: any) => {
+          (inv.lines || []).forEach((line: any) => {
+            const part = String(line.partNumber || '').trim().toLowerCase();
+            if (!part) return;
+            received.set(part, (received.get(part) || 0) + Number(line.qty || line.quantity || 0));
+          });
+        });
+        const withQty = (Array.isArray(prods) ? prods : []).map((p) => {
+          const part = String(p.partNumber || '').toLowerCase();
+          const inventoryQty = byId.get(String(p.id)) ?? byPart.get(part);
+          const invoiceQty = received.get(part) || 0;
+          return { ...p, quantity: inventoryQty && inventoryQty > 0 ? inventoryQty : invoiceQty };
+        });
+        setProducts(withQty);
+        for (const p of withQty) {
+          const part = String(p.partNumber || '').toLowerCase();
+          const inventoryQty = byId.get(String(p.id)) ?? byPart.get(part) ?? 0;
+          if (inventoryQty <= 0 && (p.quantity || 0) > 0) {
+            fetch('/api/records', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ table: 'inventory', row: { id: `${branchId}-${p.id}`, branch: branchId, productId: p.id, partNumber: p.partNumber, qty: p.quantity } }),
+            }).catch(() => {});
+          }
+        }
+        const cloudInvoices = invoicesForStock;
         setInvoices(cloudInvoices.length ? cloudInvoices : loadInvoices(branchId));
       } catch {}
     };
