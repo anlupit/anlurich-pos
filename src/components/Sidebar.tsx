@@ -19,6 +19,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
       { href: '/no-invoice', label: 'No Invoice' },
       { href: '/search-invoice', label: 'Search Sales Invoice' },
       { href: '/customers', label: 'Customer List' },
+      { href: '/crm', label: 'CRM Salesman' },
       { href: '/quotation', label: 'Quotation' },
       { href: '/unpaid', label: 'Unpaid Invoice' },
       { href: '/download', label: 'Download' },
@@ -82,7 +83,7 @@ function Icon({ label }: { label: string }) {
 }
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/activity', '/online-sales'].includes(pathname)) return 'sales';
+  if (['/sales', '/pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
   if (['/products-menu', '/product-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
   if (['/accounting', '/add-supplier', '/supplier-receipt', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';

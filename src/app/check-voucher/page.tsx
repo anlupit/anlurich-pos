@@ -131,8 +131,12 @@ export default function CheckVoucherPage() {
 
   const saveEditedVoucher = () => {
     if (!editingVoucher) return;
-    saveSchedules(schedules.map((s) => s.id === editingVoucher.id ? editingVoucher : s));
+    const saved = editingVoucher;
     setEditingVoucher(null);
+    setQSupplier('');
+    setQYear('');
+    setQMonth('');
+    saveSchedules(schedules.map((s) => s.id === saved.id ? saved : s));
   };
 
   const deleteVoucher = () => {
@@ -169,37 +173,38 @@ export default function CheckVoucherPage() {
         <button onClick={() => setTab('search')} className={`px-4 py-2 rounded ${tab === 'search' ? 'bg-teal-600 text-white' : 'bg-gray-200'}`}>Search Voucher</button>
       </div>
       {tab === 'search' ? (
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex flex-wrap gap-2 mb-3">
-            <input className="border rounded px-3 py-2" placeholder="Supplier Name" value={qSupplier} onChange={(e) => setQSupplier(e.target.value)} />
-            <input className="border rounded px-3 py-2 w-24" placeholder="Year" value={qYear} onChange={(e) => setQYear(e.target.value)} />
-            <select className="border rounded px-3 py-2" value={qMonth} onChange={(e) => setQMonth(e.target.value)}>
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="flex flex-wrap gap-2 p-2">
+            <input className="border rounded px-2 py-1 text-sm" placeholder="Supplier Name" value={qSupplier} onChange={(e) => setQSupplier(e.target.value)} />
+            <input className="border rounded px-2 py-1 w-24 text-sm" placeholder="Year" value={qYear} onChange={(e) => setQYear(e.target.value)} />
+            <select className="border rounded px-2 py-1 text-sm" value={qMonth} onChange={(e) => setQMonth(e.target.value)}>
               <option value="">Month</option>
               {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-teal-500 text-white">
+          <table className="w-full" style={{ fontSize: '20px' }}>
+            <thead className="bg-green-600 text-white">
               <tr>
-                {isAdmin && <th className="text-left p-2">Branch</th>}
-                <th className="text-left p-2">Voucher No.</th>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Supplier</th>
-                <th className="text-right p-2">Amount</th>
+                {isAdmin && <th className="text-left px-2 py-1">Branch</th>}
+                <th className="text-left px-2 py-1">Voucher No.</th>
+                <th className="text-left px-2 py-1">Date</th>
+                <th className="text-left px-2 py-1">Supplier</th>
+                <th className="text-right px-2 py-1">Amount</th>
+                <th className="text-right px-2 py-1"></th>
               </tr>
             </thead>
             <tbody>
               {voucherResults.map((s) => (
                 <tr key={s.id} className="border-t">
-                  {isAdmin && <td className="p-2">{s.branch}</td>}
-                  <td className="p-2">{s.voucherNo}</td>
-                  <td className="p-2">{formatDate(s.date)}</td>
-                  <td className="p-2">{s.supplier}</td>
-                  <td className="p-2 text-right">{money(s.checkAmount)}</td>
-                  <td className="p-2 text-right"><button onClick={() => setEditingVoucher(s)} className="text-blue-700">View / Edit</button></td>
+                  {isAdmin && <td className="px-2 py-0.5">{s.branch}</td>}
+                  <td className="px-2 py-0.5">{s.voucherNo}</td>
+                  <td className="px-2 py-0.5">{formatDate(s.date)}</td>
+                  <td className="px-2 py-0.5">{s.supplier}</td>
+                  <td className="px-2 py-0.5 text-right">{money(s.checkAmount)}</td>
+                  <td className="px-2 py-0.5 text-right"><button onClick={() => setEditingVoucher(s)} className="text-blue-700">View / Edit</button></td>
                 </tr>
               ))}
-              {voucherResults.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No vouchers found</td></tr>}
+              {voucherResults.length === 0 && <tr><td colSpan={6} className="p-2 text-center text-gray-400">No vouchers found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -284,11 +289,33 @@ export default function CheckVoucherPage() {
             <input className="w-full border rounded px-3 py-2 mb-2" value={editingVoucher.supplier || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, supplier: e.target.value })} />
             <div className="text-sm mb-2">Date: {formatDate(editingVoucher.date)}</div>
             <div className="text-sm">Gross {money(editingVoucher.gross)} · EWT {money(editingVoucher.ewt)} · Check {money(editingVoucher.checkAmount)}</div>
-            <div className="text-sm mt-2">{(editingVoucher.invoices || []).map((inv: any) => inv.no || inv).join(', ')}</div>
+            <div className="font-semibold mt-3 mb-1">Supplier invoices — tick to remove</div>
+            {(editingVoucher.invoices || []).map((inv: any, i: number) => (
+              <label key={i} className="flex items-center gap-2 text-sm py-1 border-b">
+                <input type="checkbox" onChange={() => {
+                  const invoices = editingVoucher.invoices.filter((_: any, n: number) => n !== i);
+                  const gross = invoices.reduce((n: number, x: any) => n + Number(x.amount || 0), 0);
+                  setEditingVoucher({ ...editingVoucher, invoices, gross, checkAmount: gross - Number(editingVoucher.ewt || 0) });
+                }} />
+                <span className="flex-1">Invoice {inv.no || inv}</span>
+                <span>{formatDate(inv.date)}</span>
+                <span className="w-28 text-right">{money(inv.amount || 0)}</span>
+              </label>
+            ))}
+            <div className="font-semibold mt-3 mb-1">Checks — tick to remove</div>
+            {(editingVoucher.checks || []).map((c: any, i: number) => (
+              <div key={c.id || i} className="flex items-center gap-2 mb-2">
+                <input type="checkbox" onChange={() => setEditingVoucher({ ...editingVoucher, checks: editingVoucher.checks.filter((_: any, n: number) => n !== i) })} />
+                <input className="border rounded px-2 py-1 flex-1" placeholder="Bank" value={c.bank || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, checks: editingVoucher.checks.map((x: any, n: number) => n === i ? { ...x, bank: e.target.value } : x) })} />
+                <input className="border rounded px-2 py-1 w-28" placeholder="Check No." value={c.no || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, checks: editingVoucher.checks.map((x: any, n: number) => n === i ? { ...x, no: e.target.value } : x) })} />
+                <input type="number" className="border rounded px-2 py-1 w-28 text-right" placeholder="Amount" value={c.amount || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, checks: editingVoucher.checks.map((x: any, n: number) => n === i ? { ...x, amount: e.target.value } : x) })} />
+              </div>
+            ))}
+            {(editingVoucher.checks || []).length === 0 && <div className="text-sm text-gray-400">No check recorded</div>}
             <div className="flex gap-2 mt-4">
               <button onClick={() => setEditingVoucher(null)} className="flex-1 bg-gray-500 text-white py-2 rounded">Close</button>
               <button onClick={deleteVoucher} className="flex-1 bg-red-600 text-white py-2 rounded">Delete</button>
-              <button onClick={saveEditedVoucher} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
+              <button type="button" onClick={saveEditedVoucher} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
             </div>
           </div>
         </div>
