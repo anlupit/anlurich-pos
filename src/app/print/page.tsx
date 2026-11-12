@@ -18,7 +18,7 @@ export default function PrintReportsPage() {
     setLogo(localStorage.getItem('anlurich-index-logo') || '/logo.png');
   }, []);
 
-  const runDailySales = () => {
+  const runDailySales = async () => {
     const cloud = await loadSalesCloud().catch(() => []);
     const sales = (cloud.length ? cloud : loadSales()).filter((s) => (s.date || s.dateTime || '').slice(0, 10) === salesDate);
     const list: any[] = [];
@@ -45,7 +45,7 @@ export default function PrintReportsPage() {
     setPick(null);
   };
 
-  const runMonthlyPurchases = () => {
+  const runMonthlyPurchases = async () => {
     const ym = `${year}-${month}`;
     const cloud = await loadInvoicesCloud().catch(() => []);
     const invoices = (cloud.length ? cloud : loadInvoices()).filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
@@ -69,7 +69,7 @@ export default function PrintReportsPage() {
     setPick(null);
   };
 
-  const runSupplierInvoice = () => {
+  const runSupplierInvoice = async () => {
     const ym = `${year}-${month}`;
     const cloud = await loadInvoicesCloud().catch(() => []);
     const invoices = (cloud.length ? cloud : loadInvoices()).filter((i) => (i.invoiceDate || i.createdAt || '').slice(0, 7) === ym);
