@@ -313,9 +313,10 @@ export default function SearchPurchasePage() {
                 <input className="border rounded px-2 py-1 w-20 text-center" value={viewing.discount3 || 0} onChange={(e) => updateDiscount('discount3', parseFloat(e.target.value) || 0)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <input className="border rounded px-3 py-2" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
-              <input className="border rounded px-3 py-2" value={viewing.invoiceNumber || ''} onChange={(e) => setViewing({ ...viewing, invoiceNumber: e.target.value })} />
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <input className="border rounded px-3 py-2" placeholder="Supplier" value={viewing.supplierName || ''} onChange={(e) => setViewing({ ...viewing, supplierName: e.target.value })} />
+              <input className="border rounded px-3 py-2" placeholder="Invoice No." value={viewing.invoiceNumber || ''} onChange={(e) => setViewing({ ...viewing, invoiceNumber: e.target.value })} />
+              <input type="date" className="border rounded px-3 py-2" value={String(viewing.invoiceDate || '').slice(0, 10)} onChange={(e) => setViewing({ ...viewing, invoiceDate: e.target.value })} />
             </div>
             <table className="w-full text-sm mb-3">
               <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Gross Price</th><th className="text-right p-1">Price</th></tr></thead>

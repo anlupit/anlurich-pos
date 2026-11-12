@@ -276,24 +276,24 @@ export default function SupplierReceiptPage() {
         <table className="w-full text-xs table-fixed">
           <thead className="bg-teal-500 text-white">
             <tr>
-              <th className="p-1 text-center" style={{ width: '11%' }}>Barcode</th>
-              <th className="p-1 text-center" style={{ width: '35ch' }}>Brand</th>
-              <th className="p-1 text-center" style={{ width: '11%' }}>Part Number</th>
-              <th className="p-1 text-center" style={{ width: '14%' }}>Product Name</th>
-              <th className="p-1 text-center" style={{ width: '22%' }}>Description</th>
-              <th className="p-1 text-center" style={{ width: '5%' }}>Qty</th>
-              <th className="p-1 text-center" style={{ width: '6%' }}>Unit</th>
-              <th className="p-1 text-center" style={{ width: '8%' }}>Gross</th>
-              <th className="p-1 text-center" style={{ width: '7%' }}>Net</th>
-              <th className="p-1 text-center" style={{ width: '7%' }}>Total</th>
-              <th className="p-1" style={{ width: '4%' }}></th>
+              <th className="p-1 text-center" style={{ width: '20ch' }}>Barcode</th>
+              <th className="p-1 text-center" style={{ width: '20ch' }}>Part Number</th>
+              <th className="p-1 text-center" style={{ width: '20ch' }}>Product Name</th>
+              <th className="p-1 text-center" style={{ width: '20ch' }}>Brand</th>
+              <th className="p-1 text-center" style={{ width: '60ch' }}>Description</th>
+              <th className="p-1 text-center" style={{ width: '6ch' }}>Qty</th>
+              <th className="p-1 text-center" style={{ width: '6ch' }}>Unit</th>
+              <th className="p-1 text-center" style={{ width: '12ch' }}>Gross Price</th>
+              <th className="p-1 text-center" style={{ width: '12ch' }}>Net Price</th>
+              <th className="p-1 text-center" style={{ width: '12ch' }}>Total Price</th>
+              <th className="p-1" style={{ width: '4ch' }}></th>
             </tr>
           </thead>
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1 relative">
-                  <input className="w-full border rounded px-1 py-1" value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  <input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, e.target.value); }} />
                   {lineSuggest?.id === line.id && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -306,9 +306,8 @@ export default function SupplierReceiptPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '35ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1 relative">
-                  <input className="w-full border rounded px-1 py-1" value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  <input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, e.target.value); }} />
                   {lineSuggest?.id === line.id && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -321,8 +320,9 @@ export default function SupplierReceiptPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
-                <td className="p-1"><input className="w-full border rounded px-1 py-1" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '60ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={1} className="w-full border rounded px-1 py-1 text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
