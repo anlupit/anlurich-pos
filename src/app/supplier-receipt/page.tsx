@@ -107,6 +107,9 @@ export default function SupplierReceiptPage() {
     } : l));
     setLineSuggest(null);
   };
+  const supplierChoices = (Array.isArray(suppliers) ? suppliers : [])
+    .filter((s) => s && s.name && (!supplierName.trim() || String(s.name).toLowerCase().includes(supplierName.trim().toLowerCase())))
+    .slice(0, 10);
   const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
