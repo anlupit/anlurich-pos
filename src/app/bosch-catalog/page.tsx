@@ -9,19 +9,16 @@ const KEY = 'anlurich-bosch-products';
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function loadTools(): Promise<Tool[]> {
-  try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
-    if (!res.ok) return JSON.parse(localStorage.getItem(KEY) || '[]');
-    const rows: { key: string; value: string }[] = await res.json();
-    const row = rows.find((r) => r.key === KEY);
-    if (row?.value) { localStorage.setItem(KEY, row.value); return JSON.parse(row.value); }
-  } catch {}
-  return JSON.parse(localStorage.getItem(KEY) || '[]');
+  const res = await fetch('/api/records?table=bosch_products', { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
-async function saveTools(rows: Tool[]) {
-  const text = JSON.stringify(rows);
-  localStorage.setItem(KEY, text);
-  await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: KEY, value: text }) });
+async function saveTool(row: Tool) {
+  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row }) });
+}
+async function deleteTool(id: string) {
+  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', deleteId: id }) });
 }
 
 export default function BoschCatalogPage() {
@@ -56,7 +53,7 @@ export default function BoschCatalogPage() {
     };
     const next = editing ? rows.map((r) => r.id === editing ? item : r) : [...rows, item];
     setRows(next);
-    await saveTools(next);
+    await saveTool(item);
     setForm({ partNumber: '', name: '', category: '', description: '', costPrice: '', sellingPrice: '', qty: '0' });
     setEditing(null);
   };
@@ -65,14 +62,14 @@ export default function BoschCatalogPage() {
     if (!confirm('Delete this Bosch item?')) return;
     const next = rows.filter((r) => r.id !== id);
     setRows(next);
-    await saveTools(next);
+    await deleteTool(id);
   };
 
   const shown = rows.filter((r) => `${r.partNumber} ${r.name} ${r.category} ${r.description}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name) || a.partNumber.localeCompare(b.partNumber));
 
   return (
-    <div className="p-4">
+    <div className="p-4 min-h-screen" style={{ background: 'linear-gradient(135deg, #dbeafe, #e9d5ff, #d1fae5)' }}>
       <h1 className="text-2xl font-bold text-red-700">Bosch Catalog</h1>
       <p className="text-sm text-gray-500 mb-4">Shared by Anlurich and Baliwag Auto Parts. Not mixed with auto parts.</p>
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">

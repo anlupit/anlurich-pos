@@ -16,6 +16,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     title: 'Sales',
     items: [
       { href: '/pos', label: 'POS System' },
+      { href: '/bosch-pos', label: 'Bosch POS' },
       { href: '/no-invoice', label: 'No Invoice' },
       { href: '/search-invoice', label: 'Search Sales Invoice' },
       { href: '/customers', label: 'Customer List' },
@@ -57,6 +58,7 @@ const ICONS: Record<string, string> = {
   Accounting: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5',
   'Stock Request': 'M7 3h10v18H7zM9 7h6M9 11h6M9 15h4',
   'POS System': 'M4 6h16v10H4zM8 20h8',
+  'Bosch POS': 'M4 6h16v10H4zM8 20h8',
   'No Invoice': 'M6 3h8l4 4v14H6zM10 11h6M10 15h4',
   'Search Sales Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
   Quotation: 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h4',

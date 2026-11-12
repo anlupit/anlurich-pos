@@ -11,19 +11,13 @@ const KEY = 'anlurich-bosch-products';
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function loadTools(): Promise<Tool[]> {
-  try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
-    if (!res.ok) return JSON.parse(localStorage.getItem(KEY) || '[]');
-    const rows: { key: string; value: string }[] = await res.json();
-    const row = rows.find((r) => r.key === KEY);
-    if (row?.value) { localStorage.setItem(KEY, row.value); return JSON.parse(row.value); }
-  } catch {}
-  return JSON.parse(localStorage.getItem(KEY) || '[]');
+  const res = await fetch('/api/records?table=bosch_products', { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
-async function saveTools(rows: Tool[]) {
-  const text = JSON.stringify(rows);
-  localStorage.setItem(KEY, text);
-  await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: KEY, value: text }) });
+async function saveTool(row: Tool) {
+  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row }) });
 }
 
 export default function BoschPOSPage() {
@@ -86,6 +80,7 @@ export default function BoschPOSPage() {
     };
     try {
       await saveSale(sale);
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_sales', row: sale }) });
     } catch {
       setSaving(false);
       return alert('Sale was not saved. Check the cloud connection.');
@@ -95,7 +90,7 @@ export default function BoschPOSPage() {
       return sold ? { ...p, qty: Math.max(0, Number(p.qty || 0) - sold.qty) } : p;
     });
     setCatalog(next);
-    await saveTools(next).catch(() => {});
+    await Promise.all(next.filter((p) => lines.some((l) => l.partNumber === p.partNumber)).map((p) => saveTool(p))).catch(() => {});
     setLines([]);
     setCustomer('');
     setPhone('');

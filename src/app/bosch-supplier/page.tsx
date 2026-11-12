@@ -6,24 +6,25 @@ import { currentBranch } from '../../lib/branchData';
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
 type Line = { id: string; partNumber: string; name: string; qty: number; price: number };
 
-const TOOLS = 'anlurich-bosch-products';
-const INVOICES = 'anlurich-bosch-invoices';
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-async function loadKey(key: string) {
-  try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
-    if (!res.ok) return JSON.parse(localStorage.getItem(key) || '[]');
-    const rows: { key: string; value: string }[] = await res.json();
-    const row = rows.find((r) => r.key === key);
-    if (row?.value) { localStorage.setItem(key, row.value); return JSON.parse(row.value); }
-  } catch {}
-  return JSON.parse(localStorage.getItem(key) || '[]');
+async function loadTools(): Promise<Tool[]> {
+  const res = await fetch('/api/records?table=bosch_products', { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
-async function saveKey(key: string, value: unknown) {
-  const text = JSON.stringify(value);
-  localStorage.setItem(key, text);
-  await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value: text }) });
+async function saveTool(row: Tool) {
+  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row }) });
+}
+async function loadInvoices() {
+  const res = await fetch('/api/records?table=bosch_invoices', { cache: 'no-store' });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
+}
+async function saveBoschInvoice(row: any) {
+  await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_invoices', row }) });
 }
 
 export default function BoschSupplierInvoicePage() {
@@ -44,7 +45,7 @@ export default function BoschSupplierInvoicePage() {
       return;
     }
     setAllowed(true);
-    loadKey(TOOLS).then(setCatalog);
+    loadTools().then(setCatalog);
   }, []);
 
   const suggestFor = (id: string, text: string) => {
@@ -68,13 +69,13 @@ export default function BoschSupplierInvoicePage() {
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (!valid.length) return alert('Add at least one item');
     setSaving(true);
-    const invoices = await loadKey(INVOICES);
+    const invoices = await loadInvoices();
     if (invoices.some((i: any) => String(i.supplier).toLowerCase() === supplier.trim().toLowerCase() && String(i.invoiceNo).toLowerCase() === invoiceNo.trim().toLowerCase())) {
       setSaving(false);
       return alert('This Bosch invoice is already recorded.');
     }
     const invoice = { id: Date.now().toString(), branch: 'anlurich', supplier: supplier.trim(), invoiceNo: invoiceNo.trim(), date, lines: valid, total, createdAt: new Date().toISOString() };
-    await saveKey(INVOICES, [invoice, ...invoices]);
+    await saveBoschInvoice(invoice);
     const tools = [...catalog];
     valid.forEach((l) => {
       const found = tools.find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase());
@@ -87,7 +88,7 @@ export default function BoschSupplierInvoicePage() {
       }
     });
     setCatalog(tools);
-    await saveKey(TOOLS, tools);
+    await Promise.all(tools.map((t) => saveTool(t)));
     setSupplier('');
     setInvoiceNo('');
     setDate(new Date().toISOString().slice(0, 10));

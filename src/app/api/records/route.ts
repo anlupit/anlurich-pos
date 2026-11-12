@@ -104,6 +104,36 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS customer_points_branch_idx ON customer_points (branch);
+    CREATE TABLE IF NOT EXISTS bosch_products (
+      id TEXT PRIMARY KEY,
+      part_number TEXT,
+      name TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS bosch_products_part_idx ON bosch_products (part_number);
+    CREATE TABLE IF NOT EXISTS bosch_invoices (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      invoice_number TEXT,
+      supplier_name TEXT,
+      invoice_date TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS bosch_invoices_supplier_idx ON bosch_invoices (supplier_name);
+    CREATE INDEX IF NOT EXISTS bosch_invoices_date_idx ON bosch_invoices (invoice_date);
+    CREATE TABLE IF NOT EXISTS bosch_sales (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      invoice_number TEXT,
+      customer_name TEXT,
+      sale_date TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS bosch_sales_branch_idx ON bosch_sales (branch);
+    CREATE INDEX IF NOT EXISTS bosch_sales_date_idx ON bosch_sales (sale_date);
   `);
   for (const b of BRANCHES) {
     await pool.query(`
@@ -143,7 +173,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -196,7 +226,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {
@@ -326,6 +356,27 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,$4,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, name=EXCLUDED.name, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.name || '', JSON.stringify(data)]
+    );
+  } else if (table === 'bosch_products') {
+    await pool.query(
+      `INSERT INTO bosch_products (id, part_number, name, data, updated_at)
+       VALUES ($1,$2,$3,$4,NOW())
+       ON CONFLICT (id) DO UPDATE SET part_number=EXCLUDED.part_number, name=EXCLUDED.name, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.partNumber || '', data.name || '', JSON.stringify(data)]
+    );
+  } else if (table === 'bosch_invoices') {
+    await pool.query(
+      `INSERT INTO bosch_invoices (id, branch, invoice_number, supplier_name, invoice_date, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, supplier_name=EXCLUDED.supplier_name, invoice_date=EXCLUDED.invoice_date, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.invoiceNo || data.invoiceNumber || '', data.supplier || data.supplierName || '', data.date || data.invoiceDate || '', JSON.stringify(data)]
+    );
+  } else if (table === 'bosch_sales') {
+    await pool.query(
+      `INSERT INTO bosch_sales (id, branch, invoice_number, customer_name, sale_date, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, invoice_number=EXCLUDED.invoice_number, customer_name=EXCLUDED.customer_name, sale_date=EXCLUDED.sale_date, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.invoiceNo || '', data.customerName || '', data.date || '', JSON.stringify(data)]
     );
   } else {
     await pool.query(
