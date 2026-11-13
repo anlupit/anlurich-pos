@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { currentBranch } from '../../lib/branchData';
 
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
-type Line = { id: string; partNumber: string; name: string; qty: number; price: number };
+type Line = { id: string; barcode: string; model: string; partNumber: string; segment: string; power: string; capacity: string; qty: number; price: number };
+const SEGMENTS = ['Accessories', 'Blue', 'COC', 'Garden', 'Measuring', 'Parts and Handtools'];
+const emptyLine = (): Line => ({ id: Date.now().toString(), barcode: '', model: '', partNumber: '', segment: '', power: '', capacity: '', qty: 1, price: 0 });
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -35,7 +37,7 @@ export default function BoschSupplierInvoicePage() {
   const [supplier, setSupplier] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [lines, setLines] = useState<Line[]>([{ id: '1', partNumber: '', name: '', qty: 1, price: 0 }]);
+  const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [saving, setSaving] = useState(false);
   const [suggest, setSuggest] = useState<{ id: string; matches: Tool[] } | null>(null);
 
@@ -58,7 +60,7 @@ export default function BoschSupplierInvoicePage() {
   };
 
   const pick = (id: string, p: Tool) => {
-    setLines((prev) => prev.map((l) => l.id === id ? { ...l, partNumber: p.partNumber, name: p.name, price: p.costPrice || 0 } : l));
+    setLines((prev) => prev.map((l) => l.id === id ? { ...l, partNumber: p.partNumber, model: p.name, price: p.costPrice || 0 } : l));
     setSuggest(null);
   };
 
@@ -86,10 +88,14 @@ export default function BoschSupplierInvoicePage() {
       if (found) {
         found.qty = Number(found.qty || 0) + Number(l.qty || 0);
         if (l.price > 0) found.costPrice = l.price;
-        if (l.name) found.name = l.name;
+        if (l.model) found.name = l.model;
+        if (l.barcode) (found as any).barcode = l.barcode;
+        if (l.segment) found.category = l.segment;
+        (found as any).power = l.power;
+        (found as any).capacity = l.capacity;
         added.push(`${found.partNumber}: +${l.qty} = ${found.qty}`);
       } else {
-        const item = { id: Date.now().toString() + l.partNumber, partNumber: l.partNumber, name: l.name || l.partNumber, category: '', description: l.name || '', costPrice: l.price, sellingPrice: l.price ? Math.ceil((l.price * 1.5) / 100) * 100 : 0, qty: Number(l.qty || 0) };
+        const item = { id: Date.now().toString() + l.partNumber, partNumber: l.partNumber, name: l.model || l.partNumber, category: l.segment || '', description: l.model || '', costPrice: l.price, sellingPrice: l.price ? Math.ceil((l.price * 1.5) / 100) * 100 : 0, qty: Number(l.qty || 0), barcode: l.barcode, power: l.power, capacity: l.capacity };
         tools.push(item);
         added.push(`${item.partNumber}: +${item.qty} = ${item.qty}`);
       }
@@ -107,7 +113,7 @@ export default function BoschSupplierInvoicePage() {
     setSupplier('');
     setInvoiceNo('');
     setDate(new Date().toISOString().slice(0, 10));
-    setLines([{ id: Date.now().toString(), partNumber: '', name: '', qty: 1, price: 0 }]);
+    setLines([emptyLine()]);
     setSaving(false);
     alert(`Bosch supplier invoice saved.\nCatalog stock updated:\n${added.join('\n')}`);
   };
@@ -115,7 +121,11 @@ export default function BoschSupplierInvoicePage() {
   if (!allowed) return null;
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold text-red-700">Bosch Supplier Invoice</h1>
+      <div className="text-center mb-4">
+        <img src="/logo.png" alt="Anlurich" className="h-16 mx-auto object-contain" />
+        <div className="font-bold text-lg">Auto Parts Inventory</div>
+        <div className="text-2xl font-black mt-1" style={{ color: '#002366' }}>Bosch Supplier Invoice</div>
+      </div>
       <p className="text-sm text-gray-500 mb-4">Anlurich only. Adds stock to the Bosch catalog.</p>
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2">
         <input className="border rounded px-3 py-2" placeholder="Supplier name" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
@@ -124,30 +134,53 @@ export default function BoschSupplierInvoicePage() {
       </div>
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
         <table className="w-full text-sm">
-          <thead className="bg-red-700 text-white"><tr><th className="p-2 text-left">Part Number</th><th className="p-2 text-left">Name</th><th className="p-2 text-center">Qty</th><th className="p-2 text-right">Cost</th><th></th></tr></thead>
+          <thead className="text-white" style={{ background: '#002366' }}>
+            <tr>
+              <th className="p-2 text-left">Barcode</th>
+              <th className="p-2 text-left">Model</th>
+              <th className="p-2 text-left">Part Number</th>
+              <th className="p-2 text-left">Segment</th>
+              <th className="p-2 text-left">Power</th>
+              <th className="p-2 text-left">Capacity</th>
+              <th className="p-2 text-center">Qty</th>
+              <th className="p-2 text-right">Price</th>
+              <th className="p-2 text-right">Total</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             {lines.map((l) => (
               <tr key={l.id} className="border-t">
-                <td className="p-2 relative">
-                  <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={l.partNumber} onChange={(e) => { setLines(lines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x)); suggestFor(l.id, e.target.value); }} />
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={l.barcode} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={l.model} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, model: e.target.value } : x))} /></td>
+                <td className="p-1 relative">
+                  <input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={l.partNumber} onChange={(e) => { setLines(lines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x)); suggestFor(l.id, e.target.value); }} />
                   {suggest?.id === l.id && (
                     <div className="absolute z-20 bg-white border rounded shadow max-h-40 overflow-auto">
-                      {suggest.matches.map((p) => <button type="button" key={p.id} className="block w-full text-left px-2 py-1 hover:bg-red-50" onMouseDown={() => pick(l.id, p)}>{p.partNumber} · {p.name}</button>)}
+                      {suggest.matches.map((p) => <button type="button" key={p.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => pick(l.id, p)}>{p.partNumber} · {p.name}</button>)}
                     </div>
                   )}
                 </td>
-                <td className="p-2"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={l.name} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, name: e.target.value } : x))} /></td>
-                <td className="p-2 text-center"><input type="number" min={1} className="w-16 border rounded text-center" value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value) || 1 } : x))} /></td>
-                <td className="p-2 text-right"><input type="number" className="w-28 border rounded text-right" value={l.price || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x))} /></td>
-                <td className="p-2 text-right"><button onClick={() => setLines(lines.length === 1 ? lines : lines.filter((x) => x.id !== l.id))} className="text-red-600">X</button></td>
+                <td className="p-1">
+                  <select className="border rounded px-1 py-1" style={{ width: '18ch' }} value={l.segment} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, segment: e.target.value } : x))}>
+                    <option value="">—</option>
+                    {SEGMENTS.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '10ch' }} value={l.power} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, power: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '12ch' }} value={l.capacity} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, capacity: e.target.value } : x))} /></td>
+                <td className="p-1 text-center"><input type="number" min={1} className="border rounded text-center" style={{ width: '6ch' }} value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value) || 1 } : x))} /></td>
+                <td className="p-1 text-right"><input type="number" className="border rounded text-right" style={{ width: '10ch' }} value={l.price || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x))} /></td>
+                <td className="p-1 text-right">{money(l.qty * l.price)}</td>
+                <td className="p-1 text-right"><button onClick={() => setLines(lines.length === 1 ? [emptyLine()] : lines.filter((x) => x.id !== l.id))} className="text-red-600">X</button></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <button onClick={() => setLines([...lines, { id: Date.now().toString(), partNumber: '', name: '', qty: 1, price: 0 }])} className="m-2 bg-gray-700 text-white px-3 py-1 rounded">+ Add Line</button>
+        <button onClick={() => setLines([...lines, emptyLine()])} className="m-2 bg-gray-700 text-white px-3 py-1 rounded">+ Add Line</button>
       </div>
       <div className="text-xl font-black mb-3">Total {money(total)}</div>
-      <button onClick={save} disabled={saving} className="bg-red-700 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-60">{saving ? 'SAVING...' : 'SAVE BOSCH INVOICE'}</button>
+      <button onClick={save} disabled={saving} className="text-white px-6 py-3 rounded-lg font-bold disabled:opacity-60" style={{ background: '#002366' }}>{saving ? 'SAVING...' : 'SAVE BOSCH INVOICE'}</button>
     </div>
   );
 }

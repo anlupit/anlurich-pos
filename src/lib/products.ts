@@ -40,15 +40,32 @@ export function loadProducts(): Product[] {
   }
 }
 
+export async function saveProductCloud(product: Product) {
+  const { quantity, ...clean } = product;
+  const res = await fetch('/api/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: 'products', row: { ...clean, id: clean.id || clean.partNumber } }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the product');
+  const local = loadProducts();
+  const next = local.some((p) => p.id === clean.id) ? local.map((p) => p.id === clean.id ? clean : p) : [...local, clean];
+  localStorage.setItem('anlurich-products', JSON.stringify(next));
+  return clean;
+}
+
 export async function saveProducts(products: Product[]) {
   const clean = products.map(({ quantity, ...p }) => p);
   localStorage.setItem('anlurich-products', JSON.stringify(clean));
   for (const p of clean) {
-    await fetch('/api/records', {
+    const res = await fetch('/api/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ table: 'products', row: p }),
     });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the product');
   }
   return true;
 }

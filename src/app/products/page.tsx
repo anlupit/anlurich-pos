@@ -88,7 +88,7 @@ export default function ProductsPage() {
     }
 
     setProducts(updated);
-    try { await saveProducts(updated); } catch { return alert('Product photo was NOT saved. Supabase is not connected.'); }
+    try { await saveProductCloud(productData); alert('Product saved to Supabase. All branches can see it.'); } catch { return alert('Product was NOT saved to Supabase.'); }
     // Save qty/location to this branch's private inventory
     if (productData.quantity != null || productData.location) {
       setStockQty(productData.id, productData.quantity ?? 0, productData.location);

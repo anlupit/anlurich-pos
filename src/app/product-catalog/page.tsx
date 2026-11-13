@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { loadProducts, saveProducts, deleteProduct, loadProductsCloud, Product } from '../../lib/products';
+import { loadProducts, saveProducts, saveProductCloud, deleteProduct, loadProductsCloud, Product } from '../../lib/products';
 import { searchInvoicesCloud } from '../../lib/branchData';
 
 export default function ProductCatalogPage() {
@@ -23,7 +23,13 @@ export default function ProductCatalogPage() {
 
   useEffect(() => {
     Promise.all([loadProductsCloud(), searchInvoicesCloud({})]).then(([rows, invoices]) => {
-      const base = rows.length ? rows : loadProducts();
+      const local = loadProducts();
+      const byPart = new Map<string, Product>();
+      [...(Array.isArray(rows) ? rows : []), ...local].forEach((p) => {
+        const key = String(p.partNumber || p.id || '').trim().toLowerCase();
+        if (key) byPart.set(key, p);
+      });
+      const base = Array.from(byPart.values());
       const latest = new Map<string, { date: string; net: number; description?: string }>();
       invoices.forEach((inv: any) => {
         const date = String(inv.invoiceDate || inv.createdAt || '');
@@ -148,9 +154,11 @@ export default function ProductCatalogPage() {
     setForm(emptyForm);
     setEditingId(null);
     try {
-      await saveProducts(updated);
+      await saveProductCloud(data);
+      await reload();
+      alert('Product saved to Supabase. All branches can see it.');
     } catch {
-      alert('Saved on this computer only. Supabase did not save. Check DATABASE_URL.');
+      alert('Saved on this computer only. Supabase did not save, so other branches will not see it.');
     }
   };
 
