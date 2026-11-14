@@ -148,13 +148,16 @@ export default function EmployeeSalaryPage() {
     const fullDays = Number(days[e.id] ?? (e.payout === 'weekly' ? 6 : 13));
     const halfDays = Number(x.halfDays || 0);
     const worked = fullDays + halfDays * 0.5;
-    const hourly = Number(e.dailyRate || 0) / 8;
+    const rate = Number(e.dailyRate || 0);
+    const hourly = (e.rateType === 'monthly' ? rate / 26 : rate) / 8;
+    const dayRate = e.rateType === 'monthly' ? rate / 26 : rate;
+    const base = e.rateType === 'monthly' ? (e.payout === 'weekly' ? rate / 4 : rate / 2) : dayRate * worked;
     const undertimePay = hourly * Number(x.undertime || 0);
     const overtimePay = hourly * 1.25 * Number(x.overtime || 0);
-    const restDayPay = Number(e.dailyRate || 0) * 0.3 * Number(x.restDays || 0);
-    const regularHolidayPay = Number(e.dailyRate || 0) * 0.3 * Number(x.regularHoliday || 0);
-    const specialHolidayPay = Number(e.dailyRate || 0) * Number(x.specialHoliday || 0);
-    const gross = (e.dailyRate + e.dailyAllowance) * worked + Number(x.incentive || 0) + overtimePay + restDayPay + regularHolidayPay + specialHolidayPay;
+    const restDayPay = dayRate * 0.3 * Number(x.restDays || 0);
+    const regularHolidayPay = dayRate * 0.3 * Number(x.regularHoliday || 0);
+    const specialHolidayPay = dayRate * Number(x.specialHoliday || 0);
+    const gross = base + Number(e.dailyAllowance || 0) * worked + Number(x.incentive || 0) + overtimePay + restDayPay + regularHolidayPay + specialHolidayPay;
     const advance = Math.min(Number(advances[e.id] || 0), Number(e.cashAdvanceTotal || advances[e.id] || 0) || Number(advances[e.id] || 0));
     const totalAdvance = Number(e.cashAdvanceTotal || advance);
     const remaining = Math.max(0, totalAdvance - advance);
@@ -204,16 +207,26 @@ export default function EmployeeSalaryPage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
         <input className="border rounded px-2 py-1" placeholder="Employee name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className="border rounded px-2 py-1" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-        <input type="number" className="border rounded px-2 py-1" placeholder="Daily Rate" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
+        <select className="border rounded px-2 py-1" value={form.rateType || 'daily'} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
+          <option value="daily">Daily wager</option>
+          <option value="monthly">Monthly rate</option>
+        </select>
+        <input type="number" className="border rounded px-2 py-1" placeholder={form.rateType === 'monthly' ? 'Monthly Rate' : 'Daily Rate'} value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
         <input type="number" className="border rounded px-2 py-1" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
         <div><label className="text-xs">Started</label><input type="date" className="border rounded px-2 py-1 w-full" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} /></div>
         <div><label className="text-xs">Birthdate</label><input type="date" className="border rounded px-2 py-1 w-full" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} /></div>
-        <input className="border rounded px-2 py-1" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
-        <input type="number" className="border rounded px-2 py-1" placeholder="SSS deduction" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
-        <input className="border rounded px-2 py-1" placeholder="PhilHealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
-        <input type="number" className="border rounded px-2 py-1" placeholder="PhilHealth deduction" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
-        <input className="border rounded px-2 py-1" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
-        <input type="number" className="border rounded px-2 py-1" placeholder="PAGIBIG deduction" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
+        <div className="grid grid-cols-2 gap-2">
+          <input className="border rounded px-2 py-1" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
+          <input type="number" className="border rounded px-2 py-1" placeholder="SSS deduction" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input className="border rounded px-2 py-1" placeholder="PhilHealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
+          <input type="number" className="border rounded px-2 py-1" placeholder="PhilHealth deduction" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input className="border rounded px-2 py-1" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
+          <input type="number" className="border rounded px-2 py-1" placeholder="PAGIBIG deduction" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
+        </div>
         <input type="number" className="border rounded px-2 py-1" placeholder="Cash Advance Total" value={form.cashAdvanceTotal} onChange={(e) => setForm({ ...form, cashAdvanceTotal: e.target.value })} />
         <select className="border rounded px-2 py-1" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
           <option value="weekly">Weekly — Monday to Saturday</option>
