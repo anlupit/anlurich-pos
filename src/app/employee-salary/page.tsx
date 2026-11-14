@@ -83,7 +83,7 @@ export default function EmployeeSalaryPage() {
     if (!unlocked || !branch) return;
     fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((rows) => setEmployees(Array.isArray(rows) ? rows : []))
+      .then((rows) => setEmployees(Array.isArray(rows) ? rows.filter((r) => r.name && !String(r.id || '').startsWith('payroll-')) : []))
       .catch(() => {});
   }, [unlocked, branch]);
 
