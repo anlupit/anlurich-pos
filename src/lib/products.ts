@@ -41,17 +41,20 @@ export function loadProducts(): Product[] {
 }
 
 export async function saveProductCloud(product: Product) {
-  const { quantity, ...clean } = product;
+  const { quantity, photoUrl, ...rest } = product as any;
+  const clean = { ...rest, id: String(rest.id || rest.partNumber || Date.now()) };
   const res = await fetch('/api/records', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'products', row: { ...clean, id: clean.id || clean.partNumber } }),
+    body: JSON.stringify({ table: 'products', row: clean }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the product');
-  const local = loadProducts();
-  const next = local.some((p) => p.id === clean.id) ? local.map((p) => p.id === clean.id ? clean : p) : [...local, clean];
-  localStorage.setItem('anlurich-products', JSON.stringify(next));
+  if (!res.ok || body.ok === false) throw new Error(body.error || `Supabase save failed (${res.status})`);
+  try {
+    const local = loadProducts();
+    const next = local.some((p) => p.id === clean.id) ? local.map((p) => p.id === clean.id ? clean : p) : [...local, clean];
+    localStorage.setItem('anlurich-products', JSON.stringify(next));
+  } catch {}
   return clean;
 }
 

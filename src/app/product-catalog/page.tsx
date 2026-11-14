@@ -155,10 +155,10 @@ export default function ProductCatalogPage() {
     setEditingId(null);
     try {
       await saveProductCloud(data);
-      await reload();
+      await reload().catch(() => {});
       alert('Product saved to Supabase. All branches can see it.');
-    } catch {
-      alert('Saved on this computer only. Supabase did not save, so other branches will not see it.');
+    } catch (err: any) {
+      alert(`Supabase did not save.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
   };
 
