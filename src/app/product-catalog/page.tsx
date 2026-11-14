@@ -157,7 +157,7 @@ export default function ProductCatalogPage() {
       yearModel: form.yearModel || undefined,
       costPrice: form.costPrice ? parseFloat(form.costPrice) : undefined,
       markupPercent: form.markupPercent ? parseFloat(form.markupPercent) : undefined,
-      sellingPrice: form.sellingPrice ? parseFloat(form.sellingPrice) : undefined,
+      sellingPrice: sellingFromMarkup(form.costPrice, form.markupPercent) ? parseFloat(sellingFromMarkup(form.costPrice, form.markupPercent)) : undefined,
       bufferOrderQty: form.bufferOrderQty ? parseFloat(form.bufferOrderQty) : 0,
     };
     const updated = editingId
@@ -374,8 +374,11 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Year Model" value={form.yearModel} onChange={(e) => setForm({ ...form, yearModel: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value, sellingPrice: sellingFromMarkup(e.target.value, form.markupPercent) })} onBlur={() => setForm((f) => ({ ...f, costPrice: f.costPrice ? Number(f.costPrice).toFixed(2) : '', sellingPrice: sellingFromMarkup(f.costPrice, f.markupPercent) }))} />
-          <input type="number" className="border rounded px-2 py-1 text-right" placeholder="Mark Up %" value={form.markupPercent} onChange={(e) => setForm({ ...form, markupPercent: e.target.value, sellingPrice: sellingFromMarkup(form.costPrice, e.target.value) })} />
-          <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} onBlur={() => setForm((f) => ({ ...f, sellingPrice: f.sellingPrice ? Number(f.sellingPrice).toFixed(2) : '' }))} />
+          <input type="number" className="border rounded px-2 py-1 text-right" placeholder="Mark Up %" value={form.markupPercent} onChange={(e) => setForm({ ...form, markupPercent: e.target.value })} />
+          <div className="border rounded px-3 py-1 bg-gray-100 text-right">
+            <div className="text-[10px] text-gray-500">Selling Price</div>
+            <div className="text-2xl font-black leading-none">{sellingFromMarkup(form.costPrice, form.markupPercent) ? `₱${Number(sellingFromMarkup(form.costPrice, form.markupPercent)).toLocaleString()}` : '—'}</div>
+          </div>
           <input type="number" className="border rounded px-2 py-1" placeholder="Reorder Point Qty" value={form.bufferOrderQty} onChange={(e) => setForm({ ...form, bufferOrderQty: e.target.value })} />
           <button type="button" tabIndex={-1} onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>
           <datalist id="name-suggestions">{nameSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
@@ -426,7 +429,7 @@ export default function ProductCatalogPage() {
                 <td className="p-2">{p.brand || '—'}</td>
                 <td className="p-2">{p.description || '—'}</td>
                 <td className="p-2 text-right">{p.costPrice != null ? `₱${p.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
-                <td className="p-2 text-right">{p.sellingPrice != null ? `₱${p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}</td>
+                <td className="p-2 text-right font-black">{p.costPrice != null ? `₱${Number(sellingFromMarkup(String(p.costPrice), String(p.markupPercent ?? 50))).toLocaleString()}` : '—'}</td>
                 <td className="p-2 text-right whitespace-nowrap">
                   <button onClick={() => startEdit(p)} className="text-blue-600 text-xs font-medium mr-3">View / Edit</button>
                   <button onClick={() => removeOne(p.id)} className="text-red-600 text-xs font-medium">Delete</button>
