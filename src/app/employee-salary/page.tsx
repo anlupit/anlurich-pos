@@ -69,6 +69,7 @@ export default function EmployeeSalaryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [show13th, setShow13th] = useState(false);
   const [presentDays, setPresentDays] = useState<Record<string, number>>({});
+  const [periodDate, setPeriodDate] = useState(new Date().toISOString().slice(0, 10));
   const [days, setDays] = useState<Record<string, number>>({});
   const [advances, setAdvances] = useState<Record<string, number>>({});
   const [extra, setExtra] = useState<Record<string, any>>({});
