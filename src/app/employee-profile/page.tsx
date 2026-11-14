@@ -12,14 +12,24 @@ export default function EmployeeProfilePage() {
   const [undertime, setUndertime] = useState(0);
   const [absentDates, setAbsentDates] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
+  const [deductGov, setDeductGov] = useState(false);
+  const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [alreadyDeducted, setAlreadyDeducted] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('id');
+    const id = new URLSearchParams(window.location.search).get('id') || '';
+    const cached = sessionStorage.getItem(`employee-${id}`);
+    if (cached) setEmployee(JSON.parse(cached));
     const branch = localStorage.getItem('anlurich-branch') || '';
-    fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' })
+    fetch(`/api/records?table=employee_profiles&branch=${branch}&id=${id}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((rows) => setEmployee((Array.isArray(rows) ? rows : []).find((r: any) => r.id === id) || null))
-      .catch(() => {});
+      .then((rows) => {
+        const row = (Array.isArray(rows) ? rows : [])[0];
+        if (row) setEmployee(row);
+        else if (!cached) setLoadError('Employee profile was not found. Open it from the Employee Salary list.');
+      })
+      .catch(() => { if (!cached) setLoadError('Could not load the profile. Go back and open it from the list.'); });
   }, []);
 
   const onPhoto = (file?: File) => {
@@ -27,11 +37,11 @@ export default function EmployeeProfilePage() {
     const img = new Image();
     img.onload = async () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 160 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 48 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
       canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const photo = canvas.toDataURL('image/jpeg', 0.8);
+      const photo = canvas.toDataURL('image/jpeg', 0.35);
       const row = { ...employee, photo };
       setEmployee(row);
       await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
@@ -39,7 +49,7 @@ export default function EmployeeProfilePage() {
     img.src = URL.createObjectURL(file);
   };
 
-  if (!employee) return <div className="p-4">Loading employee profile...</div>;
+  if (!employee) return <div className="p-4">{loadError || 'Loading employee profile...'} <div><button onClick={() => (window.location.href = '/employee-salary')} className="text-blue-600 mt-2">← Back</button></div></div>;
 
   const absentCount = absentDates.split(',').map((d) => d.trim()).filter(Boolean).length;
   const dayRate = employee.rateType === 'monthly' ? Number(employee.dailyRate || 0) / 26 : Number(employee.dailyRate || 0);
@@ -116,6 +126,19 @@ export default function EmployeeProfilePage() {
         <label className="block text-sm mb-3">Absent dates, separated by comma
           <input className="border rounded w-full px-2 py-1 mt-1" placeholder="2026-11-12, 2026-11-13" value={absentDates} onChange={(e) => setAbsentDates(e.target.value)} />
         </label>
+        <div className="bg-gray-50 border rounded p-3 mb-3">
+          <div className="font-bold mb-2">{new Date(`${deductMonth}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()} Deductibles</div>
+          <label className="text-sm block mb-2">Month
+            <input type="month" className="border rounded px-2 py-1 ml-2" value={deductMonth} onChange={(e) => setDeductMonth(e.target.value)} />
+          </label>
+          <label className="flex items-center gap-2 text-sm mb-2">
+            <input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} disabled={alreadyDeducted} />
+            Deduct SSS, PhilHealth, and PAGIBIG this payout
+          </label>
+          {alreadyDeducted && <div className="text-xs text-red-600 mb-2">Already deducted for this month. It will not be deducted again.</div>}
+          <div className="text-sm">SSS {money(employee.sssAmount)} · PhilHealth {money(employee.philhealthAmount)} · PAGIBIG {money(employee.pagibigAmount)}</div>
+          <div className="text-sm font-bold">To deduct now: SSS {money(sss)} · PhilHealth {money(phil)} · PAGIBIG {money(pagibig)}</div>
+        </div>
         <div className="text-sm mb-3">Half day does not include daily allowance. Absent days: {absentCount}.</div>
         <div className="text-sm space-y-1">
           <div>Base {money(base)} + Allowance {money(allowance)} + OT {money(overtimePay)}</div>

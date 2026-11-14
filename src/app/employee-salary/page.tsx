@@ -170,11 +170,11 @@ export default function EmployeeSalaryPage() {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 160 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 48 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
       canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      setForm((f: any) => ({ ...f, photo: canvas.toDataURL('image/jpeg', 0.7) }));
+      setForm((f: any) => ({ ...f, photo: canvas.toDataURL('image/jpeg', 0.35) }));
     };
     img.src = URL.createObjectURL(file);
   };
@@ -352,7 +352,7 @@ export default function EmployeeSalaryPage() {
                 <td className="p-2 font-medium">{e.name}</td>
                 <td className="p-2">{e.position || '—'}</td>
                 <td className="p-2">{e.phone || '—'}</td>
-                <td className="p-2 text-right"><button onClick={() => (window.location.href = `/employee-profile?id=${e.id}`)} className="text-blue-700 font-medium">View Profile / Create Salary</button></td>
+                <td className="p-2 text-right"><button onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-blue-700 font-medium">View Profile / Create Salary</button></td>
               </tr>
             ))}
             {employees.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No employees yet</td></tr>}

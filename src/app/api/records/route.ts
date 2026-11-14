@@ -105,6 +105,7 @@ async function ensure() {
     CREATE INDEX IF NOT EXISTS employee_salaries_branch_idx ON employee_salaries (branch);
     CREATE INDEX IF NOT EXISTS employee_salaries_name_idx ON employee_salaries (employee_name);
     CREATE INDEX IF NOT EXISTS employee_salaries_period_idx ON employee_salaries (period_date);
+    CREATE TABLE IF NOT EXISTS salary (
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
       period_date TEXT,
@@ -238,6 +239,11 @@ export async function GET(req: Request) {
         return true;
       }));
     }
+    const id = url.searchParams.get('id');
+    if (id && (table === 'employee_profiles' || table === 'employee_salaries')) {
+      const one = await pool.query(`SELECT data FROM ${physical} WHERE id = $1 LIMIT 1`, [id]).catch(() => ({ rows: [] }));
+      return NextResponse.json(one.rows.map((r: any) => r.data));
+    }
     const month = url.searchParams.get('month');
     const supplier = url.searchParams.get('supplier');
     const invoiceNo = url.searchParams.get('invoiceNo');
@@ -272,7 +278,7 @@ export async function GET(req: Request) {
       if (seen.has(id)) return false;
       seen.add(id);
       return true;
-    }));
+    }).map((row) => table === 'employee_profiles' && row?.photo ? { ...row, photo: '' } : row));
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Supabase failed' }, { status: 500 });
   }
