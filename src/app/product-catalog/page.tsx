@@ -9,7 +9,7 @@ export default function ProductCatalogPage() {
   const [form, setForm] = useState({
     barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '',
     description: '', category: '', position: '', carMake: '', carModel: '',
-    yearModel: '', costPrice: '', sellingPrice: '', reorderPointQty: '0',
+    yearModel: '', costPrice: '', markupPercent: '50', sellingPrice: '', reorderPointQty: '0',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -132,6 +132,14 @@ export default function ProductCatalogPage() {
     if (Array.isArray(rows) && rows.length) setProducts(rows);
   };
 
+  const sellingFromMarkup = (cost: string, markup: string) => {
+    const c = parseFloat(cost);
+    const m = parseFloat(markup);
+    if (!c || isNaN(c) || isNaN(m)) return '';
+    const raw = c * (1 + m / 100);
+    return String(Math.ceil(raw / 100) * 100);
+  };
+
   const saveProduct = async () => {
     if (!form.partNumber.trim() || !form.name.trim()) return alert('Part Number and Name are required');
     const data: Product = {
@@ -148,13 +156,14 @@ export default function ProductCatalogPage() {
       carModel: form.carModel || undefined,
       yearModel: form.yearModel || undefined,
       costPrice: form.costPrice ? parseFloat(form.costPrice) : undefined,
+      markupPercent: form.markupPercent ? parseFloat(form.markupPercent) : undefined,
       sellingPrice: form.sellingPrice ? parseFloat(form.sellingPrice) : undefined,
       bufferOrderQty: form.bufferOrderQty ? parseFloat(form.bufferOrderQty) : 0,
     };
     const updated = editingId
       ? products.map((p) => (p.id === editingId ? data : p))
       : [...products, data];
-    const emptyForm = { barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '', description: '', category: '', position: '', carMake: '', carModel: '', yearModel: '', costPrice: '', sellingPrice: '', bufferOrderQty: '0' };
+    const emptyForm = { barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '', description: '', category: '', position: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50', sellingPrice: '', bufferOrderQty: '0' };
     setProducts(updated);
     setForm(emptyForm);
     setEditingId(null);
@@ -182,6 +191,7 @@ export default function ProductCatalogPage() {
       carModel: p.carModel || '',
       yearModel: p.yearModel || '',
       costPrice: p.costPrice != null ? Number(p.costPrice).toFixed(2) : '',
+      markupPercent: p.markupPercent != null ? String(p.markupPercent) : '50',
       sellingPrice: p.sellingPrice != null ? Number(p.sellingPrice).toFixed(2) : '',
       bufferOrderQty: p.bufferOrderQty != null ? String(p.bufferOrderQty) : '0',
     });
@@ -363,7 +373,8 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-2 py-1" placeholder="Car Make" list="make-suggestions" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Year Model" value={form.yearModel} onChange={(e) => setForm({ ...form, yearModel: e.target.value })} />
-          <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} onBlur={() => setForm((f) => ({ ...f, costPrice: f.costPrice ? Number(f.costPrice).toFixed(2) : '' }))} />
+          <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value, sellingPrice: sellingFromMarkup(e.target.value, form.markupPercent) })} onBlur={() => setForm((f) => ({ ...f, costPrice: f.costPrice ? Number(f.costPrice).toFixed(2) : '', sellingPrice: sellingFromMarkup(f.costPrice, f.markupPercent) }))} />
+          <input type="number" className="border rounded px-2 py-1 text-right" placeholder="Mark Up %" value={form.markupPercent} onChange={(e) => setForm({ ...form, markupPercent: e.target.value, sellingPrice: sellingFromMarkup(form.costPrice, e.target.value) })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Selling Price" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} onBlur={() => setForm((f) => ({ ...f, sellingPrice: f.sellingPrice ? Number(f.sellingPrice).toFixed(2) : '' }))} />
           <input type="number" className="border rounded px-2 py-1" placeholder="Reorder Point Qty" value={form.bufferOrderQty} onChange={(e) => setForm({ ...form, bufferOrderQty: e.target.value })} />
           <button type="button" tabIndex={-1} onClick={saveProduct} className="bg-blue-700 text-white px-4 py-1 rounded-lg">{editingId ? 'Update' : 'Add Product'}</button>

@@ -15,6 +15,7 @@ export type Product = {
   location?: string;
   costPrice?: number;
   sellingPrice?: number;
+  markupPercent?: number;
   bufferOrderQty?: number;
   reorderPointQty?: number;
   photoUrl?: string;
