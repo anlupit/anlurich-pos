@@ -519,6 +519,10 @@ export async function clearOldSalesRecords() {
   }
 }
 
+export async function updateSales(branch: string, sales: any[]) {
+  for (const sale of sales) await saveSale({ ...sale, branch });
+}
+
 export function loadSales(branch?: string): any[] {
   if (typeof window === 'undefined') return [];
   const b = branch || currentBranch();
