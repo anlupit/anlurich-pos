@@ -93,10 +93,19 @@ export default function EmployeeSalaryPage() {
 
   useEffect(() => {
     if (!unlocked || !branch) return;
-    fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((rows) => setEmployees(Array.isArray(rows) ? rows.filter((r) => r.name && !String(r.id || '').startsWith('payroll-')) : []))
-      .catch(() => {});
+    Promise.all([
+      fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+      fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+    ]).then(([profiles, oldRows]) => {
+      const rows = [...(Array.isArray(profiles) ? profiles : []), ...(Array.isArray(oldRows) ? oldRows : [])];
+      const seen = new Set<string>();
+      setEmployees(rows.filter((r) => {
+        const key = String(r.id || r.name || '');
+        if (!r.name || String(r.id || '').startsWith('payroll-') || r.status === 'terminated' || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }));
+    });
   }, [unlocked, branch]);
 
   const unlock = () => {
@@ -158,7 +167,8 @@ export default function EmployeeSalaryPage() {
       rateType: form.rateType,
       accountNumber: form.accountNumber,
     };
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
+    const saved = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
+    if (!saved.ok) return alert('Not saved to Supabase. Check the connection and try again.');
     setEmployees((prev) => prev.some((e) => e.id === row.id) ? prev.map((e) => e.id === row.id ? row : e) : [...prev, row]);
     setForm({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', birthdate: '', photo: '', payout: 'weekly' });
     setEditingId(null);
@@ -270,57 +280,48 @@ export default function EmployeeSalaryPage() {
 
       {showAdd && <div className="bg-white rounded-xl shadow p-4 mb-4">
         <button onClick={() => setShowAdd(false)} className="text-sm text-blue-600 mb-3">← Back to Employee Dashboard</button>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Employee Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-          <div>
-            <div className="text-xs text-center mb-1">Wager Contract Type</div>
-            <select className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
-              <option value="monthly">Monthly</option>
-              <option value="daily">Daily</option>
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-center mb-1">Date of Employment</div>
-            <input type="date" className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} />
-          </div>
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Home Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-          <div>
-            <div className="text-xs text-center mb-1">Birthdate</div>
-            <input type="date" className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} />
-          </div>
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Monthly Rate / Daily Rate" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
-          <input className="rounded-full border bg-gray-100 px-4 py-3 md:col-span-2" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <select className="rounded-full border bg-gray-100 px-4 py-3" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
-            <option value="weekly">Salary Payout Type: Weekly</option>
-            <option value="semi">Salary Payout Type: 15th and 30th</option>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Employee Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+          <select className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
+            <option value="monthly">Monthly</option>
+            <option value="daily">Daily</option>
           </select>
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Account Number for payout" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
-          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
+          <input type="date" className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Home Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <input type="date" className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Monthly Rate / Daily Rate" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <select className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
+            <option value="weekly">Weekly payout</option>
+            <option value="semi">15th and 30th</option>
+          </select>
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Account Number for payout" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
+          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div>
             <h2 className="text-xl font-bold mb-3">Deductibles:</h2>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="SSS Deduction Amount" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="SSS Deduction Amount" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Philhealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Philhealth Deduction Amount" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Philhealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Philhealth Deduction Amount" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="PAGIBIG Deduction Amount" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="PAGIBIG Deduction Amount" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
             </div>
           </div>
           <div>
             <h2 className="text-xl font-bold mb-3">In case of Emergency</h2>
             <div className="grid grid-cols-2 gap-2 mb-6">
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Person" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} />
-              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Number" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Person" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} />
+              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Number" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} />
             </div>
             <div className="flex gap-3 justify-end">
               <label className="bg-blue-600 text-white rounded-full px-8 py-3 cursor-pointer">
