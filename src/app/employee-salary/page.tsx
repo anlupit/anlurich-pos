@@ -181,7 +181,7 @@ export default function EmployeeSalaryPage() {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 48 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 90 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
       canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -201,11 +201,23 @@ export default function EmployeeSalaryPage() {
 
   const downloadList = async () => {
     const XLSX = await import('xlsx');
-    const data = employees.map((e) => ({ Name: e.name, Position: e.position, 'Contact Number': e.phone || '', Branch: e.branch }));
+    const salaries = await fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []);
+    const latest = new Map<string, any>();
+    (Array.isArray(salaries) ? salaries : []).forEach((row: any) => {
+      const key = String(row.employeeName || '').toLowerCase();
+      if (!latest.has(key)) latest.set(key, row);
+    });
+    const order = ['Gcash', 'Gotym', 'Bank Transfer', 'Cash'];
+    const rows = employees.map((e) => {
+      const saved = latest.get(String(e.name || '').toLowerCase());
+      const net = Number(saved?.net || compute(e).net || 0);
+      return { group: e.payoutType || 'Cash', 'Employee Name': e.name, Position: e.position || '', 'Account No of Payout': e.accountNumber || '', 'Net Total of Payout': net };
+    }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a['Employee Name'].localeCompare(b['Employee Name']));
+    const data = rows.map((r) => ({ Group: r.group, 'Employee Name': r['Employee Name'], Position: r.Position, 'Account No of Payout': r['Account No of Payout'], 'Net Total of Payout': r['Net Total of Payout'] }));
     const sheet = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sheet, 'Employees');
-    XLSX.writeFile(wb, `employees-${branch}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, sheet, 'Salary Summary');
+    XLSX.writeFile(wb, `salary-summary-${branch}.xlsx`);
   };
 
   const periodEmployees = employees.filter((e) => e.payout === (new Date(`${periodDate}T00:00:00`).getDate() <= 15 || new Date(`${periodDate}T00:00:00`).getDate() > 15 ? e.payout : e.payout));
@@ -274,7 +286,7 @@ export default function EmployeeSalaryPage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2">
         <button onClick={() => setShowAdd((v) => !v)} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Add Employee</button>
         <button onClick={terminateSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg">Terminate Employee</button>
-        <button onClick={downloadList} className="bg-green-700 text-white px-4 py-2 rounded-lg">Download</button>
+        <button onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 text-white px-4 py-2 rounded-lg">Payout Summary</button>
         <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded-lg">Print</button>
         <button onClick={() => (window.location.href = '/')} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
       </div>

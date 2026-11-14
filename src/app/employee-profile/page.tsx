@@ -12,6 +12,7 @@ export default function EmployeeProfilePage() {
   const [undertime, setUndertime] = useState(0);
   const [absentDates, setAbsentDates] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
+  const [advanceRequest, setAdvanceRequest] = useState(0);
   const [deductGov, setDeductGov] = useState(false);
   const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
   const [alreadyDeducted, setAlreadyDeducted] = useState(false);
@@ -37,7 +38,7 @@ export default function EmployeeProfilePage() {
     const img = new Image();
     img.onload = async () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 48 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 90 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
       canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -64,11 +65,16 @@ export default function EmployeeProfilePage() {
   const phil = Number(employee.philhealthAmount || 0);
   const pagibig = Number(employee.pagibigAmount || 0);
   const gross = base + allowance + overtimePay;
-  const net = gross - undertimePay - sss - phil - pagibig - cashAdvance;
+  const salaryNet = gross - undertimePay - sss - phil - pagibig;
+  const totalPayout = salaryNet - cashAdvance + advanceRequest;
+  const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
 
   const saveSalary = async () => {
-    const row = { id: `${employee.branch}-${employee.id}-${new Date().toISOString().slice(0, 10)}`, branch: employee.branch, employeeName: employee.name, days, halfDays, absentDates, overtime, undertime, cashAdvance, gross, net, date: new Date().toISOString().slice(0, 10) };
+    const row = { id: `${employee.branch}-${employee.id}-${new Date().toISOString().slice(0, 10)}`, branch: employee.branch, employeeName: employee.name, days, halfDays, absentDates, overtime, undertime, cashAdvance, advanceRequest, gross, net: totalPayout, date: new Date().toISOString().slice(0, 10) };
+    const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
+    setEmployee(profile);
     alert('Salary saved.');
   };
 
@@ -81,6 +87,23 @@ export default function EmployeeProfilePage() {
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
   };
 
+  const downloadSalary = async () => {
+    const XLSX = await import('xlsx');
+    const data = [{ Name: employee.name, Position: employee.position, Days: days, Base: base, Allowance: allowance, 'Cash Advance Request': advanceRequest, 'Cash Advance Deduction': cashAdvance, SSS: sss, PhilHealth: phil, PAGIBIG: pagibig, 'Total Earnings': totalPayout, 'Current Cash Advance Balance': cashAdvanceBalance }];
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Salary');
+    XLSX.writeFile(wb, `salary-${employee.name}.xlsx`);
+  };
+
+  const printSalary = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<html><body style="font-family:Arial;width:420px;padding:16px"><h2>AUTO PARTS INVENTORY SYSTEM</h2><h3>Salary Calculation</h3><div>${employee.name}</div><hr/><p>Salary ${money(salaryNet)}</p><p>Cash Advance Request ${money(advanceRequest)}</p><p>Cash Advance Deduction ${money(cashAdvance)}</p><h2>Total Earnings ${money(totalPayout)}</h2><p>Current CASH ADVANCE balance ${money(cashAdvanceBalance)}</p></body></html>`);
+    w.document.close();
+    w.print();
+  };
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="bg-[#1e3a8a] text-white rounded-t-xl px-4 py-3 flex items-center justify-between">
@@ -89,7 +112,7 @@ export default function EmployeeProfilePage() {
           <div className="font-black tracking-wide">AUTO PARTS INVENTORY SYSTEM</div>
         </div>
         <label className="cursor-pointer">
-          {employee.photo ? <img src={employee.photo} alt="" className="h-14 w-14 object-cover rounded-full border-2 border-white" /> : <div className="h-14 w-14 rounded-full bg-white/30" />}
+          {employee.photo ? <img src={employee.photo} alt="" className="h-[90px] w-[90px] object-cover rounded-full border-2 border-white" /> : <div className="h-[90px] w-[90px] rounded-full bg-white/30" />}
           <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
         </label>
       </div>
@@ -122,7 +145,14 @@ export default function EmployeeProfilePage() {
               <div className="flex justify-between text-sm py-1 border-b"><span>SSS No<br/>{employee.sssNo || '—'}</span><b>{money(sss)}</b></div>
               <div className="flex justify-between text-sm py-1 border-b"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(phil)}</b></div>
               <div className="flex justify-between text-sm py-1 border-b"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(pagibig)}</b></div>
-              <div className="flex justify-between items-center mt-3"><span>Net Pay</span><span className="text-2xl font-black text-blue-700">{money(net)}</span></div>
+              <label className="flex justify-between items-center text-sm py-2 border-b">Cash Advance Request
+                <input className="border rounded w-28 px-2 py-1 text-right" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />
+              </label>
+              <label className="flex justify-between items-center text-sm py-2 border-b">Cash Advance Deduction
+                <input className="border rounded w-28 px-2 py-1 text-right" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />
+              </label>
+              <div className="flex justify-between items-center mt-3"><span>Total Earnings</span><span className="text-2xl font-black text-blue-700">{money(totalPayout)}</span></div>
+              <div className="text-sm mt-2">Current CASH ADVANCE balance: <b>{money(cashAdvanceBalance)}</b></div>
             </div>
           </div>
         </div>
@@ -136,7 +166,8 @@ export default function EmployeeProfilePage() {
         <div className="flex flex-wrap gap-2 mt-4">
           <button onClick={requestAdvance} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Request Cash Advance</button>
           <button onClick={saveSalary} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
-          <button onClick={() => window.print()} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
+          <button onClick={downloadSalary} className="border border-green-700 text-green-700 px-4 py-2 rounded-lg">Download</button>
+          <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
     </div>
