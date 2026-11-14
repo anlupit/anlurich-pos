@@ -65,7 +65,9 @@ export default function EmployeeSalaryPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [form, setForm] = useState<any>({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', sssAmount: '', philhealthAmount: '', pagibigAmount: '', cashAdvanceTotal: '', birthdate: '', photo: '', payout: 'weekly' });
+  const [form, setForm] = useState<any>({ name: '', position: '', rateType: 'daily', started: '', dailyRate: '', address: '', birthdate: '', phone: '', dailyAllowance: '', email: '', payoutType: '', accountNumber: '', sssNo: '', sssAmount: '', philhealthNo: '', philhealthAmount: '', pagibigNo: '', pagibigAmount: '', emergencyName: '', emergencyPhone: '', photo: '', payout: 'weekly', cashAdvanceTotal: '' });
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [show13th, setShow13th] = useState(false);
   const [presentDays, setPresentDays] = useState<Record<string, number>>({});
@@ -104,6 +106,12 @@ export default function EmployeeSalaryPage() {
       dailyRate: Number(form.dailyRate || 0),
       dailyAllowance: Number(form.dailyAllowance || 0),
       position: form.position,
+      address: form.address,
+      phone: form.phone,
+      email: form.email,
+      payoutType: form.payoutType,
+      emergencyName: form.emergencyName,
+      emergencyPhone: form.emergencyPhone,
       started: form.started,
       sssNo: form.sssNo,
       philhealthNo: form.philhealthNo,
@@ -115,11 +123,14 @@ export default function EmployeeSalaryPage() {
       birthdate: form.birthdate,
       photo: form.photo,
       payout: form.payout,
+      rateType: form.rateType,
+      accountNumber: form.accountNumber,
     };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row }) });
     setEmployees((prev) => prev.some((e) => e.id === row.id) ? prev.map((e) => e.id === row.id ? row : e) : [...prev, row]);
     setForm({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', birthdate: '', photo: '', payout: 'weekly' });
     setEditingId(null);
+    setShowAdd(false);
   };
 
   const onPhoto = (file?: File) => {
@@ -134,6 +145,24 @@ export default function EmployeeSalaryPage() {
       setForm((f: any) => ({ ...f, photo: canvas.toDataURL('image/jpeg', 0.7) }));
     };
     img.src = URL.createObjectURL(file);
+  };
+
+  const terminateSelected = async () => {
+    if (!selectedId) return alert('Select an employee first');
+    if (!confirm('Terminate this employee?')) return;
+    const row = employees.find((e) => e.id === selectedId);
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row: { ...row, status: 'terminated' } }) });
+    setEmployees((prev) => prev.filter((e) => e.id !== selectedId));
+    setSelectedId(null);
+  };
+
+  const downloadList = async () => {
+    const XLSX = await import('xlsx');
+    const data = employees.map((e) => ({ Name: e.name, Position: e.position, 'Contact Number': e.phone || '', Branch: e.branch }));
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Employees');
+    XLSX.writeFile(wb, `employees-${branch}.xlsx`);
   };
 
   const periodEmployees = employees.filter((e) => e.payout === (new Date(`${periodDate}T00:00:00`).getDate() <= 15 || new Date(`${periodDate}T00:00:00`).getDate() > 15 ? e.payout : e.payout));
@@ -169,9 +198,9 @@ export default function EmployeeSalaryPage() {
   };
 
   const savePayroll = async () => {
-    const rows = employees.map((e) => ({ id: e.id, name: e.name, payout: e.payout, ...compute(e) }));
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row: { id: `payroll-${branch}-${periodDate}`, branch, name: `Payroll ${periodDate}`, data: { periodDate, rows }, updatedAt: new Date().toISOString() } }) });
-    alert('Salary period saved.');
+    const rows = employees.map((e) => ({ id: `${branch}-${e.id}-${periodDate}`, branch, periodDate, employeeName: e.name, payout: e.payout, ...compute(e) }));
+    await Promise.all(rows.map((row) => fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'salary', row }) })));
+    alert(`Saved ${rows.length} salary records to Supabase for ${NAMES[branch] || branch}.`);
   };
 
   const postExpense = async () => {
@@ -191,7 +220,13 @@ export default function EmployeeSalaryPage() {
   if (!unlocked) {
     return (
       <div className="p-6 max-w-md">
-        <h1 className="text-xl font-bold mb-2">Create Employee Salary</h1>
+        <div className="flex items-center gap-3 mb-4">
+          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+          <div>
+            <div className="font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</div>
+            <div className="text-sm text-gray-500">Create Employee Salary</div>
+          </div>
+        </div>
         <p className="text-sm text-gray-500 mb-4">{NAMES[branch] || branch} — enter the branch password</p>
         <input type="password" className="border rounded px-3 py-2 w-full mb-3" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') unlock(); }} />
         <button onClick={unlock} className="bg-blue-700 text-white px-4 py-2 rounded">Open</button>
@@ -201,147 +236,114 @@ export default function EmployeeSalaryPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold text-yellow-600 mb-1">Create Employee Salary</h1>
+      <div className="flex items-center gap-3 mb-2">
+        {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
+        <div>
+          <h1 className="text-xl md:text-2xl font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+          <div className="text-yellow-600 font-bold">Create Employee Salary</div>
+        </div>
+      </div>
       <div className="text-xs text-gray-500 mb-4">{NAMES[branch] || branch}</div>
 
-      <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
-        <input className="border rounded px-2 py-1" placeholder="Employee name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className="border rounded px-2 py-1" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-        <select className="border rounded px-2 py-1" value={form.rateType || 'daily'} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
-          <option value="daily">Daily wager</option>
-          <option value="monthly">Monthly rate</option>
-        </select>
-        <input type="number" className="border rounded px-2 py-1" placeholder={form.rateType === 'monthly' ? 'Monthly Rate' : 'Daily Rate'} value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
-        <input type="number" className="border rounded px-2 py-1" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
-        <div><label className="text-xs">Started</label><input type="date" className="border rounded px-2 py-1 w-full" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} /></div>
-        <div><label className="text-xs">Birthdate</label><input type="date" className="border rounded px-2 py-1 w-full" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} /></div>
-        <div className="grid grid-cols-2 gap-2">
-          <input className="border rounded px-2 py-1" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
-          <input type="number" className="border rounded px-2 py-1" placeholder="SSS deduction" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input className="border rounded px-2 py-1" placeholder="PhilHealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
-          <input type="number" className="border rounded px-2 py-1" placeholder="PhilHealth deduction" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input className="border rounded px-2 py-1" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
-          <input type="number" className="border rounded px-2 py-1" placeholder="PAGIBIG deduction" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
-        </div>
-        <input type="number" className="border rounded px-2 py-1" placeholder="Cash Advance Total" value={form.cashAdvanceTotal} onChange={(e) => setForm({ ...form, cashAdvanceTotal: e.target.value })} />
-        <select className="border rounded px-2 py-1" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
-          <option value="weekly">Weekly — Monday to Saturday</option>
-          <option value="semi">15th and 30th</option>
-        </select>
-        <input type="file" accept="image/*" onChange={(e) => onPhoto(e.target.files?.[0])} />
-        {form.photo && <img src={form.photo} alt="" className="h-12 w-12 object-cover rounded" />}
-        <button onClick={saveEmployee} className="bg-blue-700 text-white rounded px-3 py-2">{editingId ? 'Update Employee' : 'Add Employee'}</button>
+      <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2">
+        <button onClick={() => setShowAdd((v) => !v)} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Add Employee</button>
+        <button onClick={terminateSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg">Terminate Employee</button>
+        <button onClick={downloadList} className="bg-green-700 text-white px-4 py-2 rounded-lg">Download</button>
+        <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded-lg">Print</button>
+        <button onClick={() => (window.location.href = '/')} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium">Salary period date</label>
-        <input type="date" className="border rounded px-2 py-1" value={periodDate} onChange={(e) => setPeriodDate(e.target.value)} />
-        <button onClick={() => setShow13th((v) => !v)} className="bg-green-700 text-white px-4 py-2 rounded">13th Month Computation</button>
-        <button onClick={savePayroll} className="bg-blue-700 text-white px-4 py-2 rounded">Save this salary</button>
-        <button onClick={postExpense} className="bg-orange-600 text-white px-4 py-2 rounded">Post to Company Expense</button>
+      {showAdd && <div className="bg-white rounded-xl shadow p-4 mb-4">
+        <button onClick={() => setShowAdd(false)} className="text-sm text-blue-600 mb-3">← Back to Employee Dashboard</button>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Employee Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+          <div>
+            <div className="text-xs text-center mb-1">Wager Contract Type</div>
+            <select className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
+              <option value="monthly">Monthly</option>
+              <option value="daily">Daily</option>
+            </select>
+          </div>
+          <div>
+            <div className="text-xs text-center mb-1">Date of Employment</div>
+            <input type="date" className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} />
+          </div>
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Home Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <div>
+            <div className="text-xs text-center mb-1">Birthdate</div>
+            <input type="date" className="w-full rounded-full border bg-gray-100 px-4 py-3" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} />
+          </div>
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Monthly Rate / Daily Rate" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
+          <input className="rounded-full border bg-gray-100 px-4 py-3 md:col-span-2" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <select className="rounded-full border bg-gray-100 px-4 py-3" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
+            <option value="weekly">Salary Payout Type: Weekly</option>
+            <option value="semi">Salary Payout Type: 15th and 30th</option>
+          </select>
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Account Number for payout" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
+          <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div>
+            <h2 className="text-xl font-bold mb-3">Deductibles:</h2>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="SSS Deduction Amount" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Philhealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Philhealth Deduction Amount" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="PAGIBIG Deduction Amount" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold mb-3">In case of Emergency</h2>
+            <div className="grid grid-cols-2 gap-2 mb-6">
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Person" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} />
+              <input className="rounded-full border bg-gray-100 px-4 py-3" placeholder="Contact Number" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <label className="bg-blue-600 text-white rounded-full px-8 py-3 cursor-pointer">
+                Upload Photo
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+              </label>
+              <button onClick={saveEmployee} className="bg-blue-700 text-white rounded-full px-8 py-3 font-bold">{editingId ? 'UPDATE EMPLOYEE' : 'ADD EMPLOYEE'}</button>
+            </div>
+            {form.photo && <img src={form.photo} alt="" className="h-16 w-16 object-cover rounded-full mt-3 ml-auto" />}
+          </div>
+        </div>
+      </div>}
+
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-teal-500 text-white">
+            <tr>
+              <th className="p-2"></th>
+              <th className="p-2 text-left">Employee Name</th>
+              <th className="p-2 text-left">Position</th>
+              <th className="p-2 text-left">Contact Number</th>
+              <th className="p-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((e) => (
+              <tr key={e.id} className="border-t">
+                <td className="p-2"><input type="radio" checked={selectedId === e.id} onChange={() => setSelectedId(e.id)} /></td>
+                <td className="p-2 font-medium">{e.name}</td>
+                <td className="p-2">{e.position || '—'}</td>
+                <td className="p-2">{e.phone || '—'}</td>
+                <td className="p-2 text-right"><button onClick={() => (window.location.href = `/employee-profile?id=${e.id}`)} className="text-blue-700 font-medium">View Profile / Create Salary</button></td>
+              </tr>
+            ))}
+            {employees.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No employees yet</td></tr>}
+          </tbody>
+        </table>
       </div>
-
-      {show13th && (
-        <div className="bg-white rounded-xl shadow p-4 mb-4">
-          <h2 className="font-bold text-lg mb-1">13th Month Pay</h2>
-          <p className="text-xs text-gray-500 mb-3">Total present days × daily rate ÷ 12. A half day is 4 hours, or 0.5 day.</p>
-          {employees.map((e) => {
-            const daysPresent = Number(presentDays[e.id] || 0);
-            const thirteenth = (Number(e.dailyRate || 0) * daysPresent) / 12;
-            return (
-              <div key={e.id} className="border rounded p-3 mb-2">
-                <div className="font-bold">{e.name}</div>
-                <label className="text-sm">Present days <input className="border rounded w-24 text-center ml-1" value={presentDays[e.id] || ''} onChange={(ev) => setPresentDays({ ...presentDays, [e.id]: parseFloat(ev.target.value) || 0 })} placeholder="0.5 = half day" /></label>
-                <div className="mt-1">Daily rate {money(e.dailyRate)} × {daysPresent} days ÷ 12 = <b>{money(thirteenth)}</b></div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {weekly.length > 0 && (
-        <div className="bg-white rounded-xl shadow p-4 mb-4">
-          <h2 className="font-bold text-lg mb-3">{weekHeader(periodDate)}</h2>
-          {weekly.map((e) => {
-            const c = compute(e);
-            return (
-              <div key={e.id} className="border rounded p-3 mb-2 flex gap-3">
-                {e.photo && <img src={e.photo} alt="" className="h-14 w-14 object-cover rounded" />}
-                <div className="flex-1">
-                  <div className="font-bold">{e.name} · {e.position}</div>
-                  <div className="text-xs text-gray-500">SSS {e.sssNo || '—'} · PhilHealth {e.philhealthNo || '—'} · PAGIBIG {e.pagibigNo || '—'}</div>
-                  <div className="flex flex-wrap gap-2 mt-2 text-sm">
-                    <label>Days <input className="border rounded w-16 text-center" value={days[e.id] ?? 6} onChange={(ev) => setDays({ ...days, [e.id]: parseInt(ev.target.value) || 0 })} /></label>
-                    <label>Half days <input className="border rounded w-16 text-center" value={getExtra(e.id).halfDays || ''} onChange={(ev) => setOne(e.id, 'halfDays', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Absent <input className="border rounded w-16 text-center" value={getExtra(e.id).absent || ''} onChange={(ev) => setOne(e.id, 'absent', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Rest days worked <input className="border rounded w-16 text-center" value={getExtra(e.id).restDays || ''} onChange={(ev) => setOne(e.id, 'restDays', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Weekly Incentive <input className="border rounded w-24 text-right" value={getExtra(e.id).incentive || ''} onChange={(ev) => setOne(e.id, 'incentive', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Undertime hrs <input className="border rounded w-16 text-center" value={getExtra(e.id).undertime || ''} onChange={(ev) => setOne(e.id, 'undertime', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Overtime hrs <input className="border rounded w-16 text-center" value={getExtra(e.id).overtime || ''} onChange={(ev) => setOne(e.id, 'overtime', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Regular holiday <input className="border rounded w-16 text-center" value={getExtra(e.id).regularHoliday || ''} onChange={(ev) => setOne(e.id, 'regularHoliday', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Special holiday <input className="border rounded w-16 text-center" value={getExtra(e.id).specialHoliday || ''} onChange={(ev) => setOne(e.id, 'specialHoliday', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>SSS loan <input className="border rounded w-20 text-right" value={getExtra(e.id).sssLoan || ''} onChange={(ev) => setOne(e.id, 'sssLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>PAGIBIG loan <input className="border rounded w-20 text-right" value={getExtra(e.id).pagibigLoan || ''} onChange={(ev) => setOne(e.id, 'pagibigLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Company loan <input className="border rounded w-20 text-right" value={getExtra(e.id).companyLoan || ''} onChange={(ev) => setOne(e.id, 'companyLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Shortage <input className="border rounded w-20 text-right" value={getExtra(e.id).shortage || ''} onChange={(ev) => setOne(e.id, 'shortage', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Uniform <input className="border rounded w-20 text-right" value={getExtra(e.id).uniform || ''} onChange={(ev) => setOne(e.id, 'uniform', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Tools <input className="border rounded w-20 text-right" value={getExtra(e.id).tools || ''} onChange={(ev) => setOne(e.id, 'tools', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Deduct this period <input className="border rounded w-24 text-right" value={advances[e.id] || ''} onChange={(ev) => setAdvances({ ...advances, [e.id]: parseFloat(ev.target.value) || 0 })} /></label>
-                  </div>
-                  <div className="mt-1">Rate {money(e.dailyRate)} + Allowance {money(e.dailyAllowance)} × {c.worked} + Incentive {money(c.incentive)} + OT {money(c.overtimePay)} + Regular Holiday {money(c.regularHolidayPay)} + Special Holiday {money(c.specialHolidayPay)} − Undertime {money(c.undertimePay)} − SSS {money(c.sss)} − PhilHealth {money(c.phil)} − PAGIBIG {money(c.pagibig)} − Advance {money(c.advance)} = <b>{money(c.net)}</b></div>
-                  <div className="mt-1 font-bold">Remaining Cash Advance: {money(c.remaining)}</div>
-                  <button onClick={() => printSlip(e)} className="mt-2 bg-gray-700 text-white px-3 py-1 rounded text-sm">Payslip</button>
-                </div>
-                <button className="text-blue-600 text-sm" onClick={() => { setEditingId(e.id); setForm(e); }}>Edit</button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {semi.length > 0 && (
-        <div className="bg-white rounded-xl shadow p-4">
-          <h2 className="font-bold text-lg mb-3">{semiHeader(periodDate)}</h2>
-          {semi.map((e) => {
-            const c = compute(e);
-            return (
-              <div key={e.id} className="border rounded p-3 mb-2 flex gap-3">
-                {e.photo && <img src={e.photo} alt="" className="h-14 w-14 object-cover rounded" />}
-                <div className="flex-1">
-                  <div className="font-bold">{e.name} · {e.position}</div>
-                  <div className="text-xs text-gray-500">SSS {e.sssNo || '—'} · PhilHealth {e.philhealthNo || '—'} · PAGIBIG {e.pagibigNo || '—'}</div>
-                  <div className="flex flex-wrap gap-2 mt-2 text-sm">
-                    <label>Days <input className="border rounded w-16 text-center" value={days[e.id] ?? 13} onChange={(ev) => setDays({ ...days, [e.id]: parseInt(ev.target.value) || 0 })} /></label>
-                    <label>Half days <input className="border rounded w-16 text-center" value={getExtra(e.id).halfDays || ''} onChange={(ev) => setOne(e.id, 'halfDays', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Absent <input className="border rounded w-16 text-center" value={getExtra(e.id).absent || ''} onChange={(ev) => setOne(e.id, 'absent', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Rest days worked <input className="border rounded w-16 text-center" value={getExtra(e.id).restDays || ''} onChange={(ev) => setOne(e.id, 'restDays', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Monthly Incentive <input className="border rounded w-24 text-right" value={getExtra(e.id).incentive || ''} onChange={(ev) => setOne(e.id, 'incentive', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Undertime hrs <input className="border rounded w-16 text-center" value={getExtra(e.id).undertime || ''} onChange={(ev) => setOne(e.id, 'undertime', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Overtime hrs <input className="border rounded w-16 text-center" value={getExtra(e.id).overtime || ''} onChange={(ev) => setOne(e.id, 'overtime', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Regular holiday <input className="border rounded w-16 text-center" value={getExtra(e.id).regularHoliday || ''} onChange={(ev) => setOne(e.id, 'regularHoliday', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Special holiday <input className="border rounded w-16 text-center" value={getExtra(e.id).specialHoliday || ''} onChange={(ev) => setOne(e.id, 'specialHoliday', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>SSS loan <input className="border rounded w-20 text-right" value={getExtra(e.id).sssLoan || ''} onChange={(ev) => setOne(e.id, 'sssLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>PAGIBIG loan <input className="border rounded w-20 text-right" value={getExtra(e.id).pagibigLoan || ''} onChange={(ev) => setOne(e.id, 'pagibigLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Company loan <input className="border rounded w-20 text-right" value={getExtra(e.id).companyLoan || ''} onChange={(ev) => setOne(e.id, 'companyLoan', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Shortage <input className="border rounded w-20 text-right" value={getExtra(e.id).shortage || ''} onChange={(ev) => setOne(e.id, 'shortage', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Uniform <input className="border rounded w-20 text-right" value={getExtra(e.id).uniform || ''} onChange={(ev) => setOne(e.id, 'uniform', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Tools <input className="border rounded w-20 text-right" value={getExtra(e.id).tools || ''} onChange={(ev) => setOne(e.id, 'tools', parseFloat(ev.target.value) || 0)} /></label>
-                    <label>Deduct this period <input className="border rounded w-24 text-right" value={advances[e.id] || ''} onChange={(ev) => setAdvances({ ...advances, [e.id]: parseFloat(ev.target.value) || 0 })} /></label>
-                  </div>
-                  <div className="mt-1">Rate {money(e.dailyRate)} + Allowance {money(e.dailyAllowance)} × {c.worked} + Incentive {money(c.incentive)} + OT {money(c.overtimePay)} + Regular Holiday {money(c.regularHolidayPay)} + Special Holiday {money(c.specialHolidayPay)} − Undertime {money(c.undertimePay)} − SSS {money(c.sss)} − PhilHealth {money(c.phil)} − PAGIBIG {money(c.pagibig)} − Advance {money(c.advance)} = <b>{money(c.net)}</b></div>
-                  <div className="mt-1 font-bold">Remaining Cash Advance: {money(c.remaining)}</div>
-                  <button onClick={() => printSlip(e)} className="mt-2 bg-gray-700 text-white px-3 py-1 rounded text-sm">Payslip</button>
-                </div>
-                <button className="text-blue-600 text-sm" onClick={() => { setEditingId(e.id); setForm(e); }}>Edit</button>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

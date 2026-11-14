@@ -11,6 +11,7 @@ export default function DownloadReportsPage() {
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [branch, setBranch] = useState('');
   const [brand, setBrand] = useState('');
+  const [report, setReport] = useState('inventory');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,12 +27,68 @@ export default function DownloadReportsPage() {
   const generate = async () => {
     setLoading(true);
     const products = await loadProductsCloud().catch(() => []);
-    const [invoices, sales, noInv, history] = await Promise.all([
+    const [invoices, sales, noInv] = await Promise.all([
       loadInvoicesCloud(branch).catch(() => []),
       loadSalesCloud(branch).catch(() => []),
       loadNoInvoicesCloud(branch).catch(() => []),
-      loadStockHistory().catch(() => []),
     ]);
+    const allSales = [...(sales || []), ...(noInv || [])].filter((s) => inRange(s.date || s.dateTime));
+    if (report === 'sales') {
+      const map = new Map<string, any>();
+      allSales.forEach((s) => {
+        const day = String(s.date || s.dateTime || '').slice(0, 10);
+        const month = day.slice(0, 7);
+        const key = `${day}`;
+        const row = map.get(key) || { date: day, month, cash: 0, credit: 0, total: 0, invoices: 0 };
+        const amount = Number(s.grandTotal || s.total || 0);
+        if (String(s.paymentType || s.payment || '').toLowerCase().includes('credit')) row.credit += amount;
+        else row.cash += amount;
+        row.total += amount;
+        row.invoices += 1;
+        map.set(key, row);
+      });
+      setRows(Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date)));
+      setLoading(false);
+      return;
+    }
+    if (report === 'profit') {
+      const list = allSales.flatMap((s) => (s.items || s.lines || []).map((line: any) => {
+        const qty = Number(line.qty || line.quantity || 0);
+        const sell = Number(line.price || 0);
+        const cost = Number(line.costPrice || products.find((p) => String(p.partNumber).toLowerCase() === String(line.partNumber || '').toLowerCase())?.costPrice || 0);
+        return { date: String(s.date || s.dateTime || '').slice(0, 10), invoice: s.invoiceNo || s.invoiceNumber || '', partNumber: line.partNumber, qty, sell, cost, profit: (sell - cost) * qty };
+      }));
+      setRows(list);
+      setLoading(false);
+      return;
+    }
+    if (report === 'unpaid') {
+      const customers = allSales.filter((s) => String(s.paymentType || s.payment || s.status || '').toLowerCase().includes('credit') || s.status === 'unpaid')
+        .map((s) => ({ type: 'Customer', name: s.customerName || 'Walk-in', ref: s.invoiceNo || s.invoiceNumber || '', date: String(s.date || s.dateTime || '').slice(0, 10), amount: Number(s.grandTotal || s.total || 0) }));
+      const suppliers = (invoices || []).filter((i) => inRange(i.invoiceDate || i.createdAt) && i.status !== 'paid')
+        .map((i) => ({ type: 'Supplier', name: i.supplierName, ref: i.invoiceNumber || i.invoiceNo, date: String(i.invoiceDate || '').slice(0, 10), amount: Number(i.grandTotal || 0) }));
+      setRows([...customers, ...suppliers]);
+      setLoading(false);
+      return;
+    }
+    if (report === 'slow') {
+      const sold = new Map<string, string>();
+      allSales.forEach((s) => (s.items || s.lines || []).forEach((line: any) => {
+        const key = String(line.partNumber || '').toLowerCase();
+        const day = String(s.date || s.dateTime || '').slice(0, 10);
+        if (!sold.get(key) || day > sold.get(key)!) sold.set(key, day);
+      }));
+      const cutoff = new Date(to);
+      cutoff.setDate(cutoff.getDate() - 60);
+      const slow = products.filter((p) => {
+        const last = sold.get(String(p.partNumber || '').toLowerCase());
+        return !last || last < cutoff.toISOString().slice(0, 10);
+      }).map((p) => ({ partNumber: p.partNumber, brand: p.brand, name: p.name, lastSale: sold.get(String(p.partNumber || '').toLowerCase()) || 'No sale' }));
+      setRows(slow);
+      setLoading(false);
+      return;
+    }
+    const history = await loadStockHistory().catch(() => []);
     const byPart = new Map<string, any>();
     const ensure = (part: string, extra: any = {}) => {
       const key = part.toLowerCase();
@@ -88,17 +145,7 @@ export default function DownloadReportsPage() {
   const download = async () => {
     if (!rows.length) return alert('Generate the report first');
     const XLSX = await import('xlsx');
-    const data = rows.map((r) => ({
-      'Part Number': r.partNumber,
-      Brand: r.brand,
-      Description: r.name,
-      Opening: r.opening,
-      Purchased: r.purchased,
-      Sold: r.sold,
-      Ending: r.ending,
-      Cost: r.cost,
-      Value: r.value,
-    }));
+    const data = rows;
     const sheet = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, sheet, 'Inventory');
@@ -106,12 +153,21 @@ export default function DownloadReportsPage() {
   };
 
   const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const columns = rows[0] ? Object.keys(rows[0]) : [];
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold text-yellow-600 mb-1">Download Reports</h1>
       <div className="text-xs text-gray-500 mb-4">Inventory report from stock movements</div>
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
+          <label className="block text-xs mb-1">Report</label>
+          <select className="border rounded px-3 py-2" value={report} onChange={(e) => { setReport(e.target.value); setRows([]); }}>
+            <option value="inventory">Inventory movement</option>
+            <option value="sales">Daily and monthly sales</option>
+            <option value="profit">Profit report</option>
+            <option value="unpaid">Unpaid customers and suppliers</option>
+            <option value="slow">Slow-moving stock</option>
+          </select>
         <div>
           <label className="block text-xs mb-1">From</label>
           <input type="date" className="border rounded px-3 py-2" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -136,29 +192,11 @@ export default function DownloadReportsPage() {
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-teal-500 text-white">
-            <tr>
-              <th className="p-2 text-left">Part Number</th>
-              <th className="p-2 text-left">Brand</th>
-              <th className="p-2 text-left">Description</th>
-              <th className="p-2 text-right">Opening</th>
-              <th className="p-2 text-right">Purchased</th>
-              <th className="p-2 text-right">Sold</th>
-              <th className="p-2 text-right">Ending</th>
-              <th className="p-2 text-right">Value</th>
-            </tr>
+            <tr>{columns.map((c) => <th key={c} className="p-2 text-left">{c}</th>)}</tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.partNumber} className="border-t">
-                <td className="p-2">{r.partNumber}</td>
-                <td className="p-2">{r.brand || '—'}</td>
-                <td className="p-2">{r.name || '—'}</td>
-                <td className="p-2 text-right">{r.opening}</td>
-                <td className="p-2 text-right">{r.purchased}</td>
-                <td className="p-2 text-right">{r.sold}</td>
-                <td className="p-2 text-right font-bold">{r.ending}</td>
-                <td className="p-2 text-right">{money(r.value)}</td>
-              </tr>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-t">{columns.map((c) => <td key={c} className="p-2">{typeof r[c] === 'number' ? r[c].toLocaleString() : r[c] || '—'}</td>)}</tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-gray-400">Generate a report to see stock movements</td></tr>}
           </tbody>

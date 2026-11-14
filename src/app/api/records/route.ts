@@ -85,6 +85,16 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS employees_branch_idx ON employees (branch);
+    CREATE TABLE IF NOT EXISTS salary (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      period_date TEXT,
+      employee_name TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS salary_branch_idx ON salary (branch);
+    CREATE INDEX IF NOT EXISTS salary_period_idx ON salary (period_date);
     CREATE TABLE IF NOT EXISTS expenses (
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
@@ -166,6 +176,9 @@ async function ensure() {
       CREATE TABLE IF NOT EXISTS employees_${b} (
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS salary_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, period_date TEXT, employee_name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
       CREATE TABLE IF NOT EXISTS expenses_${b} (
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, expense_date TEXT, category TEXT, payee TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -180,7 +193,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -245,7 +258,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {
@@ -403,6 +416,13 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,NOW())
        ON CONFLICT (id) DO UPDATE SET part_number=EXCLUDED.part_number, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.partNumber || '', JSON.stringify(data)]
+    );
+  } else if (table === 'salary') {
+    await pool.query(
+      `INSERT INTO salary (id, branch, period_date, employee_name, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, period_date=EXCLUDED.period_date, employee_name=EXCLUDED.employee_name, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.periodDate || data.period_date || '', data.employeeName || data.name || '', JSON.stringify(data)]
     );
   } else {
     await pool.query(
