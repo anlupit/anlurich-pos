@@ -127,6 +127,11 @@ export default function ProductCatalogPage() {
     }
   };
 
+  const reload = async () => {
+    const rows = await loadProductsCloud().catch(() => []);
+    if (Array.isArray(rows) && rows.length) setProducts(rows);
+  };
+
   const saveProduct = async () => {
     if (!form.partNumber.trim() || !form.name.trim()) return alert('Part Number and Name are required');
     const data: Product = {
