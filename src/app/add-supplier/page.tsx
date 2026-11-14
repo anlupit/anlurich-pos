@@ -89,7 +89,7 @@ export default function AddSupplierPage() {
             </tr>
           </thead>
           <tbody>
-            {suppliers.map((s) => (
+            {[...suppliers].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })).map((s) => (
               <tr key={s.id} className="border-t">
                 <td className="p-2 font-medium">{s.name}</td>
                 <td className="p-2">{s.address}</td>

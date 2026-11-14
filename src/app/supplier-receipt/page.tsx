@@ -40,13 +40,11 @@ export default function SupplierReceiptPage() {
   const [lineSuggest, setLineSuggest] = useState<{ id: string; matches: any[] } | null>(null);
 
   useEffect(() => {
-    syncOnline().then(async () => {
+    const refreshSuppliers = async () => {
       const saved = loadBranchSuppliers();
-      const invoices = await loadInvoicesCloud().catch(() => []);
-      const fromInvoices = (invoices || []).map((inv: any) => inv.supplierName).filter(Boolean);
-      const names = Array.from(new Map([...saved.map((s) => s.name), ...fromInvoices].filter(Boolean).map((name) => [String(name).toLowerCase(), { id: String(name), name: String(name) }])).values());
-      setSuppliers(names.length ? names : saved);
-    }).catch(() => setSuppliers(loadBranchSuppliers()));
+      setSuppliers([...saved].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })));
+    };
+    refreshSuppliers();
     loadProductsCloud().then(setCatalog).catch(() => {});
     stripInvoicePhotos().catch(() => {});
   }, []);
@@ -107,9 +105,9 @@ export default function SupplierReceiptPage() {
     } : l));
     setLineSuggest(null);
   };
-  const supplierChoices = (Array.isArray(suppliers) ? suppliers : [])
+  const supplierChoices = [...(Array.isArray(suppliers) ? suppliers : [])]
     .filter((s) => s && s.name && (!supplierName.trim() || String(s.name).toLowerCase().includes(supplierName.trim().toLowerCase())))
-    .slice(0, 10);
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
   const d1 = parseFloat(discount1) || 0;
   const d2 = parseFloat(discount2) || 0;
   const d3 = parseFloat(discount3) || 0;
@@ -232,9 +230,9 @@ export default function SupplierReceiptPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[20ch] flex-1 relative">
             <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
-            <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => setSupplierOpen(true)} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
+            <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => { setSuppliers([...loadBranchSuppliers()].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
             {supplierOpen && supplierChoices.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
+              <div className="absolute z-20 left-0 right-0 w-full bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
                 {supplierChoices.map((s) => (
                   <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
                 ))}
@@ -281,7 +279,7 @@ export default function SupplierReceiptPage() {
               <th className="p-1 text-center" style={{ width: '20ch' }}>Product Name</th>
               <th className="p-1 text-center" style={{ width: '20ch' }}>Brand</th>
               <th className="p-1 text-center" style={{ width: '60ch' }}>Description</th>
-              <th className="p-1 text-center" style={{ width: '6ch' }}>Qty</th>
+              <th className="p-1 text-center" style={{ width: '5ch' }}>Qty</th>
               <th className="p-1 text-center" style={{ width: '6ch' }}>Unit</th>
               <th className="p-1 text-center" style={{ width: '12ch' }}>Gross Price</th>
               <th className="p-1 text-center" style={{ width: '12ch' }}>Net Price</th>
@@ -323,7 +321,7 @@ export default function SupplierReceiptPage() {
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '20ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '50ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 text-center" style={{ width: '5ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                <td className="p-1"><input type="number" min={1} maxLength={5} className="border rounded px-1 py-1 text-center" style={{ width: '5ch', maxWidth: '5ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
                 <td className="p-1 text-center font-medium">{money(netPrice(line))}</td>

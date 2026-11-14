@@ -18,6 +18,8 @@ export default function ProductCatalogPage() {
   const [findName, setFindName] = useState('');
   const [findDesc, setFindDesc] = useState('');
   const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [nameOpen, setNameOpen] = useState(false);
+  const [makeOpen, setMakeOpen] = useState(false);
   const [zoom, setZoom] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -368,14 +370,32 @@ export default function ProductCatalogPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} onDoubleClick={(e) => e.stopPropagation()}>
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
-          <input className="border rounded px-2 py-1" placeholder="Product Name *" list="name-suggestions" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <div className="relative">
+            <input className="w-full border rounded px-2 py-1" placeholder="Product Name *" value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setNameOpen(true); }} onFocus={() => setNameOpen(true)} onBlur={() => setTimeout(() => setNameOpen(false), 150)} required />
+            {nameOpen && (
+              <div className="absolute z-20 left-0 right-0 w-full bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
+                {nameSuggestions.filter((v) => !form.name.trim() || v.toLowerCase().includes(form.name.trim().toLowerCase())).map((v) => (
+                  <button type="button" key={v} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setForm({ ...form, name: v }); setNameOpen(false); }}>{v}</button>
+                ))}
+              </div>
+            )}
+          </div>
           <input className="border rounded px-2 py-1" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} />
           <input className="border rounded px-2 py-1" placeholder="OEM Part Number" value={form.oemPartNumber} onChange={(e) => setForm({ ...form, oemPartNumber: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Category" list="category-suggestions" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-          <input className="border rounded px-2 py-1" placeholder="Car Make" list="make-suggestions" value={form.carMake} onChange={(e) => setForm({ ...form, carMake: e.target.value })} />
+          <div className="relative">
+            <input className="w-full border rounded px-2 py-1" placeholder="Car Make" value={form.carMake} onChange={(e) => { setForm({ ...form, carMake: e.target.value }); setMakeOpen(true); }} onFocus={() => setMakeOpen(true)} onBlur={() => setTimeout(() => setMakeOpen(false), 150)} />
+            {makeOpen && (
+              <div className="absolute z-20 left-0 right-0 w-full bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
+                {makeSuggestions.filter((v) => !form.carMake.trim() || v.toLowerCase().includes(form.carMake.trim().toLowerCase())).map((v) => (
+                  <button type="button" key={v} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setForm({ ...form, carMake: v }); setMakeOpen(false); }}>{v}</button>
+                ))}
+              </div>
+            )}
+          </div>
           <input className="border rounded px-2 py-1" placeholder="Car Model" list="model-suggestions" value={form.carModel} onChange={(e) => setForm({ ...form, carModel: e.target.value })} />
           <input className="border rounded px-2 py-1" placeholder="Year Model" value={form.yearModel} onChange={(e) => setForm({ ...form, yearModel: e.target.value })} />
           <input type="number" step="0.01" className="border rounded px-2 py-1 text-right" placeholder="Cost Price" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value, sellingPrice: sellingFromMarkup(e.target.value, form.markupPercent) })} onBlur={() => setForm((f) => ({ ...f, costPrice: f.costPrice ? Number(f.costPrice).toFixed(2) : '', sellingPrice: sellingFromMarkup(f.costPrice, f.markupPercent) }))} />
