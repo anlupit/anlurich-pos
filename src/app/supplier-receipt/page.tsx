@@ -37,7 +37,7 @@ export default function SupplierReceiptPage() {
     { id: '1', barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 },
   ]);
   const [catalog, setCatalog] = useState<any[]>([]);
-  const [lineSuggest, setLineSuggest] = useState<{ id: string; matches: any[] } | null>(null);
+  const [lineSuggest, setLineSuggest] = useState<{ id: string; field: 'barcode' | 'partNumber'; matches: any[] } | null>(null);
 
   useEffect(() => {
     const refreshSuppliers = async () => {
@@ -81,16 +81,19 @@ export default function SupplierReceiptPage() {
     }));
   };
 
-  const suggestForLine = (id: string, text: string) => {
+  const suggestForLine = async (id: string, field: 'barcode' | 'partNumber', text: string) => {
     const q = text.trim().toLowerCase();
     if (q.length < 2) { setLineSuggest(null); return; }
-    const matches = catalog.filter((p) =>
+    const latest = await loadProductsCloud().catch(() => catalog);
+    if (latest.length) setCatalog(latest);
+    const source = latest.length ? latest : catalog;
+    const matches = source.filter((p) =>
       String(p.partNumber || '').toLowerCase().includes(q) ||
       String(p.barcode || '').toLowerCase().includes(q) ||
       String(p.name || '').toLowerCase().includes(q) ||
       String(p.brand || '').toLowerCase().includes(q)
     ).slice(0, 8);
-    setLineSuggest(matches.length ? { id, matches } : null);
+    setLineSuggest(matches.length ? { id, field, matches } : null);
   };
 
   const pickSuggestion = (id: string, p: any) => {
@@ -276,7 +279,7 @@ export default function SupplierReceiptPage() {
             <tr>
               <th className="p-1 text-center" style={{ width: '16ch' }}>Barcode</th>
               <th className="p-1 text-center" style={{ width: '16ch' }}>Part Number</th>
-              <th className="p-1 text-center" style={{ width: '21ch' }}>Product Name</th>
+              <th className="p-1 text-center" style={{ width: '26ch' }}>Product Name</th>
               <th className="p-1 text-center" style={{ width: '14ch' }}>Brand</th>
               <th className="p-1 text-center" style={{ width: '46ch' }}>Description</th>
               <th className="p-1 text-center" style={{ width: '8ch' }}>Qty</th>
@@ -291,8 +294,8 @@ export default function SupplierReceiptPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, e.target.value); }} />
-                  {lineSuggest?.id === line.id && (
+                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} />
+                  {lineSuggest?.id === line.id && lineSuggest.field === 'barcode' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
@@ -305,8 +308,8 @@ export default function SupplierReceiptPage() {
                   )}
                 </td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, e.target.value); }} />
-                  {lineSuggest?.id === line.id && (
+                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} />
+                  {lineSuggest?.id === line.id && lineSuggest.field === 'partNumber' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
@@ -318,7 +321,7 @@ export default function SupplierReceiptPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '26ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '14ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '46ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center text-base font-semibold" style={{ width: '8ch', minWidth: '8ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
