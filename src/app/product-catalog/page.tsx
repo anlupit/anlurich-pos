@@ -271,7 +271,11 @@ export default function ProductCatalogPage() {
       const key = keys.find((k) => want.includes(k.toLowerCase().replace(/[^a-z0-9]/g, '')));
       return key ? String(row[key] ?? '').trim() : '';
     };
-    const newProducts: Product[] = rows.map((r, i) => ({
+    const newProducts: Product[] = rows.map((r, i) => {
+      const costPrice = num(r, ['Cost Price', 'Cost', 'costPrice', 'CostPrice']);
+      const markupPercent = num(r, ['Mark Up %', 'Markup', 'Mark Up', 'markupPercent']) ?? 50;
+      const sellingPrice = costPrice ? Math.ceil((costPrice * (1 + markupPercent / 100)) / 100) * 100 : undefined;
+      return {
       id: Date.now().toString() + i,
       partNumber: text(r, ['Part Number', 'partNumber', 'Part No']),
       name: text(r, ['Name', 'Product Name', 'name']),
@@ -284,9 +288,10 @@ export default function ProductCatalogPage() {
       carMake: text(r, ['Car Make', 'carMake']) || undefined,
       carModel: text(r, ['Car Model', 'carModel']) || undefined,
       yearModel: text(r, ['Year Model', 'yearModel']) || undefined,
-      costPrice: num(r, ['Cost Price', 'Cost', 'costPrice', 'CostPrice']),
-      sellingPrice: num(r, ['Selling Price', 'Selling', 'sellingPrice', 'Price']),
-    })).filter((p) => p.partNumber && p.name);
+      costPrice,
+      markupPercent,
+      sellingPrice,
+    }; }).filter((p) => p.partNumber && p.name);
     if (newProducts.length === 0) return alert('No valid rows. Need Part Number and Name columns.');
     const replace = confirm('Replace the whole catalog with this file?\n\nOK = replace old products\nCancel = add/update only');
     const merged = replace ? [] : [...products];
@@ -318,7 +323,7 @@ export default function ProductCatalogPage() {
   };
 
   const downloadTemplate = () => {
-    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Selling Price\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,1850.00\nBBF3-20,Brake Fluid,9316068437780,,Bendix,BRAKE FLUID DOT-3 1X12 (900ml),Fluids,,, , ,250.50,400.00';
+    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Mark Up %\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,50\nBBF3-20,Brake Fluid,9316068437780,,Bendix,BRAKE FLUID DOT-3 1X12 (900ml),Fluids,,, , ,250.50,50';
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
