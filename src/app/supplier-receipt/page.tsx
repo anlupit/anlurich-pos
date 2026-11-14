@@ -203,7 +203,7 @@ export default function SupplierReceiptPage() {
   };
 
   return (
-    <div className="p-2 md:p-4 max-w-full">
+    <div className="p-2 md:p-4 max-w-full" style={{ fontSize: '17px' }}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h1 className="text-xl font-bold text-yellow-600">RECORD SUPPLIER INVOICE</h1>
@@ -276,9 +276,9 @@ export default function SupplierReceiptPage() {
             <tr>
               <th className="p-1 text-center" style={{ width: '16ch' }}>Barcode</th>
               <th className="p-1 text-center" style={{ width: '16ch' }}>Part Number</th>
-              <th className="p-1 text-center" style={{ width: '16ch' }}>Product Name</th>
+              <th className="p-1 text-center" style={{ width: '21ch' }}>Product Name</th>
               <th className="p-1 text-center" style={{ width: '14ch' }}>Brand</th>
-              <th className="p-1 text-center" style={{ width: '36ch' }}>Description</th>
+              <th className="p-1 text-center" style={{ width: '46ch' }}>Description</th>
               <th className="p-1 text-center" style={{ width: '8ch' }}>Qty</th>
               <th className="p-1 text-center" style={{ width: '6ch' }}>Unit</th>
               <th className="p-1 text-center" style={{ width: '10ch' }}>Gross Price</th>
@@ -320,7 +320,7 @@ export default function SupplierReceiptPage() {
                 </td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '14ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '36ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '46ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center text-base font-semibold" style={{ width: '8ch', minWidth: '8ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>

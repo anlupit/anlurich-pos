@@ -8,6 +8,7 @@ const MAIN = [
   { href: '/products-menu', label: 'Products' },
   { href: '/accounting', label: 'Accounting' },
   { href: '/stock-request', label: 'Stock Request' },
+  { href: '/download-reports', label: 'Download Reports' },
   { href: '/check-voucher', label: 'Check Voucher' },
 ];
 
@@ -58,6 +59,7 @@ const ICONS: Record<string, string> = {
   Products: 'M3 7l9-4 9 4-9 4-9-4zm0 0v10l9 4 9-4V7',
   Accounting: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5',
   'Stock Request': 'M7 3h10v18H7zM9 7h6M9 11h6M9 15h4',
+  'Download Reports': 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
   'POS System': 'M4 6h16v10H4zM8 20h8',
   'Bosch POS': 'M4 6h16v10H4zM8 20h8',
   'No Invoice': 'M6 3h8l4 4v14H6zM10 11h6M10 15h4',

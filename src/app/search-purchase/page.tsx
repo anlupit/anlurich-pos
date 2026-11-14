@@ -319,16 +319,17 @@ export default function SearchPurchasePage() {
               <input type="date" className="border rounded px-3 py-2" value={String(viewing.invoiceDate || '').slice(0, 10)} onChange={(e) => setViewing({ ...viewing, invoiceDate: e.target.value })} />
             </div>
             <table className="w-full text-sm mb-3">
-              <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Gross Price</th><th className="text-right p-1">Price</th></tr></thead>
+              <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Gross Price</th><th className="text-right p-1">Price</th><th className="text-right p-1">Total</th></tr></thead>
               <tbody>
                 {(viewing.lines || []).map((line: any, i: number) => (
                   <tr key={i} className="border-t">
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={line.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
-                    <td className="p-1 text-center"><input type="number" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value) || 0)} /></td>
+                    <td className="p-1 text-center"><input inputMode="numeric" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
                     <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.grossPrice || line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'grossPrice', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
                     <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
+                    <td className="p-1 text-right font-medium">₱{Number(line.total || (Number(line.qty || 0) * Number(line.price || line.netPrice || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
