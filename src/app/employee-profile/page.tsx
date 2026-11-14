@@ -82,73 +82,61 @@ export default function EmployeeProfilePage() {
   };
 
   return (
-    <div className="p-4">
-      <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600 mb-3">← Back to Employee Dashboard</button>
-      <div className="flex items-start justify-between gap-4 mb-4">
+    <div className="p-4 bg-gray-50 min-h-screen">
+      <div className="bg-[#1e3a8a] text-white rounded-t-xl px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain" />
-          <div>
-            <h1 className="text-xl font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
-            <div className="text-yellow-600 font-bold">Employee Profile</div>
+          <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white rounded" />
+          <div className="font-black tracking-wide">AUTO PARTS INVENTORY SYSTEM</div>
+        </div>
+        <label className="cursor-pointer">
+          {employee.photo ? <img src={employee.photo} alt="" className="h-14 w-14 object-cover rounded-full border-2 border-white" /> : <div className="h-14 w-14 rounded-full bg-white/30" />}
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+        </label>
+      </div>
+      <div className="bg-white rounded-b-xl shadow p-4 mb-4">
+        <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600">← Back</button>
+        <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="border rounded-xl p-4">
+            <div className="text-2xl font-bold">{employee.name}</div>
+            <div className="text-sm text-gray-600 mb-4">{employee.position || '—'} · {employee.phone || '—'}</div>
+            <div className="text-sm space-y-1 mb-4">
+              <div>Address: {employee.address || '—'}</div>
+              <div>Email: {employee.email || '—'}</div>
+              <div>Birthdate: {employee.birthdate || '—'}</div>
+              <div>Date of Employment: {employee.started || '—'}</div>
+              <div>Rate: {money(employee.dailyRate)} · Allowance: {money(employee.dailyAllowance)}</div>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span>SSS No<br/>{employee.sssNo || '—'}</span><b>{money(employee.sssAmount)}</b></div>
+              <div className="flex justify-between"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(employee.philhealthAmount)}</b></div>
+              <div className="flex justify-between"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
+            </div>
+          </div>
+          <div className="border rounded-xl overflow-hidden">
+            <div className="bg-[#1e3a8a] text-white text-center font-bold py-2">{new Date(`${deductMonth}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()} Deductibles</div>
+            <div className="p-4">
+              <label className="text-sm block mb-2">Month <input type="month" className="border rounded px-2 py-1 ml-2" value={deductMonth} onChange={(e) => setDeductMonth(e.target.value)} /></label>
+              <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} disabled={alreadyDeducted} /> Deduct this payout</label>
+              {alreadyDeducted && <div className="text-xs text-red-600 mb-2">Already deducted for this month.</div>}
+              <div className="flex justify-between text-sm py-1 border-b"><span>SSS No<br/>{employee.sssNo || '—'}</span><b>{money(sss)}</b></div>
+              <div className="flex justify-between text-sm py-1 border-b"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(phil)}</b></div>
+              <div className="flex justify-between text-sm py-1 border-b"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(pagibig)}</b></div>
+              <div className="flex justify-between items-center mt-3"><span>Net Pay</span><span className="text-2xl font-black text-blue-700">{money(net)}</span></div>
+            </div>
           </div>
         </div>
-        <div className="text-center">
-          {employee.photo ? <img src={employee.photo} alt="" className="h-24 w-24 object-cover rounded-full border" /> : <div className="h-24 w-24 rounded-full bg-gray-200" />}
-          <label className="block text-xs text-blue-700 mt-1 cursor-pointer">Change Photo<input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} /></label>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+          <label className="text-sm">Days<input className="border rounded w-full px-2 py-1" value={days} onChange={(e) => setDays(parseFloat(e.target.value) || 0)} /></label>
+          <label className="text-sm">Half days<input className="border rounded w-full px-2 py-1" value={halfDays} onChange={(e) => setHalfDays(parseFloat(e.target.value) || 0)} /></label>
+          <label className="text-sm">Overtime hours<input className="border rounded w-full px-2 py-1" value={overtime} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} /></label>
+          <label className="text-sm">Undertime hours<input className="border rounded w-full px-2 py-1" value={undertime} onChange={(e) => setUndertime(parseFloat(e.target.value) || 0)} /></label>
+          <label className="text-sm">Absent dates<input className="border rounded w-full px-2 py-1" placeholder="2026-11-12" value={absentDates} onChange={(e) => setAbsentDates(e.target.value)} /></label>
         </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-        <div><b>Name:</b> {employee.name}</div>
-        <div><b>Position:</b> {employee.position || '—'}</div>
-        <div><b>Contact:</b> {employee.phone || '—'}</div>
-        <div><b>Address:</b> {employee.address || '—'}</div>
-        <div><b>Email:</b> {employee.email || '—'}</div>
-        <div><b>Birthdate:</b> {employee.birthdate || '—'}</div>
-        <div><b>Date of Employment:</b> {employee.started || '—'}</div>
-        <div><b>Rate:</b> {money(employee.dailyRate)}</div>
-        <div><b>Daily Allowance:</b> {money(employee.dailyAllowance)}</div>
-        <div><b>SSS:</b> {employee.sssNo || '—'} / {money(employee.sssAmount)}</div>
-        <div><b>PhilHealth:</b> {employee.philhealthNo || '—'} / {money(employee.philhealthAmount)}</div>
-        <div><b>PAGIBIG:</b> {employee.pagibigNo || '—'} / {money(employee.pagibigAmount)}</div>
-        <div><b>Emergency:</b> {employee.emergencyName || '—'} / {employee.emergencyPhone || '—'}</div>
-        <div><b>Account:</b> {employee.accountNumber || '—'}</div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4">
-        <h2 className="font-bold text-lg mb-3">Calculate Salary</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-          <label>Days<input className="border rounded w-full px-2 py-1" value={days} onChange={(e) => setDays(parseFloat(e.target.value) || 0)} /></label>
-          <label>Half days<input className="border rounded w-full px-2 py-1" value={halfDays} onChange={(e) => setHalfDays(parseFloat(e.target.value) || 0)} /></label>
-          <label>Overtime hours<input className="border rounded w-full px-2 py-1" value={overtime} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} /></label>
-          <label>Undertime hours<input className="border rounded w-full px-2 py-1" value={undertime} onChange={(e) => setUndertime(parseFloat(e.target.value) || 0)} /></label>
-        </div>
-        <label className="block text-sm mb-3">Absent dates, separated by comma
-          <input className="border rounded w-full px-2 py-1 mt-1" placeholder="2026-11-12, 2026-11-13" value={absentDates} onChange={(e) => setAbsentDates(e.target.value)} />
-        </label>
-        <div className="bg-gray-50 border rounded p-3 mb-3">
-          <div className="font-bold mb-2">{new Date(`${deductMonth}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()} Deductibles</div>
-          <label className="text-sm block mb-2">Month
-            <input type="month" className="border rounded px-2 py-1 ml-2" value={deductMonth} onChange={(e) => setDeductMonth(e.target.value)} />
-          </label>
-          <label className="flex items-center gap-2 text-sm mb-2">
-            <input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} disabled={alreadyDeducted} />
-            Deduct SSS, PhilHealth, and PAGIBIG this payout
-          </label>
-          {alreadyDeducted && <div className="text-xs text-red-600 mb-2">Already deducted for this month. It will not be deducted again.</div>}
-          <div className="text-sm">SSS {money(employee.sssAmount)} · PhilHealth {money(employee.philhealthAmount)} · PAGIBIG {money(employee.pagibigAmount)}</div>
-          <div className="text-sm font-bold">To deduct now: SSS {money(sss)} · PhilHealth {money(phil)} · PAGIBIG {money(pagibig)}</div>
-        </div>
-        <div className="text-sm mb-3">Half day does not include daily allowance. Absent days: {absentCount}.</div>
-        <div className="text-sm space-y-1">
-          <div>Base {money(base)} + Allowance {money(allowance)} + OT {money(overtimePay)}</div>
-          <div>Deductibles: SSS {money(sss)} · PhilHealth {money(phil)} · PAGIBIG {money(pagibig)} · Undertime {money(undertimePay)} · Cash Advance {money(cashAdvance)}</div>
-          <div className="text-xl font-black">Net Pay {money(net)}</div>
-        </div>
-        <div className="flex gap-2 mt-4">
-          <button onClick={requestAdvance} className="bg-orange-600 text-white px-4 py-2 rounded-lg">Request Cash Advance</button>
-          <button onClick={saveSalary} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Save Salary</button>
-          <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded-lg">Print</button>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button onClick={requestAdvance} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Request Cash Advance</button>
+          <button onClick={saveSalary} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
+          <button onClick={() => window.print()} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
     </div>

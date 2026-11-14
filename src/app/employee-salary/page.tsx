@@ -168,7 +168,8 @@ export default function EmployeeSalaryPage() {
       accountNumber: form.accountNumber,
     };
     const saved = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
-    if (!saved.ok) return alert('Not saved to Supabase. Check the connection and try again.');
+    const result = await saved.json().catch(() => ({}));
+    if (!saved.ok) return alert(result.error || 'Not saved to Supabase. Check the connection and try again.');
     setEmployees((prev) => prev.some((e) => e.id === row.id) ? prev.map((e) => e.id === row.id ? row : e) : [...prev, row]);
     setForm({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', birthdate: '', photo: '', payout: 'weekly' });
     setEditingId(null);
@@ -278,60 +279,48 @@ export default function EmployeeSalaryPage() {
         <button onClick={() => (window.location.href = '/')} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
       </div>
 
-      {showAdd && <div className="bg-white rounded-xl shadow p-4 mb-4">
+      {showAdd && <div className="bg-white rounded-xl shadow p-6 mb-4">
         <button onClick={() => setShowAdd(false)} className="text-sm text-blue-600 mb-3">← Back to Employee Dashboard</button>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Employee Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-          <select className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value })}>
-            <option value="monthly">Monthly</option>
-            <option value="daily">Daily</option>
-          </select>
-          <input type="date" className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Home Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-          <input type="date" className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Monthly Rate / Daily Rate" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <select className="h-10 w-full rounded-lg border bg-gray-100 px-3" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}>
-            <option value="weekly">Weekly payout</option>
-            <option value="semi">15th and 30th</option>
-          </select>
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Account Number for payout" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
-          <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Daily Allowance" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} />
+        <div className="text-center mb-5">
+          <h2 className="text-2xl font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h2>
+          <div className="text-yellow-600 font-bold text-lg">Create Employee Salary</div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div>
-            <h2 className="text-xl font-bold mb-3">Deductibles:</h2>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="SSS No." value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} />
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="SSS Deduction Amount" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Philhealth No." value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} />
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Philhealth Deduction Amount" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="PAGIBIG No." value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} />
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="PAGIBIG Deduction Amount" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <label className="text-sm">Employee Name<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+          <label className="text-sm">Position<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} /></label>
+          <label className="text-sm">Date of Employment<input type="date" className="h-10 w-full rounded-lg border px-3 mt-1" value={form.started} onChange={(e) => setForm({ ...form, started: e.target.value })} /></label>
+          <label className="text-sm">Contact Number<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+          <label className="text-sm">Home Address<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
+          <label className="text-sm">Birthdate<input type="date" className="h-10 w-full rounded-lg border px-3 mt-1" value={form.birthdate} onChange={(e) => setForm({ ...form, birthdate: e.target.value })} /></label>
+          <label className="text-sm">Salary Type<select className="h-10 w-full rounded-lg border px-3 mt-1" value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value })}><option value="monthly">Monthly</option><option value="daily">Daily</option></select></label>
+          <label className="text-sm">Monthly Rate / Daily Rate<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} /></label>
+          <label className="text-sm">Email Address<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+          <label className="text-sm">Weekly Payout<select className="h-10 w-full rounded-lg border px-3 mt-1" value={form.payout} onChange={(e) => setForm({ ...form, payout: e.target.value })}><option value="weekly">Weekly</option><option value="semi">15th and 30th</option></select></label>
+          <label className="text-sm">Payout Type<select className="h-10 w-full rounded-lg border px-3 mt-1" value={form.payoutType} onChange={(e) => setForm({ ...form, payoutType: e.target.value })}><option value="">Select</option><option>Cash</option><option>Gcash</option><option>Gotym</option><option>Bank Transfer</option></select></label>
+          <label className="text-sm">Payout Account No<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} /></label>
+          <label className="text-sm">Daily Allowance<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.dailyAllowance} onChange={(e) => setForm({ ...form, dailyAllowance: e.target.value })} /></label>
+        </div>
+        <div className="border rounded-xl p-4 mt-5">
+          <h2 className="font-bold mb-3">Deductibles</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <label className="text-sm">SSS No.<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.sssNo} onChange={(e) => setForm({ ...form, sssNo: e.target.value })} /></label>
+            <label className="text-sm">SSS Deduction Amount<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.sssAmount} onChange={(e) => setForm({ ...form, sssAmount: e.target.value })} /></label>
+            <label className="text-sm">Philhealth No.<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.philhealthNo} onChange={(e) => setForm({ ...form, philhealthNo: e.target.value })} /></label>
+            <label className="text-sm">Philhealth Deduction Amount<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.philhealthAmount} onChange={(e) => setForm({ ...form, philhealthAmount: e.target.value })} /></label>
+            <label className="text-sm">PAGIBIG No.<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.pagibigNo} onChange={(e) => setForm({ ...form, pagibigNo: e.target.value })} /></label>
+            <label className="text-sm">PAGIBIG Deduction Amount<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.pagibigAmount} onChange={(e) => setForm({ ...form, pagibigAmount: e.target.value })} /></label>
           </div>
-          <div>
-            <h2 className="text-xl font-bold mb-3">In case of Emergency</h2>
-            <div className="grid grid-cols-2 gap-2 mb-6">
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Person" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} />
-              <input className="h-10 w-full rounded-lg border bg-gray-100 px-3" placeholder="Contact Number" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <label className="bg-blue-600 text-white rounded-full px-8 py-3 cursor-pointer">
-                Upload Photo
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
-              </label>
-              <button onClick={saveEmployee} className="bg-blue-700 text-white rounded-full px-8 py-3 font-bold">{editingId ? 'UPDATE EMPLOYEE' : 'ADD EMPLOYEE'}</button>
-            </div>
-            {form.photo && <img src={form.photo} alt="" className="h-16 w-16 object-cover rounded-full mt-3 ml-auto" />}
+        </div>
+        <div className="border rounded-xl p-4 mt-4">
+          <h2 className="font-bold mb-3">In case of Emergency</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-sm">Contact Person<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} /></label>
+            <label className="text-sm">Contact Number<input className="h-10 w-full rounded-lg border px-3 mt-1" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} /></label>
           </div>
+        </div>
+        <div className="flex justify-center gap-3 mt-5">
+          <label className="bg-blue-600 text-white rounded-lg px-6 py-3 cursor-pointer">Upload Photo<input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} /></label>
+          <button onClick={saveEmployee} className="bg-blue-700 text-white rounded-lg px-8 py-3 font-bold">{editingId ? 'UPDATE EMPLOYEE' : '+ ADD EMPLOYEE'}</button>
         </div>
       </div>}
 

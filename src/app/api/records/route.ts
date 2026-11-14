@@ -201,6 +201,7 @@ async function ensure() {
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, period_date TEXT, employee_name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS employee_salaries_${b}_name_idx ON employee_salaries_${b} (employee_name);
+      CREATE TABLE IF NOT EXISTS employees_${b} (
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS salary_${b} (
