@@ -8,7 +8,7 @@ const pool = new Pool({
 });
 
 const BRANCHES = ['anlurich', 'dasma', 'sezan', 'timitsu', 'avenders', 'lipa'];
-const SPLIT = ['supplier_invoices', 'sales', 'no_invoices', 'customer_points', 'inventory', 'customers', 'employees', 'expenses'];
+const SPLIT = ['supplier_invoices', 'sales', 'no_invoices', 'customer_points', 'inventory', 'customers', 'employees', 'expenses', 'employee_profiles', 'employee_salaries'];
 
 function tableFor(base: string, branch?: string | null) {
   const b = String(branch || '').toLowerCase();
@@ -85,7 +85,26 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS employees_branch_idx ON employees (branch);
-    CREATE TABLE IF NOT EXISTS salary (
+    CREATE TABLE IF NOT EXISTS employee_profiles (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      name TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS employee_profiles_branch_idx ON employee_profiles (branch);
+    CREATE INDEX IF NOT EXISTS employee_profiles_name_idx ON employee_profiles (name);
+    CREATE TABLE IF NOT EXISTS employee_salaries (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      period_date TEXT,
+      employee_name TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS employee_salaries_branch_idx ON employee_salaries (branch);
+    CREATE INDEX IF NOT EXISTS employee_salaries_name_idx ON employee_salaries (employee_name);
+    CREATE INDEX IF NOT EXISTS employee_salaries_period_idx ON employee_salaries (period_date);
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
       period_date TEXT,
@@ -173,7 +192,14 @@ async function ensure() {
       CREATE TABLE IF NOT EXISTS customers_${b} (
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, phone TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-      CREATE TABLE IF NOT EXISTS employees_${b} (
+      CREATE TABLE IF NOT EXISTS employee_profiles_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS employee_profiles_${b}_name_idx ON employee_profiles_${b} (name);
+      CREATE TABLE IF NOT EXISTS employee_salaries_${b} (
+        id TEXT PRIMARY KEY, branch TEXT NOT NULL, period_date TEXT, employee_name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS employee_salaries_${b}_name_idx ON employee_salaries_${b} (employee_name);
         id TEXT PRIMARY KEY, branch TEXT NOT NULL, name TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS salary_${b} (
@@ -193,7 +219,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -258,7 +284,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {
@@ -381,6 +407,20 @@ async function upsert(table: string, row: any) {
        VALUES ($1,$2,$3,$4,$5,NOW())
        ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, name=EXCLUDED.name, phone=EXCLUDED.phone, data=EXCLUDED.data, updated_at=NOW()`,
       [id, data.branch || '', data.name || data.customerName || '', data.phone || data.customerPhone || '', JSON.stringify(data)]
+    );
+  } else if (table.startsWith('employee_profiles')) {
+    await pool.query(
+      `INSERT INTO ${table} (id, branch, name, data, updated_at)
+       VALUES ($1,$2,$3,$4,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, name=EXCLUDED.name, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.name || '', JSON.stringify(data)]
+    );
+  } else if (table.startsWith('employee_salaries')) {
+    await pool.query(
+      `INSERT INTO ${table} (id, branch, period_date, employee_name, data, updated_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       ON CONFLICT (id) DO UPDATE SET branch=EXCLUDED.branch, period_date=EXCLUDED.period_date, employee_name=EXCLUDED.employee_name, data=EXCLUDED.data, updated_at=NOW()`,
+      [id, data.branch || '', data.date || data.periodDate || '', data.employeeName || data.name || '', JSON.stringify(data)]
     );
   } else if (table.startsWith('employees')) {
     await pool.query(

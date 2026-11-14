@@ -16,7 +16,7 @@ export default function EmployeeProfilePage() {
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('id');
     const branch = localStorage.getItem('anlurich-branch') || '';
-    fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' })
+    fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((rows) => setEmployee((Array.isArray(rows) ? rows : []).find((r: any) => r.id === id) || null))
       .catch(() => {});
@@ -34,7 +34,7 @@ export default function EmployeeProfilePage() {
       const photo = canvas.toDataURL('image/jpeg', 0.8);
       const row = { ...employee, photo };
       setEmployee(row);
-      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row }) });
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
     };
     img.src = URL.createObjectURL(file);
   };
@@ -58,7 +58,7 @@ export default function EmployeeProfilePage() {
 
   const saveSalary = async () => {
     const row = { id: `${employee.branch}-${employee.id}-${new Date().toISOString().slice(0, 10)}`, branch: employee.branch, employeeName: employee.name, days, halfDays, absentDates, overtime, undertime, cashAdvance, gross, net, date: new Date().toISOString().slice(0, 10) };
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'salary', row }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     alert('Salary saved.');
   };
 
@@ -68,7 +68,7 @@ export default function EmployeeProfilePage() {
     const row = { ...employee, cashAdvanceTotal: Number(employee.cashAdvanceTotal || 0) + Number(amount) };
     setEmployee(row);
     setCashAdvance(Number(amount));
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
   };
 
   return (

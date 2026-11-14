@@ -25,6 +25,14 @@ type Employee = {
   dailyRate: number;
   dailyAllowance: number;
   position: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  payoutType?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
+  rateType?: string;
+  accountNumber?: string;
   started: string;
   sssNo: string;
   philhealthNo: string;
@@ -39,6 +47,7 @@ type Employee = {
 };
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const logo = '/logo.png';
 const monthName = (d: Date) => d.toLocaleString('en-US', { month: 'long' });
 
 function weekHeader(date: string) {
@@ -84,18 +93,41 @@ export default function EmployeeSalaryPage() {
 
   useEffect(() => {
     if (!unlocked || !branch) return;
-    fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' })
+    fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((rows) => setEmployees(Array.isArray(rows) ? rows.filter((r) => r.name && !String(r.id || '').startsWith('payroll-')) : []))
       .catch(() => {});
   }, [unlocked, branch]);
 
   const unlock = () => {
-    if (pin === PASSWORDS[branch]) {
-      sessionStorage.setItem(`salary-ok-${branch}`, '1');
+    const b = branch || currentBranch() || '';
+    if (!b) return alert('Login to a branch first, then open Employee Salary.');
+    if (pin.trim() === PASSWORDS[b]) {
+      sessionStorage.setItem(`salary-ok-${b}`, '1');
+      setBranch(b);
       setUnlocked(true);
     } else alert('Wrong password for this branch.');
   };
+
+  if (!unlocked) {
+    return (
+      <div className="p-6 max-w-md">
+        <div className="flex items-center gap-3 mb-4">
+          <img src={logo} alt="Logo" className="w-14 h-14 object-contain" />
+          <div>
+            <div className="font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</div>
+            <div className="text-sm text-gray-500">Employee Salary</div>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">{NAMES[branch || currentBranch() || ''] || 'Branch'} — enter the branch password</p>
+        <form onSubmit={(e) => { e.preventDefault(); unlock(); }}>
+          <input type="password" className="border rounded px-3 py-2 w-full mb-3" placeholder="Branch password" value={pin} onChange={(e) => setPin(e.target.value)} />
+          <button type="submit" className="bg-blue-700 text-white px-4 py-2 rounded">Open</button>
+        </form>
+        <button onClick={() => (window.location.href = '/')} className="block mt-3 text-sm text-blue-600">← Main Menu</button>
+      </div>
+    );
+  }
 
   const saveEmployee = async () => {
     if (!form.name.trim()) return alert('Enter employee name');
@@ -126,7 +158,7 @@ export default function EmployeeSalaryPage() {
       rateType: form.rateType,
       accountNumber: form.accountNumber,
     };
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
     setEmployees((prev) => prev.some((e) => e.id === row.id) ? prev.map((e) => e.id === row.id ? row : e) : [...prev, row]);
     setForm({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', birthdate: '', photo: '', payout: 'weekly' });
     setEditingId(null);
@@ -151,7 +183,7 @@ export default function EmployeeSalaryPage() {
     if (!selectedId) return alert('Select an employee first');
     if (!confirm('Terminate this employee?')) return;
     const row = employees.find((e) => e.id === selectedId);
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employees', row: { ...row, status: 'terminated' } }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: { ...row, status: 'terminated' } }) });
     setEmployees((prev) => prev.filter((e) => e.id !== selectedId));
     setSelectedId(null);
   };
@@ -216,23 +248,6 @@ export default function EmployeeSalaryPage() {
     w.document.write(`<html><body style="font-family:Arial;width:420px"><h2>${e.name}</h2><div>${e.payout === 'weekly' ? weekHeader(periodDate) : semiHeader(periodDate)}</div><p>Days ${c.worked} · Half days ${c.halfDays} · Absent ${c.absent}</p><p>Gross ${money(c.gross)}</p><p>Undertime ${money(c.undertimePay)} · OT ${money(c.overtimePay)} · Rest day ${money(c.restDayPay)}</p><p>SSS ${money(c.sss)} · PhilHealth ${money(c.phil)} · PAGIBIG ${money(c.pagibig)}</p><p>Loans and other ${money(c.other)} · Advance ${money(c.advance)}</p><h3>Net ${money(c.net)}</h3><p>Remaining cash advance ${money(c.remaining)}</p></body></html>`);
     w.print();
   };
-
-  if (!unlocked) {
-    return (
-      <div className="p-6 max-w-md">
-        <div className="flex items-center gap-3 mb-4">
-          {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
-          <div>
-            <div className="font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</div>
-            <div className="text-sm text-gray-500">Create Employee Salary</div>
-          </div>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">{NAMES[branch] || branch} — enter the branch password</p>
-        <input type="password" className="border rounded px-3 py-2 w-full mb-3" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') unlock(); }} />
-        <button onClick={unlock} className="bg-blue-700 text-white px-4 py-2 rounded">Open</button>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4">
