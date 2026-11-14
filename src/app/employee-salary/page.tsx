@@ -88,7 +88,8 @@ export default function EmployeeSalaryPage() {
   useEffect(() => {
     const b = currentBranch() || '';
     setBranch(b);
-    if (sessionStorage.getItem(`salary-ok-${b}`) === '1') setUnlocked(true);
+    sessionStorage.removeItem(`salary-ok-${b}`);
+    setUnlocked(false);
   }, []);
 
   useEffect(() => {
@@ -133,7 +134,7 @@ export default function EmployeeSalaryPage() {
           <input type="password" className="border rounded px-3 py-2 w-full mb-3" placeholder="Branch password" value={pin} onChange={(e) => setPin(e.target.value)} />
           <button type="submit" className="bg-blue-700 text-white px-4 py-2 rounded">Open</button>
         </form>
-        <button onClick={() => (window.location.href = '/')} className="block mt-3 text-sm text-blue-600">← Main Menu</button>
+        <button onClick={() => { sessionStorage.removeItem(`salary-ok-${branch || currentBranch() || ''}`); window.location.href = `/branch/${branch || currentBranch() || 'anlurich'}`; }} className="block mt-3 text-sm text-blue-600">← Dashboard</button>
       </div>
     );
   }
@@ -142,7 +143,7 @@ export default function EmployeeSalaryPage() {
     if (!form.name.trim()) return alert('Enter employee name');
     const row: Employee = {
       id: editingId || Date.now().toString(),
-      branch,
+      branch: branch || currentBranch() || '',
       name: form.name.trim(),
       dailyRate: Number(form.dailyRate || 0),
       dailyAllowance: Number(form.dailyAllowance || 0),
@@ -170,6 +171,7 @@ export default function EmployeeSalaryPage() {
     const saved = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
     const result = await saved.json().catch(() => ({}));
     if (!saved.ok) return alert(result.error || 'Not saved to Supabase. Check the connection and try again.');
+    alert(`Saved to Supabase for ${NAMES[row.branch] || row.branch}.`);
     setEmployees((prev) => prev.some((e) => e.id === row.id) ? prev.map((e) => e.id === row.id ? row : e) : [...prev, row]);
     setForm({ name: '', dailyRate: '', dailyAllowance: '', position: '', started: '', sssNo: '', philhealthNo: '', pagibigNo: '', birthdate: '', photo: '', payout: 'weekly' });
     setEditingId(null);
@@ -288,7 +290,7 @@ export default function EmployeeSalaryPage() {
         <button onClick={terminateSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg">Terminate Employee</button>
         <button onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 text-white px-4 py-2 rounded-lg">Payout Summary</button>
         <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded-lg">Print</button>
-        <button onClick={() => (window.location.href = '/')} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
+        <button onClick={() => { sessionStorage.removeItem(`salary-ok-${branch}`); window.location.href = `/branch/${branch || 'anlurich'}`; }} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
       </div>
 
       {showAdd && <div className="bg-white rounded-xl shadow p-6 mb-4">
