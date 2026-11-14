@@ -125,6 +125,12 @@ export default function SearchPurchasePage() {
     return { lines: next, subtotal, grandTotal: Math.round(subtotal * 100) / 100, discount1: d1, discount2: d2, discount3: d3 };
   };
 
+  const addLine = () => {
+    if (!viewing) return;
+    const lines = [...(viewing.lines || []), { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, grossPrice: 0, price: 0, total: 0 }];
+    setViewing({ ...viewing, ...recalc(lines, Number(viewing.discount1 || 0), Number(viewing.discount2 || 0), Number(viewing.discount3 || 0)) });
+  };
+
   const updateLine = (index: number, field: string, value: string | number) => {
     if (!viewing) return;
     const lines = [...(viewing.lines || [])];
@@ -334,6 +340,7 @@ export default function SearchPurchasePage() {
                 ))}
               </tbody>
             </table>
+            <button type="button" onClick={addLine} className="mb-3 bg-blue-700 text-white px-3 py-1 rounded">+ Add Line</button>
             <div className="text-right font-bold mb-3">Total: ₱{Number(viewing.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
