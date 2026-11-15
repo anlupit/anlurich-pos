@@ -74,6 +74,7 @@ export default function EmployeeSalaryPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loadNote, setLoadNote] = useState('');
   const [form, setForm] = useState<any>({ name: '', position: '', rateType: 'daily', started: '', dailyRate: '', address: '', birthdate: '', phone: '', dailyAllowance: '', email: '', payoutType: '', accountNumber: '', sssNo: '', sssAmount: '', philhealthNo: '', philhealthAmount: '', pagibigNo: '', pagibigAmount: '', emergencyName: '', emergencyPhone: '', photo: '', payout: 'weekly', cashAdvanceTotal: '' });
   const [showAdd, setShowAdd] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);

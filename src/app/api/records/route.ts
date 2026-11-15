@@ -114,6 +114,7 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS payout_summaries_branch_idx ON payout_summaries (branch);
+    CREATE TABLE IF NOT EXISTS salary (
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
       period_date TEXT,
