@@ -271,6 +271,10 @@ export async function GET(req: Request) {
     const sql = `SELECT data FROM ${physical} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, values);
     let extra: any[] = [];
+    if (branchTable && (table === 'employee_profiles' || table === 'employees')) {
+      const legacy = await pool.query(`SELECT data FROM ${table} WHERE branch = $1 OR data->>'branch' = $1 ORDER BY updated_at DESC LIMIT 1000`, [branch]).catch(() => ({ rows: [] }));
+      extra = legacy.rows.map((r: any) => r.data);
+    }
     if (branchTable && table === 'supplier_invoices') {
       const legacyWhere = [`(branch = $1 OR data->>'branch' = $1)`];
       const legacyValues: any[] = [branch];

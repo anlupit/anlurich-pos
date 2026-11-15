@@ -96,7 +96,7 @@ export default function EmployeeSalaryPage() {
     Promise.all([
       fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
       fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
-    ]).then(([profiles, oldRows]) => {
+    ]).then(async ([profiles, oldRows]) => {
       const rows = [...(Array.isArray(profiles) ? profiles : []), ...(Array.isArray(oldRows) ? oldRows : [])];
       const seen = new Set<string>();
       const list = rows.filter((r) => {
@@ -106,6 +106,24 @@ export default function EmployeeSalaryPage() {
         return true;
       });
       setEmployees(list);
+      if (!list.length) {
+        const local: any[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i) || '';
+          if (!/employ/i.test(key)) continue;
+          try {
+            const value = JSON.parse(localStorage.getItem(key) || 'null');
+            const rows = Array.isArray(value) ? value : value?.name ? [value] : [];
+            local.push(...rows.filter((r) => r?.name));
+          } catch {}
+        }
+        if (local.length) {
+          setEmployees(local);
+          for (const row of local) {
+            await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: { ...row, branch } }) });
+          }
+        }
+      }
     });
   }, [unlocked, branch]);
 
