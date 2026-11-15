@@ -87,7 +87,7 @@ export default function EmployeeProfilePage() {
   const allowanceDays = fullDays;
   const base = dayRate * worked;
   const allowance = Number(employee.dailyAllowance || 0) * allowanceDays;
-  const overtimePay = hourly * 1.25 * overtime;
+  const overtimePay = (dayRate / 8) * 1.3 * overtime;
   const undertimePay = hourly * undertime;
   const sss = deductGov && !alreadyDeducted ? Number(employee.sssAmount || 0) : 0;
   const phil = deductGov && !alreadyDeducted ? Number(employee.philhealthAmount || 0) : 0;
@@ -97,7 +97,7 @@ export default function EmployeeProfilePage() {
   const totalPayout = salaryNet - cashAdvance + advanceRequest;
   const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
 
-  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
+  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? (dayRate / 8) * undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
@@ -167,7 +167,7 @@ export default function EmployeeProfilePage() {
         <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600">← Back</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="border rounded-xl p-3 w-1/2">
+          <div className="border rounded-xl p-3 min-w-0">
             <div className="flex justify-between items-start mb-2">
               <div className="text-lg font-bold">{employee.name}</div>
               <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-blue-700 text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit'}</button>
@@ -212,7 +212,7 @@ export default function EmployeeProfilePage() {
             </div>
             </>)}
           </div>
-          <div className="border rounded-xl p-3 w-1/2">
+          <div className="border rounded-xl p-3 min-w-0">
             <div className="font-bold mb-2">Present dates. Days: {worked}</div>
             <div className="flex flex-col gap-1">
               {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
@@ -238,8 +238,8 @@ export default function EmployeeProfilePage() {
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => setShowUndertime(e.target.checked)} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} />}</label>
           </div>
-          <div className="border rounded-xl p-3 w-1/2">
-            <div className="font-bold mb-2">Salary Computation</div>
+          <div className="border rounded-xl p-3 min-w-0">
+            <div className="font-bold mb-2 text-lg">Salary Computation</div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between"><span>Daily Rate x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
               <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
@@ -258,7 +258,7 @@ export default function EmployeeProfilePage() {
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
                 {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
-                <div className="text-right"><div className="text-xs">Total Payout</div><div className="text-3xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
+                <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
               </div>
             </div>
           </div>
