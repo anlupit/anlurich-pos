@@ -118,7 +118,7 @@ export default function Sidebar() {
     setBranchId(id);
     setBranchName(names[id] || '');
     const unlocked = sessionStorage.getItem(`salary-ok-${id}`) === '1';
-    setSalaryOpen(unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary')));
+    setSalaryOpen(unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')));
     if (unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary'))) {
       fetch(`/api/records?table=employee_profiles&branch=${id}`, { cache: 'no-store' })
         .then((r) => r.json())
@@ -156,11 +156,12 @@ export default function Sidebar() {
       </button>
       {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-1 flex-1">
-        {salaryOpen ? (
+        {salaryOpen && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) ? (
           employees.map((e) => (
             <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium text-left">{e.name}</button>
           )).concat([
-            <button key="report" onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 hover:bg-teal-800 rounded-lg px-2 py-2 text-xs font-bold text-left mt-2">Generate Report</button>
+            <button key="report" onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 hover:bg-teal-800 rounded-lg px-2 py-2 text-xs font-bold text-left mt-2">Generate Report</button>,
+            <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>
           ])
         ) : menu.map((item) => (
           <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2">

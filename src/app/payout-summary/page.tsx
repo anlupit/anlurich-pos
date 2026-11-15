@@ -40,25 +40,43 @@ export default function PayoutSummaryPage() {
     Promise.all([
       fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
       fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
-    ]).then(([employees, salaries]) => {
+    ]).then(async ([employees, salaries]) => {
       const latest = new Map<string, any>();
       (Array.isArray(salaries) ? salaries : []).forEach((row: any) => {
         const key = String(row.employeeName || '').toLowerCase();
         if (!latest.has(key)) latest.set(key, row);
       });
       const list = (Array.isArray(employees) ? employees : []).filter((e) => e.name).map((e) => {
-        const saved = (Array.isArray(salaries) ? salaries : []).find((row: any) => String(row.employeeName || '').toLowerCase() === String(e.name || '').toLowerCase() && String(row.period || row.date || '') >= fromDate && String(row.period || row.date || '') <= toDate);
+        const matches = (Array.isArray(salaries) ? salaries : []).filter((row: any) => {
+          const name = String(row.employeeName || '').toLowerCase();
+          const emp = String(e.name || '').toLowerCase();
+          if (!name || !(name === emp || name.includes(emp) || emp.includes(name))) return false;
+          const start = String(row.fromDate || '');
+          const end = String(row.toDate || '');
+          if (start && end && start <= toDate && end >= fromDate) return true;
+          const savedDate = String(row.date || '');
+          if (savedDate && savedDate >= fromDate && savedDate <= toDate) return true;
+          const period = String(row.period || '').toLowerCase();
+          const from = new Date(`${fromDate}T00:00:00`);
+          const month = from.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+          return period.includes(month) && period.includes(String(from.getFullYear())) && period.includes(String(from.getDate()));
+        });
+        const net = matches.reduce((n: number, row: any) => n + Number(row.net || 0), 0);
         return {
         group: e.payoutType || 'Cash',
         name: e.name,
         position: e.position || '',
         account: e.accountNumber || '',
-        net: Number(saved?.net || 0),
+        net,
         schedule: e.payout === 'semi' || e.rateType === 'monthly' ? 'semi' : 'weekly',
         salaryDate: `${fromDate} to ${toDate}`,
       };
       }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
       setRows(list);
+      const branch = localStorage.getItem('anlurich-branch') || '';
+      for (const item of list.filter((r) => r.net)) {
+        await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'payout_summaries', row: { id: `${branch}-${item.name}-${fromDate}`, branch, employeeName: item.name, period: `${fromDate} to ${toDate}`, net: item.net, payoutType: item.group, accountNumber: item.account } }) });
+      }
     });
   }, [fromDate, toDate]);
 

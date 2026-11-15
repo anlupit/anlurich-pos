@@ -8,7 +8,7 @@ const pool = new Pool({
 });
 
 const BRANCHES = ['anlurich', 'dasma', 'sezan', 'timitsu', 'avenders', 'lipa'];
-const SPLIT = ['supplier_invoices', 'sales', 'no_invoices', 'customer_points', 'inventory', 'customers', 'employees', 'expenses', 'employee_profiles', 'employee_salaries'];
+const SPLIT = ['supplier_invoices', 'sales', 'no_invoices', 'customer_points', 'inventory', 'customers', 'employees', 'expenses', 'employee_profiles', 'employee_salaries', 'payout_summaries'];
 
 function tableFor(base: string, branch?: string | null) {
   const b = String(branch || '').toLowerCase();
@@ -105,7 +105,15 @@ async function ensure() {
     CREATE INDEX IF NOT EXISTS employee_salaries_branch_idx ON employee_salaries (branch);
     CREATE INDEX IF NOT EXISTS employee_salaries_name_idx ON employee_salaries (employee_name);
     CREATE INDEX IF NOT EXISTS employee_salaries_period_idx ON employee_salaries (period_date);
-    CREATE TABLE IF NOT EXISTS salary (
+    CREATE TABLE IF NOT EXISTS payout_summaries (
+      id TEXT PRIMARY KEY,
+      branch TEXT NOT NULL,
+      period_date TEXT,
+      employee_name TEXT,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS payout_summaries_branch_idx ON payout_summaries (branch);
       id TEXT PRIMARY KEY,
       branch TEXT NOT NULL,
       period_date TEXT,
@@ -221,7 +229,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -291,7 +299,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {

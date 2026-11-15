@@ -127,7 +127,7 @@ export default function EmployeeProfilePage() {
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
-    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     setHistory((prev) => [row, ...prev]);
     setReleaseOpen(false);
@@ -224,7 +224,7 @@ export default function EmployeeProfilePage() {
       <div className="bg-white rounded-b-xl shadow p-4 mb-4">
         <button onClick={() => (window.location.href = '/employee-salary')} className="bg-slate-600 text-white px-4 py-2 rounded-lg mb-3">← Back to Employee Salary</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
-        <div className="grid gap-3 text-base" style={{ gridTemplateColumns: '1.4fr 1fr 1.2fr' }}>
+        <div className="grid gap-3 text-base" style={{ gridTemplateColumns: '1.8fr 1fr 1.2fr' }}>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="font-bold text-lg mb-2">1. Employee Information</div>
             <div className="flex justify-between items-start mb-2">
@@ -262,9 +262,9 @@ export default function EmployeeProfilePage() {
             </div>
             <div className="mt-3 overflow-x-auto">
               <div className="font-bold text-sm mb-1">Salary History</div>
-              <table className="w-full text-xs table-fixed">
-                <thead><tr className="bg-gray-100"><th className="p-1 text-left w-28">Dates of Salary</th><th className="p-1 text-left">Type</th><th className="p-1 text-left">Account</th><th className="p-1 text-right">Total</th><th className="p-1 text-left">Ref No.</th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td><td className="p-1"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+              <table className="w-full text-[11px] table-fixed leading-tight">
+                <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Type</th><th className="px-1 py-0.5 text-left">Account</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{h.period || h.date}</td><td className="px-1 py-0.5">{h.payoutType || employee.payoutType || ''}</td><td className="px-1 py-0.5 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}

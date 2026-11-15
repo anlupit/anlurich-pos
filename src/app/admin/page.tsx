@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [toMonth, setToMonth] = useState(`${yearNow}-12`);
   const [payables, setPayables] = useState<any[]>([]);
   const [searchedPayables, setSearchedPayables] = useState(false);
+  const [salaryExpense, setSalaryExpense] = useState<any[]>([]);
 
   const today = new Date().toISOString().slice(0, 10);
   const month = new Date().toISOString().slice(0, 7);
@@ -74,6 +75,8 @@ export default function AdminDashboard() {
         setRequests(Array.isArray(get('anlurich-stock-requests')) ? get('anlurich-stock-requests') : []);
         const ann = get('anlurich-announcements');
         setAnnouncements(Array.isArray(ann) ? ann : []);
+        const salaryRows = await Promise.all(BRANCHES.map((b) => fetch(`/api/records?table=employee_salaries&branch=${b.id}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => [])));
+        setSalaryExpense(salaryRows.flat().filter((r) => r && r.net));
       } catch {}
     };
     load();
@@ -235,6 +238,36 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-5 mb-4">
+        <h2 className="font-semibold mb-3">Monthly Salary Expense — All Branches</h2>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="text-left p-2">Month</th>
+              {BRANCHES.map((b) => <th key={b.id} className="text-right p-2">{b.name}</th>)}
+              <th className="text-right p-2">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from(new Set(salaryExpense.map((s) => String(s.date || s.period || '').slice(0, 7)).filter(Boolean))).sort().map((m) => {
+              const byBranch = BRANCHES.map((b) => salaryExpense.filter((s) => s.branch === b.id && String(s.date || s.period || '').startsWith(m)).reduce((n, s) => n + Number(s.net || 0), 0));
+              return (
+                <tr key={m} className="border-t">
+                  <td className="p-2">{m}</td>
+                  {byBranch.map((n, i) => <td key={BRANCHES[i].id} className="p-2 text-right">{money(n)}</td>)}
+                  <td className="p-2 text-right font-bold">{money(byBranch.reduce((a, b) => a + b, 0))}</td>
+                </tr>
+              );
+            })}
+            <tr className="border-t font-black">
+              <td className="p-2">All Months</td>
+              {BRANCHES.map((b) => <td key={b.id} className="p-2 text-right">{money(salaryExpense.filter((s) => s.branch === b.id).reduce((n, s) => n + Number(s.net || 0), 0))}</td>)}
+              <td className="p-2 text-right">{money(salaryExpense.reduce((n, s) => n + Number(s.net || 0), 0))}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div className="bg-white rounded-xl shadow p-5">
