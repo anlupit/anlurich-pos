@@ -99,12 +99,13 @@ export default function EmployeeSalaryPage() {
     ]).then(([profiles, oldRows]) => {
       const rows = [...(Array.isArray(profiles) ? profiles : []), ...(Array.isArray(oldRows) ? oldRows : [])];
       const seen = new Set<string>();
-      setEmployees(rows.filter((r) => {
-        const key = String(r.id || r.name || '');
+      const list = rows.filter((r) => {
+        const key = String(r.name || r.id || '').toLowerCase();
         if (!r.name || String(r.id || '').startsWith('payroll-') || r.status === 'terminated' || seen.has(key)) return false;
         seen.add(key);
         return true;
-      }));
+      });
+      setEmployees(list);
     });
   }, [unlocked, branch]);
 
@@ -359,7 +360,7 @@ export default function EmployeeSalaryPage() {
                 <td className="p-2 text-right"><button onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-blue-700 font-medium">View Profile / Create Salary</button></td>
               </tr>
             ))}
-            {employees.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No employees yet</td></tr>}
+            {employees.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No employees found in Supabase for this branch. Check that you are logged in to the correct branch.</td></tr>}
           </tbody>
         </table>
       </div>

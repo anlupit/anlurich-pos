@@ -164,10 +164,17 @@ export default function Sidebar() {
             <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>
           ])
         ) : menu.map((item) => (
+          item.href === '/employee-salary' ? (
+            <button key={item.href} onClick={() => { sessionStorage.removeItem(`salary-ok-${branchId}`); window.location.href = '/employee-salary'; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2 w-full">
+              <Icon label={item.label} />
+              <span className="flex-1 text-left">{item.label}</span>
+            </button>
+          ) : (
           <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2">
             <Icon label={item.label} />
             <span className="flex-1 text-left">{item.label}</span>
           </a>
+          )
         ))}
         {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-3 py-3 text-base font-bold flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
       </nav>

@@ -127,13 +127,15 @@ export default function Home() {
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <h2 className="font-bold mb-1">Login</h2>
             <p className="text-sm text-gray-500 mb-3">{loginFor === 'admin' ? 'Anlu Pit' : BUTTONS.find((b) => b.id === loginFor)?.name}</p>
+            <form onSubmit={(e) => { e.preventDefault(); submitLogin(); }}>
             <input className="w-full border rounded px-3 py-2 mb-2" placeholder="Login Name" value={loginName} onChange={(e) => setLoginName(e.target.value)} />
             <input type="password" className="w-full border rounded px-3 py-2 mb-2" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
             {loginError && <p className="text-red-600 text-sm mb-2">{loginError}</p>}
             <div className="flex gap-3">
-              <button onClick={() => setLoginFor(null)} className="flex-1 bg-gray-400 text-white py-2 rounded">Cancel</button>
-              <button onClick={submitLogin} className="flex-1 bg-purple-600 text-white py-2 rounded">Enter</button>
+              <button type="button" onClick={() => setLoginFor(null)} className="flex-1 bg-gray-400 text-white py-2 rounded">Cancel</button>
+              <button type="submit" className="flex-1 bg-purple-600 text-white py-2 rounded">Enter</button>
             </div>
+            </form>
           </div>
         </div>
       )}
