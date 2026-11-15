@@ -88,8 +88,7 @@ export default function EmployeeSalaryPage() {
   useEffect(() => {
     const b = currentBranch() || '';
     setBranch(b);
-    sessionStorage.removeItem(`salary-ok-${b}`);
-    setUnlocked(false);
+    setUnlocked(sessionStorage.getItem(`salary-ok-${b}`) === '1');
   }, []);
 
   useEffect(() => {
@@ -116,6 +115,7 @@ export default function EmployeeSalaryPage() {
       sessionStorage.setItem(`salary-ok-${b}`, '1');
       setBranch(b);
       setUnlocked(true);
+      window.location.reload();
     } else alert('Wrong password for this branch.');
   };
 

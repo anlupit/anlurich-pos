@@ -102,6 +102,7 @@ export default function Sidebar() {
   const [branchName, setBranchName] = useState('');
   const [branchId, setBranchId] = useState('');
   const [employees, setEmployees] = useState<any[]>([]);
+  const [salaryOpen, setSalaryOpen] = useState(false);
 
   useEffect(() => {
     const names: Record<string, string> = {
@@ -116,12 +117,14 @@ export default function Sidebar() {
     const id = localStorage.getItem('anlurich-branch') || '';
     setBranchId(id);
     setBranchName(names[id] || '');
-    if (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile')) {
+    const unlocked = sessionStorage.getItem(`salary-ok-${id}`) === '1';
+    setSalaryOpen(unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary')));
+    if (unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary'))) {
       fetch(`/api/records?table=employee_profiles&branch=${id}`, { cache: 'no-store' })
         .then((r) => r.json())
         .then((rows) => setEmployees((Array.isArray(rows) ? rows : []).filter((e) => e.name && e.status !== 'terminated')))
         .catch(() => setEmployees([]));
-    }
+    } else setEmployees([]);
   }, [pathname]);
 
   if (pathname === '/' || pathname.startsWith('/customer')) return null;
@@ -153,7 +156,7 @@ export default function Sidebar() {
       </button>
       {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-1 flex-1">
-        {pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') ? (
+        {salaryOpen ? (
           employees.map((e) => (
             <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium text-left">{e.name}</button>
           )).concat([
