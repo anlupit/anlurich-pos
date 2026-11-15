@@ -25,6 +25,13 @@ function semiLabel(date = new Date()) {
 }
 
 export default function PayoutSummaryPage() {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  const [fromDate, setFromDate] = useState(monday.toISOString().slice(0, 10));
+  const [toDate, setToDate] = useState(saturday.toISOString().slice(0, 10));
   const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
@@ -38,18 +45,21 @@ export default function PayoutSummaryPage() {
         const key = String(row.employeeName || '').toLowerCase();
         if (!latest.has(key)) latest.set(key, row);
       });
-      const list = (Array.isArray(employees) ? employees : []).filter((e) => e.name).map((e) => ({
+      const list = (Array.isArray(employees) ? employees : []).filter((e) => e.name).map((e) => {
+        const saved = (Array.isArray(salaries) ? salaries : []).find((row: any) => String(row.employeeName || '').toLowerCase() === String(e.name || '').toLowerCase() && String(row.period || row.date || '') >= fromDate && String(row.period || row.date || '') <= toDate);
+        return {
         group: e.payoutType || 'Cash',
         name: e.name,
         position: e.position || '',
         account: e.accountNumber || '',
-        net: Number(latest.get(String(e.name || '').toLowerCase())?.net || 0),
+        net: Number(saved?.net || 0),
         schedule: e.payout === 'semi' || e.rateType === 'monthly' ? 'semi' : 'weekly',
-        salaryDate: e.payout === 'semi' || e.rateType === 'monthly' ? semiLabel() : weekLabel(),
-      })).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
+        salaryDate: `${fromDate} to ${toDate}`,
+      };
+      }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
       setRows(list);
     });
-  }, []);
+  }, [week]);
 
   const download = async () => {
     const XLSX = await import('xlsx');
@@ -67,6 +77,7 @@ export default function PayoutSummaryPage() {
         <div>
           <h1 className="text-2xl font-black text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
           <div className="text-yellow-600 font-bold">Payout Summary</div>
+          <label className="text-sm text-gray-700">From <input type="date" className="border rounded px-2 py-1 ml-1" value={fromDate} onChange={(e) => setFromDate(e.target.value)} /> To <input type="date" className="border rounded px-2 py-1 ml-1" value={toDate} onChange={(e) => setToDate(e.target.value)} /></label>
         </div>
         <div className="flex gap-2">
           <button onClick={download} className="bg-green-700 text-white px-4 py-2 rounded-lg">Download</button>

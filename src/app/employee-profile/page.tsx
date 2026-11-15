@@ -30,11 +30,13 @@ export default function EmployeeProfilePage() {
   const [undertime, setUndertime] = useState(0);
   const [absentDates, setAbsentDates] = useState('');
   const [presentDates, setPresentDates] = useState<string[]>([]);
-  const [weekStart, setWeekStart] = useState(() => {
-    const now = new Date();
-    now.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    return now.toISOString().slice(0, 10);
-  });
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  const [fromDate, setFromDate] = useState(monday.toISOString().slice(0, 10));
+  const [toDate, setToDate] = useState(saturday.toISOString().slice(0, 10));
   const [halfDate, setHalfDate] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
   const [advanceRequest, setAdvanceRequest] = useState(0);
@@ -241,25 +243,11 @@ export default function EmployeeProfilePage() {
           </div>
           <div className="border rounded-xl p-3 min-w-0">
             <div className="font-bold text-lg mb-2">2. Payroll Adjustments</div>
-            <label className="text-sm block mb-2">Week
-              <select className="border rounded px-2 py-1 ml-2" value={weekStart} onChange={(e) => { setWeekStart(e.target.value); setPresentDates([]); }}>
-                {Array.from({ length: 53 }, (_, i) => {
-                  const year = new Date().getFullYear();
-                  const start = new Date(year, 0, 1 + i * 7);
-                  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-                  const value = start.toISOString().slice(0, 10);
-                  const end = new Date(start);
-                  end.setDate(start.getDate() + 5);
-                  return <option key={i + 1} value={value}>Week {i + 1}</option>;
-                })}
-              </select>
-              <span className="ml-2 font-bold">{(() => { const start = new Date(`${weekStart}T00:00:00`); const end = new Date(start); end.setDate(start.getDate() + 5); return `${start.toLocaleString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`; })()}</span>
-            </label>
+            <label className="text-sm block mb-2">From <input type="date" className="border rounded px-2 py-1" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPresentDates([]); }} /> To <input type="date" className="border rounded px-2 py-1" value={toDate} onChange={(e) => { setToDate(e.target.value); setPresentDates([]); }} /></label>
             <div className="flex flex-col gap-1">
-              {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
-                const start = new Date(`${weekStart}T00:00:00`);
-                const date = new Date(start);
-                date.setDate(start.getDate() + i);
+              {Array.from({ length: Math.max(1, Math.round((new Date(`${toDate}T00:00:00`).getTime() - new Date(`${fromDate}T00:00:00`).getTime()) / 86400000) + 1) }, (_, i) => {
+                const date = new Date(`${fromDate}T00:00:00`);
+                date.setDate(date.getDate() + i);
                 const key = date.toISOString().slice(0, 10);
                 const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 return <div key={key} className="flex items-center gap-2 text-sm">
