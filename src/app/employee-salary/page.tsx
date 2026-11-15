@@ -183,11 +183,12 @@ export default function EmployeeSalaryPage() {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 90 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 400 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
-      canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      setForm((f: any) => ({ ...f, photo: canvas.toDataURL('image/jpeg', 0.35) }));
+      const ctx = canvas.getContext('2d');
+      if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, canvas.width, canvas.height); }
+      setForm((f: any) => ({ ...f, photo: canvas.toDataURL('image/jpeg', 0.92) }));
     };
     img.src = URL.createObjectURL(file);
   };

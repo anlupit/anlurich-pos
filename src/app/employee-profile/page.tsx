@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 
-const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const LETTERHEAD: Record<string, string> = {
+  anlurich: 'Anlurich OPC',
+  dasma: 'Dasma Auto Parts',
+  lipa: 'Lipa Auto Parts',
+  sezan: 'Baliwag Auto Parts',
+  avenders: 'Avenders Auto Parts',
+};
 
 export default function EmployeeProfilePage() {
   const [employee, setEmployee] = useState<any>(null);
@@ -17,6 +23,7 @@ export default function EmployeeProfilePage() {
   const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
   const [alreadyDeducted, setAlreadyDeducted] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('id') || '';
@@ -38,11 +45,12 @@ export default function EmployeeProfilePage() {
     const img = new Image();
     img.onload = async () => {
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 90 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 400 / Math.max(img.width, img.height));
       canvas.width = Math.max(1, Math.round(img.width * scale));
       canvas.height = Math.max(1, Math.round(img.height * scale));
-      canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const photo = canvas.toDataURL('image/jpeg', 0.35);
+      const ctx = canvas.getContext('2d');
+      if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, canvas.width, canvas.height); }
+      const photo = canvas.toDataURL('image/jpeg', 0.92);
       const row = { ...employee, photo };
       setEmployee(row);
       await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row }) });
@@ -61,9 +69,9 @@ export default function EmployeeProfilePage() {
   const allowance = Number(employee.dailyAllowance || 0) * allowanceDays;
   const overtimePay = hourly * 1.25 * overtime;
   const undertimePay = hourly * undertime;
-  const sss = Number(employee.sssAmount || 0);
-  const phil = Number(employee.philhealthAmount || 0);
-  const pagibig = Number(employee.pagibigAmount || 0);
+  const sss = deductGov && !alreadyDeducted ? Number(employee.sssAmount || 0) : 0;
+  const phil = deductGov && !alreadyDeducted ? Number(employee.philhealthAmount || 0) : 0;
+  const pagibig = deductGov && !alreadyDeducted ? Number(employee.pagibigAmount || 0) : 0;
   const gross = base + allowance + overtimePay;
   const salaryNet = gross - undertimePay - sss - phil - pagibig;
   const totalPayout = salaryNet - cashAdvance + advanceRequest;
@@ -76,6 +84,12 @@ export default function EmployeeProfilePage() {
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
     setEmployee(profile);
     alert('Salary saved.');
+  };
+
+  const saveProfile = async () => {
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: employee }) });
+    setEditing(false);
+    alert('Employee information saved to Supabase.');
   };
 
   const requestAdvance = async () => {
@@ -99,7 +113,7 @@ export default function EmployeeProfilePage() {
   const printSalary = () => {
     const w = window.open('', '_blank');
     if (!w) return;
-    w.document.write(`<html><body style="font-family:Arial;width:420px;padding:16px"><h2>AUTO PARTS INVENTORY SYSTEM</h2><h3>Salary Calculation</h3><div>${employee.name}</div><hr/><p>Salary ${money(salaryNet)}</p><p>Cash Advance Request ${money(advanceRequest)}</p><p>Cash Advance Deduction ${money(cashAdvance)}</p><h2>Total Earnings ${money(totalPayout)}</h2><p>Current CASH ADVANCE balance ${money(cashAdvanceBalance)}</p></body></html>`);
+    w.document.write(`<html><body style="font-family:Arial;text-align:center"><img src="/logo.png" style="height:70px"/><h2>${LETTERHEAD[employee.branch] || employee.branch}</h2><h3>Salary Computation</h3><div style="text-align:left"><p>${employee.name}</p><p>Salary ${money(salaryNet)}</p><p>Cash Advance Request ${money(advanceRequest)}</p><p>Cash Advance Deduction ${money(cashAdvance)}</p><h2>Total Earnings ${money(totalPayout)}</h2></div></body></html>`);
     w.document.close();
     w.print();
   };
@@ -112,7 +126,7 @@ export default function EmployeeProfilePage() {
           <div className="font-black tracking-wide">AUTO PARTS INVENTORY SYSTEM</div>
         </div>
         <label className="cursor-pointer">
-          {employee.photo ? <img src={employee.photo} alt="" className="h-[90px] w-[90px] object-cover rounded-full border-2 border-white" /> : <div className="h-[90px] w-[90px] rounded-full bg-white/30" />}
+          {employee.photo ? <img src={employee.photo} alt="" className="h-[153px] w-[153px] object-cover rounded-full border-2 border-white" /> : <div className="h-[153px] w-[153px] rounded-full bg-white/30" />}
           <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
         </label>
       </div>
@@ -121,7 +135,28 @@ export default function EmployeeProfilePage() {
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="border rounded-xl p-4">
-            <div className="text-2xl font-bold">{employee.name}</div>
+            <div className="flex justify-between items-start mb-2">
+              <div className="text-2xl font-bold">{employee.name}</div>
+              <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-blue-700 text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit'}</button>
+            </div>
+            {editing ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                <input className="border rounded px-2 py-1" value={employee.name || ''} onChange={(e) => setEmployee({ ...employee, name: e.target.value })} placeholder="Name" />
+                <input className="border rounded px-2 py-1" value={employee.position || ''} onChange={(e) => setEmployee({ ...employee, position: e.target.value })} placeholder="Position" />
+                <input className="border rounded px-2 py-1" value={employee.phone || ''} onChange={(e) => setEmployee({ ...employee, phone: e.target.value })} placeholder="Contact Number" />
+                <input className="border rounded px-2 py-1" value={employee.address || ''} onChange={(e) => setEmployee({ ...employee, address: e.target.value })} placeholder="Address" />
+                <input className="border rounded px-2 py-1" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} placeholder="Email" />
+                <input className="border rounded px-2 py-1" value={employee.dailyRate || ''} onChange={(e) => setEmployee({ ...employee, dailyRate: e.target.value })} placeholder="Rate" />
+                <input className="border rounded px-2 py-1" value={employee.dailyAllowance || ''} onChange={(e) => setEmployee({ ...employee, dailyAllowance: e.target.value })} placeholder="Daily Allowance" />
+                <input className="border rounded px-2 py-1" value={employee.sssNo || ''} onChange={(e) => setEmployee({ ...employee, sssNo: e.target.value })} placeholder="SSS No." />
+                <input className="border rounded px-2 py-1" value={employee.sssAmount || ''} onChange={(e) => setEmployee({ ...employee, sssAmount: e.target.value })} placeholder="SSS Amount" />
+                <input className="border rounded px-2 py-1" value={employee.philhealthNo || ''} onChange={(e) => setEmployee({ ...employee, philhealthNo: e.target.value })} placeholder="PhilHealth No." />
+                <input className="border rounded px-2 py-1" value={employee.philhealthAmount || ''} onChange={(e) => setEmployee({ ...employee, philhealthAmount: e.target.value })} placeholder="PhilHealth Amount" />
+                <input className="border rounded px-2 py-1" value={employee.pagibigNo || ''} onChange={(e) => setEmployee({ ...employee, pagibigNo: e.target.value })} placeholder="PAGIBIG No." />
+                <input className="border rounded px-2 py-1" value={employee.pagibigAmount || ''} onChange={(e) => setEmployee({ ...employee, pagibigAmount: e.target.value })} placeholder="PAGIBIG Amount" />
+                <input className="border rounded px-2 py-1" value={employee.accountNumber || ''} onChange={(e) => setEmployee({ ...employee, accountNumber: e.target.value })} placeholder="Payout Account No." />
+              </div>
+            ) : (<>
             <div className="text-sm text-gray-600 mb-4">{employee.position || '—'} · {employee.phone || '—'}</div>
             <div className="text-sm space-y-1 mb-4">
               <div>Address: {employee.address || '—'}</div>
@@ -135,6 +170,7 @@ export default function EmployeeProfilePage() {
               <div className="flex justify-between"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(employee.philhealthAmount)}</b></div>
               <div className="flex justify-between"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
             </div>
+            </>)}
           </div>
           <div className="border rounded-xl overflow-hidden">
             <div className="bg-[#1e3a8a] text-white text-center font-bold py-2">{new Date(`${deductMonth}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()} Deductibles</div>
@@ -142,9 +178,11 @@ export default function EmployeeProfilePage() {
               <label className="text-sm block mb-2">Month <input type="month" className="border rounded px-2 py-1 ml-2" value={deductMonth} onChange={(e) => setDeductMonth(e.target.value)} /></label>
               <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} disabled={alreadyDeducted} /> Deduct this payout</label>
               {alreadyDeducted && <div className="text-xs text-red-600 mb-2">Already deducted for this month.</div>}
-              <div className="flex justify-between text-sm py-1 border-b"><span>SSS No<br/>{employee.sssNo || '—'}</span><b>{money(sss)}</b></div>
-              <div className="flex justify-between text-sm py-1 border-b"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(phil)}</b></div>
-              <div className="flex justify-between text-sm py-1 border-b"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(pagibig)}</b></div>
+              {deductGov && <>
+                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">SSS</span><b className="text-red-600">{money(employee.sssAmount)}</b></div>
+                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">PhilHealth</span><b className="text-red-600">{money(employee.philhealthAmount)}</b></div>
+                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">PAGIBIG</span><b className="text-red-600">{money(employee.pagibigAmount)}</b></div>
+              </>}
               <label className="flex justify-between items-center text-sm py-2 border-b">Cash Advance Request
                 <input className="border rounded w-28 px-2 py-1 text-right" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />
               </label>
