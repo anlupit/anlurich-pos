@@ -46,6 +46,12 @@ export default function EmployeeProfilePage() {
   const [personalDetails, setPersonalDetails] = useState('');
   const [showAdvance, setShowAdvance] = useState(false);
   const [showIncentive, setShowIncentive] = useState(false);
+  const [showCommission, setShowCommission] = useState(false);
+  const [commission, setCommission] = useState(0);
+  const [commissionDetails, setCommissionDetails] = useState('');
+  const [showHoliday, setShowHoliday] = useState(false);
+  const [holidayPay, setHolidayPay] = useState(0);
+  const [holidayDetails, setHolidayDetails] = useState('');
   const [showOvertime, setShowOvertime] = useState(false);
   const [showCADeduct, setShowCADeduct] = useState(false);
   const [showUndertime, setShowUndertime] = useState(false);
@@ -116,7 +122,7 @@ export default function EmployeeProfilePage() {
   const totalPayout = salaryNet - cashAdvance + advanceRequest;
   const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
 
-  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? (dayRate / 8) * undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
+  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - (showUndertime ? (dayRate / 8) * undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
@@ -126,7 +132,29 @@ export default function EmployeeProfilePage() {
     setHistory((prev) => [row, ...prev]);
     setReleaseOpen(false);
     setReferenceNo('');
-    alert('Salary saved and released.');
+    setPresentDates([]);
+    setHalfDate('');
+    setOvertime(0);
+    setIncentive(0);
+    setUndertimeAmount(0);
+    setPersonalCharge(0);
+    setPersonalDetails('');
+    setCashAdvance(0);
+    setAdvanceRequest(0);
+    setDeductGov(false);
+    setShowAdvance(false);
+    setShowIncentive(false);
+    setShowCommission(false);
+    setShowHoliday(false);
+    setHolidayPay(0);
+    setHolidayDetails('');
+    setCommission(0);
+    setCommissionDetails('');
+    setShowOvertime(false);
+    setShowCADeduct(false);
+    setShowUndertime(false);
+    setShowPersonal(false);
+    alert('Salary saved and released. Form cleared for a new record.');
   };
 
   const saveSalary = async () => {
@@ -259,6 +287,8 @@ export default function EmployeeProfilePage() {
             <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => setShowOvertime(e.target.checked)} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => setShowAdvance(e.target.checked)} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showIncentive} onChange={(e) => setShowIncentive(e.target.checked)} /> Incentive Pay Bonus {showIncentive && <input className="border rounded w-20 px-2 py-1" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showCommission} onChange={(e) => setShowCommission(e.target.checked)} /> Monthly Commission {showCommission && <><input className="border rounded w-20 px-2 py-1" value={commission || ''} onChange={(e) => setCommission(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={commissionDetails} onChange={(e) => setCommissionDetails(e.target.value)} /></>}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showHoliday} onChange={(e) => setShowHoliday(e.target.checked)} /> Holiday Pay {showHoliday && <><input className="border rounded w-20 px-2 py-1" value={holidayPay || ''} onChange={(e) => setHolidayPay(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={holidayDetails} onChange={(e) => setHolidayDetails(e.target.value)} /></>}</label>
             <div className="font-bold mt-3">Deductibles</div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} /> Government Mandatory Contribution</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => setShowCADeduct(e.target.checked)} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
@@ -276,6 +306,8 @@ export default function EmployeeProfilePage() {
               <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
               {showAdvance && <div className="flex justify-between text-blue-700 font-bold"><span>Cash Advance Request</span><span>{money(advanceRequest)}</span></div>}
               {showIncentive && <div className="flex justify-between"><span>Incentive Pay Bonus</span><span>{money(incentive)}</span></div>}
+              {showCommission && <div className="flex justify-between text-blue-700 font-bold"><span>Monthly Commission {commissionDetails}</span><span>{money(commission)}</span></div>}
+              {showHoliday && <div className="flex justify-between text-blue-700 font-bold"><span>Holiday Pay {holidayDetails}</span><span>{money(holidayPay)}</span></div>}
               {showOvertime && <div className="flex justify-between"><span>Overtime Pay</span><span>{money(overtimePay)}</span></div>}
               <div className="font-bold pt-2">Deductibles</div>
               {!deductGov && !showCADeduct && !showUndertime && !showPersonal && <div>No Deductions</div>}
@@ -289,7 +321,7 @@ export default function EmployeeProfilePage() {
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
                 {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
-                <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
+                <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
               </div>
             </div>
           </div>

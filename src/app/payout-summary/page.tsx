@@ -61,6 +61,31 @@ export default function PayoutSummaryPage() {
     });
   }, [fromDate, toDate]);
 
+  const downloadTemplate = async () => {
+    const XLSX = await import('xlsx');
+    const data = rows.map((r) => ({ 'Date From': fromDate, 'Date To': toDate, 'Employee Name': r.name, 'Payout Type': r.group, 'Account No': r.account, 'Total Payout': r.net, 'Reference No': r.referenceNo || '' }));
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Reference Numbers');
+    XLSX.writeFile(wb, `reference-nos-${fromDate}-to-${toDate}.xlsx`);
+  };
+
+  const uploadReferences = async (file?: File) => {
+    if (!file) return;
+    const XLSX = await import('xlsx');
+    const wb = XLSX.read(await file.arrayBuffer());
+    const rowsIn = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]) as any[];
+    const branch = localStorage.getItem('anlurich-branch') || '';
+    const salaries = await fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []);
+    for (const item of rowsIn) {
+      const name = String(item['Employee Name'] || '').toLowerCase();
+      const match = (Array.isArray(salaries) ? salaries : []).find((row: any) => String(row.employeeName || '').toLowerCase() === name && String(row.period || row.date || '').includes(fromDate));
+      if (!match) continue;
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row: { ...match, referenceNo: item['Reference No'] || '' } }) });
+    }
+    alert('Reference numbers uploaded.');
+  };
+
   const download = async () => {
     const XLSX = await import('xlsx');
     const data = rows.map((r) => ({ Schedule: r.salaryDate, Group: r.group, 'Employee Name': r.name, Position: r.position, 'Account No of Payout': r.account, 'Net Total of Payout': r.net }));
