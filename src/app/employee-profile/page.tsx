@@ -23,6 +23,18 @@ export default function EmployeeProfilePage() {
   const [halfDate, setHalfDate] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
   const [advanceRequest, setAdvanceRequest] = useState(0);
+  const [incentive, setIncentive] = useState(0);
+  const [undertimeAmount, setUndertimeAmount] = useState(0);
+  const [personalCharge, setPersonalCharge] = useState(0);
+  const [showAdvance, setShowAdvance] = useState(false);
+  const [showIncentive, setShowIncentive] = useState(false);
+  const [showOvertime, setShowOvertime] = useState(false);
+  const [showCADeduct, setShowCADeduct] = useState(false);
+  const [showUndertime, setShowUndertime] = useState(false);
+  const [showPersonal, setShowPersonal] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [releaseOpen, setReleaseOpen] = useState(false);
+  const [referenceNo, setReferenceNo] = useState('');
   const [deductGov, setDeductGov] = useState(false);
   const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
   const [alreadyDeducted, setAlreadyDeducted] = useState(false);
@@ -40,6 +52,9 @@ export default function EmployeeProfilePage() {
         const row = (Array.isArray(rows) ? rows : [])[0];
         if (row) setEmployee(row);
         else if (!cached) setLoadError('Employee profile was not found. Open it from the Employee Salary list.');
+        fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' })
+          .then((r) => r.json())
+          .then((rows) => setHistory((Array.isArray(rows) ? rows : []).filter((r) => String(r.employeeName || '').toLowerCase() === String((row?.name || '')).toLowerCase())));
       })
       .catch(() => { if (!cached) setLoadError('Could not load the profile. Go back and open it from the list.'); });
   }, []);
@@ -81,6 +96,19 @@ export default function EmployeeProfilePage() {
   const salaryNet = gross - undertimePay - sss - phil - pagibig;
   const totalPayout = salaryNet - cashAdvance + advanceRequest;
   const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
+
+  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
+
+  const confirmRelease = async () => {
+    const dates = presentDates.slice().sort();
+    const period = dates.length ? `${dates[0]} to ${dates[dates.length - 1]}` : new Date().toISOString().slice(0, 10);
+    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
+    setHistory((prev) => [row, ...prev]);
+    setReleaseOpen(false);
+    setReferenceNo('');
+    alert('Salary saved and released.');
+  };
 
   const saveSalary = async () => {
     const row = { id: `${employee.branch}-${employee.id}-${new Date().toISOString().slice(0, 10)}`, branch: employee.branch, employeeName: employee.name, days, halfDays, absentDates, overtime, undertime, cashAdvance, advanceRequest, gross, net: totalPayout, date: new Date().toISOString().slice(0, 10) };
@@ -139,97 +167,122 @@ export default function EmployeeProfilePage() {
         <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600">← Back</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="border rounded-xl p-4">
+          <div className="border rounded-xl p-3 w-1/2">
             <div className="flex justify-between items-start mb-2">
-              <div className="text-2xl font-bold">{employee.name}</div>
+              <div className="text-lg font-bold">{employee.name}</div>
               <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-blue-700 text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit'}</button>
             </div>
             {editing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                <input className="border rounded px-2 py-1" value={employee.name || ''} onChange={(e) => setEmployee({ ...employee, name: e.target.value })} placeholder="Name" />
-                <input className="border rounded px-2 py-1" value={employee.position || ''} onChange={(e) => setEmployee({ ...employee, position: e.target.value })} placeholder="Position" />
-                <input className="border rounded px-2 py-1" value={employee.phone || ''} onChange={(e) => setEmployee({ ...employee, phone: e.target.value })} placeholder="Contact Number" />
-                <input className="border rounded px-2 py-1" value={employee.address || ''} onChange={(e) => setEmployee({ ...employee, address: e.target.value })} placeholder="Address" />
-                <input className="border rounded px-2 py-1" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} placeholder="Email" />
-                <input className="border rounded px-2 py-1" value={employee.dailyRate || ''} onChange={(e) => setEmployee({ ...employee, dailyRate: e.target.value })} placeholder="Rate" />
-                <input className="border rounded px-2 py-1" value={employee.dailyAllowance || ''} onChange={(e) => setEmployee({ ...employee, dailyAllowance: e.target.value })} placeholder="Daily Allowance" />
-                <input className="border rounded px-2 py-1" value={employee.sssNo || ''} onChange={(e) => setEmployee({ ...employee, sssNo: e.target.value })} placeholder="SSS No." />
-                <input className="border rounded px-2 py-1" value={employee.sssAmount || ''} onChange={(e) => setEmployee({ ...employee, sssAmount: e.target.value })} placeholder="SSS Amount" />
-                <input className="border rounded px-2 py-1" value={employee.philhealthNo || ''} onChange={(e) => setEmployee({ ...employee, philhealthNo: e.target.value })} placeholder="PhilHealth No." />
-                <input className="border rounded px-2 py-1" value={employee.philhealthAmount || ''} onChange={(e) => setEmployee({ ...employee, philhealthAmount: e.target.value })} placeholder="PhilHealth Amount" />
-                <input className="border rounded px-2 py-1" value={employee.pagibigNo || ''} onChange={(e) => setEmployee({ ...employee, pagibigNo: e.target.value })} placeholder="PAGIBIG No." />
-                <input className="border rounded px-2 py-1" value={employee.pagibigAmount || ''} onChange={(e) => setEmployee({ ...employee, pagibigAmount: e.target.value })} placeholder="PAGIBIG Amount" />
-                <input className="border rounded px-2 py-1" value={employee.accountNumber || ''} onChange={(e) => setEmployee({ ...employee, accountNumber: e.target.value })} placeholder="Payout Account No." />
+              <div className="grid grid-cols-1 gap-1 text-sm">
+                <input className="border rounded px-2 py-1 h-8" value={employee.name || ''} onChange={(e) => setEmployee({ ...employee, name: e.target.value })} placeholder="Name" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.position || ''} onChange={(e) => setEmployee({ ...employee, position: e.target.value })} placeholder="Position" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.phone || ''} onChange={(e) => setEmployee({ ...employee, phone: e.target.value })} placeholder="Contact Number" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.address || ''} onChange={(e) => setEmployee({ ...employee, address: e.target.value })} placeholder="Address" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} placeholder="Email" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.dailyRate || ''} onChange={(e) => setEmployee({ ...employee, dailyRate: e.target.value })} placeholder="Rate" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.dailyAllowance || ''} onChange={(e) => setEmployee({ ...employee, dailyAllowance: e.target.value })} placeholder="Daily Allowance" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.sssNo || ''} onChange={(e) => setEmployee({ ...employee, sssNo: e.target.value })} placeholder="SSS No." />
+                <input className="border rounded px-2 py-1 h-8" value={employee.sssAmount || ''} onChange={(e) => setEmployee({ ...employee, sssAmount: e.target.value })} placeholder="SSS Amount" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.philhealthNo || ''} onChange={(e) => setEmployee({ ...employee, philhealthNo: e.target.value })} placeholder="PhilHealth No." />
+                <input className="border rounded px-2 py-1 h-8" value={employee.philhealthAmount || ''} onChange={(e) => setEmployee({ ...employee, philhealthAmount: e.target.value })} placeholder="PhilHealth Amount" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.pagibigNo || ''} onChange={(e) => setEmployee({ ...employee, pagibigNo: e.target.value })} placeholder="PAGIBIG No." />
+                <input className="border rounded px-2 py-1 h-8" value={employee.pagibigAmount || ''} onChange={(e) => setEmployee({ ...employee, pagibigAmount: e.target.value })} placeholder="PAGIBIG Amount" />
+                <input className="border rounded px-2 py-1 h-8" value={employee.accountNumber || ''} onChange={(e) => setEmployee({ ...employee, accountNumber: e.target.value })} placeholder="Payout Account No." />
               </div>
             ) : (<>
-            <div className="text-sm text-gray-600 mb-4">{employee.position || '—'} · {employee.phone || '—'}</div>
-            <div className="text-sm space-y-1 mb-4">
+            <div className="text-sm text-gray-600 mb-2">{employee.position || '—'} · {employee.phone || '—'}</div>
+            <div className="text-sm space-y-0.5 mb-2">
               <div>Address: {employee.address || '—'}</div>
               <div>Email: {employee.email || '—'}</div>
               <div>Birthdate: {employee.birthdate || '—'}</div>
               <div>Date of Employment: {employee.started || '—'}</div>
               <div>Rate: {money(employee.dailyRate)} · Allowance: {money(employee.dailyAllowance)}</div>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span>SSS No<br/>{employee.sssNo || '—'}</span><b>{money(employee.sssAmount)}</b></div>
-              <div className="flex justify-between"><span>PhilHealth No<br/>{employee.philhealthNo || '—'}</span><b>{money(employee.philhealthAmount)}</b></div>
-              <div className="flex justify-between"><span>PAGIBIG No<br/>{employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between"><span>SSS {employee.sssNo || '—'}</span><b>{money(employee.sssAmount)}</b></div>
+              <div className="flex justify-between"><span>PhilHealth {employee.philhealthNo || '—'}</span><b>{money(employee.philhealthAmount)}</b></div>
+              <div className="flex justify-between"><span>PAGIBIG {employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <div className="font-bold text-sm mb-1">Salary Payout History</div>
+              <table className="w-full text-xs">
+                <thead><tr className="bg-gray-100"><th className="p-1 text-left">Dates of Salary</th><th className="p-1 text-left">Payout Type</th><th className="p-1 text-left">Payout Account</th><th className="p-1 text-right">Total Salary</th><th className="p-1 text-left">Reference No.</th></tr></thead>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td></tr>)}</tbody>
+              </table>
             </div>
             </>)}
           </div>
-          <div className="border rounded-xl overflow-hidden">
-            <div className="bg-[#1e3a8a] text-white text-center font-bold py-2">{new Date(`${deductMonth}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()} Deductibles</div>
-            <div className="p-4">
-              <label className="text-sm block mb-2">Month <input type="month" className="border rounded px-2 py-1 ml-2" value={deductMonth} onChange={(e) => setDeductMonth(e.target.value)} /></label>
-              <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} disabled={alreadyDeducted} /> Deduct this payout</label>
-              {alreadyDeducted && <div className="text-xs text-red-600 mb-2">Already deducted for this month.</div>}
+          <div className="border rounded-xl p-3 w-1/2">
+            <div className="font-bold mb-2">Present dates. Days: {worked}</div>
+            <div className="flex flex-col gap-1">
+              {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
+                const start = new Date();
+                if (employee.payout === 'semi') start.setDate(start.getDate() <= 15 ? 1 : 16);
+                else start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                const date = new Date(start);
+                date.setDate(start.getDate() + i);
+                const key = date.toISOString().slice(0, 10);
+                const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                return <div key={key} className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={presentDates.includes(key)} onChange={(e) => { setPresentDates((prev) => e.target.checked ? [...prev, key] : prev.filter((d) => d !== key)); if (!e.target.checked && halfDate === key) setHalfDate(''); }} />{label}</label>
+                  {presentDates.includes(key) && <label className="flex items-center gap-1 text-xs text-orange-700"><input type="radio" name="halfday" checked={halfDate === key} onChange={() => setHalfDate(key)} />Half day</label>}
+                </div>;
+              })}
+            </div>
+            <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => setShowOvertime(e.target.checked)} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => setShowAdvance(e.target.checked)} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showIncentive} onChange={(e) => setShowIncentive(e.target.checked)} /> Incentive Pay Bonus {showIncentive && <input className="border rounded w-20 px-2 py-1" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} />}</label>
+            <div className="font-bold mt-3">Deductibles</div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} /> Government Mandatory Contribution</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => setShowCADeduct(e.target.checked)} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => setShowUndertime(e.target.checked)} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} />}</label>
+          </div>
+          <div className="border rounded-xl p-3 w-1/2">
+            <div className="font-bold mb-2">Salary Computation</div>
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between"><span>Daily Rate x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
+              <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
+              {showAdvance && <div className="flex justify-between text-blue-700 font-bold"><span>Cash Advance Request</span><span>{money(advanceRequest)}</span></div>}
+              {showIncentive && <div className="flex justify-between"><span>Incentive Pay Bonus</span><span>{money(incentive)}</span></div>}
+              {showOvertime && <div className="flex justify-between"><span>Overtime Pay</span><span>{money(overtimePay)}</span></div>}
+              <div className="font-bold pt-2">Deductibles</div>
+              {!deductGov && !showCADeduct && !showUndertime && !showPersonal && <div>No Deductions</div>}
               {deductGov && <>
-                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">SSS</span><b className="text-red-600">{money(employee.sssAmount)}</b></div>
-                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">PhilHealth</span><b className="text-red-600">{money(employee.philhealthAmount)}</b></div>
-                <div className="flex justify-between text-sm py-1 border-b"><span className="text-red-600 font-bold">PAGIBIG</span><b className="text-red-600">{money(employee.pagibigAmount)}</b></div>
+                <div className="flex justify-between text-red-600 font-bold"><span>SSS</span><span>{money(employee.sssAmount)}</span></div>
+                <div className="flex justify-between text-red-600 font-bold"><span>PhilHealth</span><span>{money(employee.philhealthAmount)}</span></div>
+                <div className="flex justify-between text-red-600 font-bold"><span>PAGIBIG</span><span>{money(employee.pagibigAmount)}</span></div>
               </>}
-              <label className="flex justify-between items-center text-sm py-2 border-b">Cash Advance Request
-                <input className="border rounded w-28 px-2 py-1 text-right" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />
-              </label>
-              <label className="flex justify-between items-center text-sm py-2 border-b">Cash Advance Deduction
-                <input className="border rounded w-28 px-2 py-1 text-right" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />
-              </label>
-              <div className="flex justify-between items-center mt-3"><span>Total Earnings</span><span className="text-2xl font-black text-blue-700">{money(totalPayout)}</span></div>
-              <div className="text-sm mt-2">Current CASH ADVANCE balance: <b>{money(cashAdvanceBalance)}</b></div>
+              {showCADeduct && <div className="flex justify-between text-red-600 font-bold"><span>Less: Cash Advance Deduction</span><span>{money(cashAdvance)}</span></div>}
+              {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime</span><span>{money(undertimeAmount)}</span></div>}
+              {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge</span><span>{money(personalCharge)}</span></div>}
+              <div className="flex justify-between items-end pt-3">
+                {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
+                <div className="text-right"><div className="text-xs">Total Payout</div><div className="text-3xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="font-bold mb-2">Tick the dates he is present. Days for salary: {worked}. Half day has no allowance.</div>
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
-              const start = new Date();
-              if (employee.payout === 'semi') start.setDate(start.getDate() <= 15 ? 1 : 16);
-              else start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-              const date = new Date(start);
-              date.setDate(start.getDate() + i);
-              const key = date.toISOString().slice(0, 10);
-              const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              return <div key={key} className="border rounded px-2 py-1 text-sm">
-                <label className="flex items-center gap-1"><input type="checkbox" checked={presentDates.includes(key)} onChange={(e) => { setPresentDates((prev) => e.target.checked ? [...prev, key] : prev.filter((d) => d !== key)); if (!e.target.checked && halfDate === key) setHalfDate(''); }} />{label}</label>
-                {presentDates.includes(key) && <label className="flex items-center gap-1 text-xs text-orange-700"><input type="radio" name="halfday" checked={halfDate === key} onChange={() => setHalfDate(key)} />Half day</label>}
-              </div>;
-            })}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-          <label className="text-sm">Half days<input className="border rounded w-full px-2 py-1" value={halfDays} onChange={(e) => setHalfDays(parseFloat(e.target.value) || 0)} /></label>
-          <label className="text-sm">Overtime hours<input className="border rounded w-full px-2 py-1" value={overtime} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} /></label>
-          <label className="text-sm">Undertime hours<input className="border rounded w-full px-2 py-1" value={undertime} onChange={(e) => setUndertime(parseFloat(e.target.value) || 0)} /></label>
-          <label className="text-sm">Absent dates<input className="border rounded w-full px-2 py-1" placeholder="2026-11-12" value={absentDates} onChange={(e) => setAbsentDates(e.target.value)} /></label>
-        </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <button onClick={requestAdvance} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Request Cash Advance</button>
-          <button onClick={saveSalary} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
+          <button onClick={() => setReleaseOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
           <button onClick={downloadSalary} className="border border-green-700 text-green-700 px-4 py-2 rounded-lg">Download</button>
           <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
+      {releaseOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-4 w-full max-w-sm">
+            <div className="font-bold text-lg mb-2">Released Payment?</div>
+            <div className="text-sm mb-2">Amount to transfer: <b>{money(payoutAmount)}</b></div>
+            <input className="border rounded w-full px-2 py-1 mb-3" placeholder="Reference No. of payment transfer" value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
+            <div className="flex gap-2">
+              <button onClick={confirmRelease} className="bg-blue-700 text-white px-4 py-2 rounded">Released</button>
+              <button onClick={() => setReleaseOpen(false)} className="border px-4 py-2 rounded">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
