@@ -19,6 +19,8 @@ export default function EmployeeProfilePage() {
   const [overtime, setOvertime] = useState(0);
   const [undertime, setUndertime] = useState(0);
   const [absentDates, setAbsentDates] = useState('');
+  const [presentDates, setPresentDates] = useState<string[]>([]);
+  const [halfDate, setHalfDate] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
   const [advanceRequest, setAdvanceRequest] = useState(0);
   const [deductGov, setDeductGov] = useState(false);
@@ -65,8 +67,9 @@ export default function EmployeeProfilePage() {
   const absentCount = absentDates.split(',').map((d) => d.trim()).filter(Boolean).length;
   const dayRate = employee.rateType === 'monthly' ? Number(employee.dailyRate || 0) / 26 : Number(employee.dailyRate || 0);
   const hourly = dayRate / 8;
-  const worked = days + halfDays * 0.5;
-  const allowanceDays = days;
+  const fullDays = presentDates.filter((d) => d !== halfDate).length;
+  const worked = fullDays + (halfDate ? 0.5 : 0);
+  const allowanceDays = fullDays;
   const base = dayRate * worked;
   const allowance = Number(employee.dailyAllowance || 0) * allowanceDays;
   const overtimePay = hourly * 1.25 * overtime;
@@ -196,8 +199,25 @@ export default function EmployeeProfilePage() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
-          <label className="text-sm">Days<input className="border rounded w-full px-2 py-1" value={days} onChange={(e) => setDays(parseFloat(e.target.value) || 0)} /></label>
+        <div className="mt-4">
+          <div className="font-bold mb-2">Tick the dates he is present. Days for salary: {worked}. Half day has no allowance.</div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
+              const start = new Date();
+              if (employee.payout === 'semi') start.setDate(start.getDate() <= 15 ? 1 : 16);
+              else start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+              const date = new Date(start);
+              date.setDate(start.getDate() + i);
+              const key = date.toISOString().slice(0, 10);
+              const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              return <div key={key} className="border rounded px-2 py-1 text-sm">
+                <label className="flex items-center gap-1"><input type="checkbox" checked={presentDates.includes(key)} onChange={(e) => { setPresentDates((prev) => e.target.checked ? [...prev, key] : prev.filter((d) => d !== key)); if (!e.target.checked && halfDate === key) setHalfDate(''); }} />{label}</label>
+                {presentDates.includes(key) && <label className="flex items-center gap-1 text-xs text-orange-700"><input type="radio" name="halfday" checked={halfDate === key} onChange={() => setHalfDate(key)} />Half day</label>}
+              </div>;
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
           <label className="text-sm">Half days<input className="border rounded w-full px-2 py-1" value={halfDays} onChange={(e) => setHalfDays(parseFloat(e.target.value) || 0)} /></label>
           <label className="text-sm">Overtime hours<input className="border rounded w-full px-2 py-1" value={overtime} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} /></label>
           <label className="text-sm">Undertime hours<input className="border rounded w-full px-2 py-1" value={undertime} onChange={(e) => setUndertime(parseFloat(e.target.value) || 0)} /></label>
