@@ -59,7 +59,7 @@ export default function PayoutSummaryPage() {
       }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
       setRows(list);
     });
-  }, [week]);
+  }, [fromDate, toDate]);
 
   const download = async () => {
     const XLSX = await import('xlsx');

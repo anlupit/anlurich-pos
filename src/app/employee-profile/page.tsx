@@ -266,7 +266,11 @@ export default function EmployeeProfilePage() {
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <><input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={personalDetails} onChange={(e) => setPersonalDetails(e.target.value)} /></>}</label>
           </div>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
-            <div className="font-bold text-lg mb-2">3. Salary Computation</div>
+            <div className="text-center mb-3">
+              <div className="font-black text-xl text-[#1e3a8a]">{LETTERHEAD[employee.branch] || employee.branch}</div>
+              <div className="font-bold">SALARY PAYOUT {new Date(`${fromDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric' })} - {new Date(`${toDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+            <div className="font-bold text-left mb-2">Salary Computation</div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between"><span>Daily Rate x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
               <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
