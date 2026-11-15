@@ -230,11 +230,6 @@ export default function EmployeeProfilePage() {
               <div>PhilHealth Number: {employee.philhealthNo || '—'}</div>
               <div>Pag-IBIG Number: {employee.pagibigNo || '—'}</div>
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span>SSS {employee.sssNo || '—'}</span><b>{money(employee.sssAmount)}</b></div>
-              <div className="flex justify-between"><span>PhilHealth {employee.philhealthNo || '—'}</span><b>{money(employee.philhealthAmount)}</b></div>
-              <div className="flex justify-between"><span>PAGIBIG {employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
-            </div>
             <div className="mt-3 overflow-x-auto">
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-xs table-fixed">
