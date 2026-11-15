@@ -10,6 +10,8 @@ const LETTERHEAD: Record<string, string> = {
   avenders: 'Avenders Auto Parts',
 };
 
+const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export default function EmployeeProfilePage() {
   const [employee, setEmployee] = useState<any>(null);
   const [days, setDays] = useState(6);
