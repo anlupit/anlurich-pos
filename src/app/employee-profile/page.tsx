@@ -30,6 +30,11 @@ export default function EmployeeProfilePage() {
   const [undertime, setUndertime] = useState(0);
   const [absentDates, setAbsentDates] = useState('');
   const [presentDates, setPresentDates] = useState<string[]>([]);
+  const [weekStart, setWeekStart] = useState(() => {
+    const now = new Date();
+    now.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    return now.toISOString().slice(0, 10);
+  });
   const [halfDate, setHalfDate] = useState('');
   const [cashAdvance, setCashAdvance] = useState(0);
   const [advanceRequest, setAdvanceRequest] = useState(0);
@@ -46,6 +51,7 @@ export default function EmployeeProfilePage() {
   const [history, setHistory] = useState<any[]>([]);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [referenceNo, setReferenceNo] = useState('');
+  const [editRow, setEditRow] = useState<any>(null);
   const [deductGov, setDeductGov] = useState(false);
   const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
   const [alreadyDeducted, setAlreadyDeducted] = useState(false);
@@ -136,6 +142,17 @@ export default function EmployeeProfilePage() {
     alert('Employee information saved to Supabase.');
   };
 
+  const deleteHistory = async (row: any) => {
+    await fetch('/api/records', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', id: row.id, branch: row.branch }) });
+    setHistory((prev) => prev.filter((h) => h.id !== row.id));
+  };
+
+  const saveEditRow = async () => {
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row: editRow }) });
+    setHistory((prev) => prev.map((h) => h.id === editRow.id ? editRow : h));
+    setEditRow(null);
+  };
+
   const requestAdvance = async () => {
     const amount = prompt('Cash advance amount');
     if (!amount) return;
@@ -222,18 +239,30 @@ export default function EmployeeProfilePage() {
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-xs table-fixed">
                 <thead><tr className="bg-gray-100"><th className="p-1 text-left w-28">Dates of Salary</th><th className="p-1 text-left">Type</th><th className="p-1 text-left">Account</th><th className="p-1 text-right">Total</th><th className="p-1 text-left">Ref No.</th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td></tr>)}</tbody>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td><td className="p-1"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
           </div>
           <div className="border rounded-xl p-3 min-w-0">
             <div className="font-bold text-lg mb-2">2. Payroll Adjustments</div>
+            <label className="text-sm block mb-2">Week
+              <select className="border rounded px-2 py-1 ml-2" value={weekStart} onChange={(e) => { setWeekStart(e.target.value); setPresentDates([]); }}>
+                {Array.from({ length: 53 }, (_, i) => {
+                  const year = new Date().getFullYear();
+                  const start = new Date(year, 0, 1 + i * 7);
+                  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                  const value = start.toISOString().slice(0, 10);
+                  const end = new Date(start);
+                  end.setDate(start.getDate() + 5);
+                  return <option key={i + 1} value={value}>Week {i + 1}</option>;
+                })}
+              </select>
+              <span className="ml-2 font-bold">{(() => { const start = new Date(`${weekStart}T00:00:00`); const end = new Date(start); end.setDate(start.getDate() + 5); return `${start.toLocaleString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`; })()}</span>
+            </label>
             <div className="flex flex-col gap-1">
               {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
-                const start = new Date();
-                if (employee.payout === 'semi') start.setDate(start.getDate() <= 15 ? 1 : 16);
-                else start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                const start = new Date(`${weekStart}T00:00:00`);
                 const date = new Date(start);
                 date.setDate(start.getDate() + i);
                 const key = date.toISOString().slice(0, 10);
@@ -284,6 +313,18 @@ export default function EmployeeProfilePage() {
           <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
+      {editRow && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-4 w-full max-w-md grid grid-cols-2 gap-2 text-sm">
+            <div className="col-span-2 font-bold">Edit Salary</div>
+            {['period', 'payoutType', 'accountNumber', 'net', 'referenceNo', 'days', 'allowance', 'overtime', 'undertime', 'cashAdvance', 'advanceRequest', 'incentive', 'personalCharge', 'personalDetails', 'sss', 'philhealth', 'pagibig'].map((field) => (
+              <input key={field} className="border rounded px-2 py-1" placeholder={field} value={editRow[field] || ''} onChange={(e) => setEditRow({ ...editRow, [field]: e.target.value })} />
+            ))}
+            <button onClick={saveEditRow} className="bg-blue-700 text-white px-4 py-2 rounded">Save</button>
+            <button onClick={() => setEditRow(null)} className="border px-4 py-2 rounded">Cancel</button>
+          </div>
+        </div>
+      )}
       {releaseOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-4 w-full max-w-sm">
