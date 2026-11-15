@@ -10,6 +10,16 @@ const LETTERHEAD: Record<string, string> = {
   avenders: 'Avenders Auto Parts',
 };
 
+function periodLabel(dates: string[]) {
+  if (!dates.length) return '';
+  const start = new Date(`${dates[0]}T00:00:00`);
+  const end = new Date(`${dates[dates.length - 1]}T00:00:00`);
+  const yearStart = new Date(start.getFullYear(), 0, 1);
+  const week = Math.ceil((((start.getTime() - yearStart.getTime()) / 86400000) + yearStart.getDay() + 1) / 7);
+  const month = start.toLocaleString('en-US', { month: 'short' });
+  return `${month} ${start.getDate()}-${end.getDate()} ${start.getFullYear()} Week ${week}`;
+}
+
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function EmployeeProfilePage() {
@@ -26,6 +36,7 @@ export default function EmployeeProfilePage() {
   const [incentive, setIncentive] = useState(0);
   const [undertimeAmount, setUndertimeAmount] = useState(0);
   const [personalCharge, setPersonalCharge] = useState(0);
+  const [personalDetails, setPersonalDetails] = useState('');
   const [showAdvance, setShowAdvance] = useState(false);
   const [showIncentive, setShowIncentive] = useState(false);
   const [showOvertime, setShowOvertime] = useState(false);
@@ -101,7 +112,7 @@ export default function EmployeeProfilePage() {
 
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
-    const period = dates.length ? `${dates[0]} to ${dates[dates.length - 1]}` : new Date().toISOString().slice(0, 10);
+    const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
     const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     setHistory((prev) => [row, ...prev]);
@@ -166,11 +177,12 @@ export default function EmployeeProfilePage() {
       <div className="bg-white rounded-b-xl shadow p-4 mb-4">
         <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600">← Back</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="border rounded-xl p-3 min-w-0">
+        <div className="grid gap-3 text-base" style={{ gridTemplateColumns: '1.4fr 1fr 1.2fr' }}>
+          <div className="border rounded-xl p-3 min-w-0 bg-white">
+            <div className="font-bold text-lg mb-2">1. Employee Information</div>
             <div className="flex justify-between items-start mb-2">
-              <div className="text-lg font-bold">{employee.name}</div>
-              <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-blue-700 text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit'}</button>
+              <div className="text-2xl font-black">{employee.name}</div>
+              <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-[#1e3a8a] text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit Employee'}</button>
             </div>
             {editing ? (
               <div className="grid grid-cols-1 gap-1 text-sm">
@@ -190,13 +202,16 @@ export default function EmployeeProfilePage() {
                 <input className="border rounded px-2 py-1 h-8" value={employee.accountNumber || ''} onChange={(e) => setEmployee({ ...employee, accountNumber: e.target.value })} placeholder="Payout Account No." />
               </div>
             ) : (<>
-            <div className="text-sm text-gray-600 mb-2">{employee.position || '—'} · {employee.phone || '—'}</div>
-            <div className="text-sm space-y-0.5 mb-2">
+            <div className="text-sm space-y-1 mb-2">
+              <div>Position: {employee.position || '—'}</div>
+              <div>Phone: {employee.phone || '—'}</div>
               <div>Address: {employee.address || '—'}</div>
-              <div>Email: {employee.email || '—'}</div>
-              <div>Birthdate: {employee.birthdate || '—'}</div>
-              <div>Date of Employment: {employee.started || '—'}</div>
-              <div>Rate: {money(employee.dailyRate)} · Allowance: {money(employee.dailyAllowance)}</div>
+            </div>
+            <div className="font-bold text-sm mt-3">Government Numbers</div>
+            <div className="text-sm space-y-1 mb-2">
+              <div>SSS Number: {employee.sssNo || '—'}</div>
+              <div>PhilHealth Number: {employee.philhealthNo || '—'}</div>
+              <div>Pag-IBIG Number: {employee.pagibigNo || '—'}</div>
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span>SSS {employee.sssNo || '—'}</span><b>{money(employee.sssAmount)}</b></div>
@@ -204,16 +219,16 @@ export default function EmployeeProfilePage() {
               <div className="flex justify-between"><span>PAGIBIG {employee.pagibigNo || '—'}</span><b>{money(employee.pagibigAmount)}</b></div>
             </div>
             <div className="mt-3 overflow-x-auto">
-              <div className="font-bold text-sm mb-1">Salary Payout History</div>
-              <table className="w-full text-xs">
-                <thead><tr className="bg-gray-100"><th className="p-1 text-left">Dates of Salary</th><th className="p-1 text-left">Payout Type</th><th className="p-1 text-left">Payout Account</th><th className="p-1 text-right">Total Salary</th><th className="p-1 text-left">Reference No.</th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td></tr>)}</tbody>
+              <div className="font-bold text-sm mb-1">Salary History</div>
+              <table className="w-full text-xs table-fixed">
+                <thead><tr className="bg-gray-100"><th className="p-1 text-left w-28">Dates of Salary</th><th className="p-1 text-left">Type</th><th className="p-1 text-left">Account</th><th className="p-1 text-right">Total</th><th className="p-1 text-left">Ref No.</th></tr></thead>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="p-1">{h.period || h.date}</td><td className="p-1">{h.payoutType || employee.payoutType || ''}</td><td className="p-1 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="p-1 text-right">{money(h.net)}</td><td className="p-1">{h.referenceNo || '—'}</td></tr>)}</tbody>
               </table>
             </div>
             </>)}
           </div>
           <div className="border rounded-xl p-3 min-w-0">
-            <div className="font-bold mb-2">Present dates. Days: {worked}</div>
+            <div className="font-bold text-lg mb-2">2. Payroll Adjustments</div>
             <div className="flex flex-col gap-1">
               {Array.from({ length: employee.payout === 'semi' ? 15 : 6 }, (_, i) => {
                 const start = new Date();
@@ -236,10 +251,10 @@ export default function EmployeeProfilePage() {
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} /> Government Mandatory Contribution</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => setShowCADeduct(e.target.checked)} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => setShowUndertime(e.target.checked)} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <><input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={personalDetails} onChange={(e) => setPersonalDetails(e.target.value)} /></>}</label>
           </div>
-          <div className="border rounded-xl p-3 min-w-0">
-            <div className="font-bold mb-2 text-lg">Salary Computation</div>
+          <div className="border rounded-xl p-3 min-w-0 bg-white">
+            <div className="font-bold text-lg mb-2">3. Salary Computation</div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between"><span>Daily Rate x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
               <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
@@ -254,8 +269,8 @@ export default function EmployeeProfilePage() {
                 <div className="flex justify-between text-red-600 font-bold"><span>PAGIBIG</span><span>{money(employee.pagibigAmount)}</span></div>
               </>}
               {showCADeduct && <div className="flex justify-between text-red-600 font-bold"><span>Less: Cash Advance Deduction</span><span>{money(cashAdvance)}</span></div>}
-              {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime</span><span>{money(undertimeAmount)}</span></div>}
-              {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge</span><span>{money(personalCharge)}</span></div>}
+              {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime {undertimeAmount} hrs x {money(dayRate / 8)}</span><span>{money((dayRate / 8) * undertimeAmount)}</span></div>}
+              {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
                 {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
                 <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
@@ -264,7 +279,6 @@ export default function EmployeeProfilePage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
-          <button onClick={requestAdvance} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Request Cash Advance</button>
           <button onClick={() => setReleaseOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
           <button onClick={downloadSalary} className="border border-green-700 text-green-700 px-4 py-2 rounded-lg">Download</button>
           <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
