@@ -117,9 +117,7 @@ export default function Sidebar() {
     const id = localStorage.getItem('anlurich-branch') || '';
     setBranchId(id);
     setBranchName(names[id] || '');
-    const unlocked = sessionStorage.getItem(`salary-ok-${id}`) === '1';
-    setSalaryOpen(unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')));
-    if (unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary'))) {
+    if (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) {
       fetch(`/api/records?table=employee_profiles&branch=${id}`, { cache: 'no-store' })
         .then((r) => r.json())
         .then((rows) => setEmployees((Array.isArray(rows) ? rows : []).filter((e) => e.name && e.status !== 'terminated')))
@@ -156,7 +154,7 @@ export default function Sidebar() {
       </button>
       {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-1 flex-1">
-        {salaryOpen && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) ? (
+        {(pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) ? (
           employees.map((e) => (
             <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium text-left">{e.name}</button>
           )).concat([
@@ -164,17 +162,10 @@ export default function Sidebar() {
             <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>
           ])
         ) : menu.map((item) => (
-          item.href === '/employee-salary' ? (
-            <button key={item.href} onClick={() => { sessionStorage.removeItem(`salary-ok-${branchId}`); window.location.href = '/employee-salary'; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2 w-full">
-              <Icon label={item.label} />
-              <span className="flex-1 text-left">{item.label}</span>
-            </button>
-          ) : (
           <a key={item.href} href={item.href} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2">
             <Icon label={item.label} />
             <span className="flex-1 text-left">{item.label}</span>
           </a>
-          )
         ))}
         {group && <a href="/branch-menu" className="bg-white/20 rounded-lg px-3 py-3 text-base font-bold flex items-center gap-2"><Icon label="Main Menu" /><span>Main Menu</span></a>}
       </nav>

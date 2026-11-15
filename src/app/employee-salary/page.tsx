@@ -96,8 +96,9 @@ export default function EmployeeSalaryPage() {
     Promise.all([
       fetch(`/api/records?table=employee_profiles&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
       fetch(`/api/records?table=employees&branch=${branch}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
-    ]).then(async ([profiles, oldRows]) => {
-      const rows = [...(Array.isArray(profiles) ? profiles : []), ...(Array.isArray(oldRows) ? oldRows : [])];
+      fetch(`/api/records?table=employee_profiles`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+    ]).then(async ([profiles, oldRows, allProfiles]) => {
+      const rows = [...(Array.isArray(profiles) ? profiles : []), ...(Array.isArray(oldRows) ? oldRows : []), ...(Array.isArray(allProfiles) ? allProfiles : []).filter((r) => String(r.branch || '') === branch)];
       const seen = new Set<string>();
       const list = rows.filter((r) => {
         const key = String(r.name || r.id || '').toLowerCase();
@@ -134,7 +135,6 @@ export default function EmployeeSalaryPage() {
       sessionStorage.setItem(`salary-ok-${b}`, '1');
       setBranch(b);
       setUnlocked(true);
-      window.location.reload();
     } else alert('Wrong password for this branch.');
   };
 
