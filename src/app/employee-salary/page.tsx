@@ -286,12 +286,11 @@ export default function EmployeeSalaryPage() {
       </div>
       <div className="text-xs text-gray-500 mb-4">{NAMES[branch] || branch}</div>
 
-      <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2">
-        <button onClick={() => setShowAdd((v) => !v)} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Add Employee</button>
-        <button onClick={terminateSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg">Terminate Employee</button>
-        <button onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 text-white px-4 py-2 rounded-lg">Payout Summary</button>
-        <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded-lg">Print</button>
-        <button onClick={() => { sessionStorage.removeItem(`salary-ok-${branch}`); window.location.href = `/branch/${branch || 'anlurich'}`; }} className="bg-slate-500 text-white px-4 py-2 rounded-lg">Main Menu</button>
+      <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-col gap-2">
+        {employees.map((e) => (
+          <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-left bg-slate-100 hover:bg-blue-50 border rounded-lg px-4 py-2 font-medium">{e.name}</button>
+        ))}
+        <button onClick={() => (window.location.href = '/payout-summary')} className="mt-2 bg-teal-700 text-white rounded-lg px-4 py-2">Generate Report</button>
       </div>
 
       {showAdd && <div className="bg-white rounded-xl shadow p-6 mb-4">

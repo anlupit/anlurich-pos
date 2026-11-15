@@ -33,6 +33,7 @@ export default function PayoutSummaryPage() {
   const [fromDate, setFromDate] = useState(monday.toISOString().slice(0, 10));
   const [toDate, setToDate] = useState(saturday.toISOString().slice(0, 10));
   const [rows, setRows] = useState<any[]>([]);
+  const [showGroups, setShowGroups] = useState(false);
 
   useEffect(() => {
     const branch = localStorage.getItem('anlurich-branch') || '';
@@ -109,28 +110,29 @@ export default function PayoutSummaryPage() {
           <button onClick={() => window.print()} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
-      {['weekly', 'semi'].map((schedule) => {
-        const section = rows.filter((r) => r.schedule === schedule);
-        if (!section.length) return null;
+      <table className="w-full text-sm bg-white rounded-xl shadow mb-4">
+        <thead><tr className="bg-gray-100"><th className="p-2 text-left">Date of Salary Payout</th><th className="p-2 text-right">Total Amount</th><th className="p-2 text-right"></th></tr></thead>
+        <tbody>
+          <tr>
+            <td className="p-2">{new Date(`${fromDate}T00:00:00`).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} to {new Date(`${toDate}T00:00:00`).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</td>
+            <td className="p-2 text-right font-black">{money(rows.reduce((n, r) => n + Number(r.net || 0), 0))}</td>
+            <td className="p-2 text-right"><button onClick={() => setShowGroups(true)} className="text-blue-700 font-bold">View Summary</button></td>
+          </tr>
+        </tbody>
+      </table>
+      {showGroups && order.map((group) => {
+        const items = rows.filter((r) => r.group === group);
+        if (!items.length) return null;
         return (
-          <div key={schedule} className="mb-6">
-            <h2 className="text-xl font-black mb-2">{schedule === 'weekly' ? weekLabel() : semiLabel()}</h2>
-            {order.map((group) => {
-              const items = section.filter((r) => r.group === group);
-              if (!items.length) return null;
-              return (
-                <div key={group} className="bg-white rounded-xl shadow mb-4 overflow-x-auto">
-                  <div className="bg-[#1e3a8a] text-white font-bold px-3 py-2">{group}</div>
-                  <table className="w-full text-sm">
-                    <thead><tr className="bg-gray-100"><th className="p-2 text-left">Date of Salary</th><th className="p-2 text-left">Employee Name</th><th className="p-2 text-left">Position</th><th className="p-2 text-left">Account No of Payout</th><th className="p-2 text-right">Net Total of Payout</th></tr></thead>
-                    <tbody>
-                      {items.map((r) => <tr key={r.name} className="border-t"><td className="p-2">{r.salaryDate}</td><td className="p-2">{r.name}</td><td className="p-2">{r.position}</td><td className="p-2">{r.account}</td><td className="p-2 text-right">{money(r.net)}</td></tr>)}
-                      <tr className="border-t font-bold"><td className="p-2" colSpan={4}>Total</td><td className="p-2 text-right">{money(items.reduce((n, r) => n + r.net, 0))}</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+          <div key={group} className="bg-white rounded-xl shadow mb-4 overflow-x-auto">
+            <div className="bg-[#1e3a8a] text-white font-bold px-3 py-2">{group}</div>
+            <table className="w-full text-sm">
+              <thead><tr className="bg-gray-100"><th className="p-2 text-left">Employee Name</th><th className="p-2 text-left">Position</th><th className="p-2 text-left">Account No</th><th className="p-2 text-right">Net Total</th></tr></thead>
+              <tbody>
+                {items.map((r) => <tr key={r.name} className="border-t"><td className="p-2">{r.name}</td><td className="p-2">{r.position}</td><td className="p-2">{r.account}</td><td className="p-2 text-right">{money(r.net)}</td></tr>)}
+                <tr className="border-t font-bold"><td className="p-2" colSpan={3}>Total</td><td className="p-2 text-right">{money(items.reduce((n, r) => n + r.net, 0))}</td></tr>
+              </tbody>
+            </table>
           </div>
         );
       })}

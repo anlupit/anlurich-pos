@@ -222,7 +222,7 @@ export default function EmployeeProfilePage() {
         </label>
       </div>
       <div className="bg-white rounded-b-xl shadow p-4 mb-4">
-        <button onClick={() => (window.location.href = '/employee-salary')} className="text-sm text-blue-600">← Back</button>
+        <button onClick={() => (window.location.href = '/employee-salary')} className="bg-slate-600 text-white px-4 py-2 rounded-lg mb-3">← Back to Employee Salary</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
         <div className="grid gap-3 text-base" style={{ gridTemplateColumns: '1.4fr 1fr 1.2fr' }}>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
