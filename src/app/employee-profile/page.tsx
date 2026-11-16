@@ -118,11 +118,12 @@ export default function EmployeeProfilePage() {
   const phil = deductGov && !alreadyDeducted ? Number(employee.philhealthAmount || 0) : 0;
   const pagibig = deductGov && !alreadyDeducted ? Number(employee.pagibigAmount || 0) : 0;
   const gross = base + allowance + overtimePay;
-  const salaryNet = gross - undertimePay - sss - phil - pagibig;
+  const salaryNet = gross - sss - phil - pagibig;
+  const undertimeDeduct = showUndertime ? (dayRate / 8) * undertimeAmount : 0;
   const totalPayout = salaryNet - (showCADeduct ? cashAdvance : 0) + (showAdvance ? advanceRequest : 0);
   const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
 
-  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - (showUndertime ? (dayRate / 8) * undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
+  const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
@@ -335,7 +336,7 @@ export default function EmployeeProfilePage() {
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
                 {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
-                <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - (showUndertime ? undertimeAmount : 0) - (showPersonal ? personalCharge : 0))}</div></div>
+                <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(payoutAmount)}</div></div>
               </div>
             </div>
           </div>
