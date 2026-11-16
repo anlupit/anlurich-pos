@@ -135,14 +135,15 @@ export default function EmployeeProfilePage() {
   const salaryNet = gross - sss - phil - pagibig;
   const undertimeDeduct = showUndertime ? (dayRate / 8) * undertimeAmount : 0;
   const totalPayout = salaryNet - (showCADeduct ? cashAdvance : 0) + (showAdvance ? advanceRequest : 0);
-  const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + (showAdvance ? advanceRequest : 0) - (showCADeduct ? cashAdvance : 0));
+  const historyBalance = history.reduce((n, h) => n + Number(h.advanceRequest || 0) - Number(h.cashAdvance || 0), 0);
+  const cashAdvanceBalance = Math.max(0, historyBalance + (showAdvance ? advanceRequest : 0) - (showCADeduct ? cashAdvance : 0));
 
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
-    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
@@ -193,7 +194,12 @@ export default function EmployeeProfilePage() {
 
   const deleteHistory = async (row: any) => {
     await fetch('/api/records', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', id: row.id, branch: row.branch }) });
-    setHistory((prev) => prev.filter((h) => h.id !== row.id));
+    const next = history.filter((h) => h.id !== row.id);
+    const balance = Math.max(0, next.reduce((n, h) => n + Number(h.advanceRequest || 0) - Number(h.cashAdvance || 0), 0));
+    const profile = { ...employee, cashAdvanceTotal: balance };
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
+    setHistory(next);
+    setEmployee(profile);
   };
 
   const saveEditRow = async () => {
