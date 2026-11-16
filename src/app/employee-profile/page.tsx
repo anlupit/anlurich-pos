@@ -36,6 +36,8 @@ function sortHistory(rows: any[]) {
   return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => String(b?.toDate || b?.fromDate || b?.date || b?.period || '').localeCompare(String(a?.toDate || a?.fromDate || a?.date || a?.period || '')));
 }
 
+const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export default function EmployeeProfilePage() {
   const [employee, setEmployee] = useState<any>(null);
   const [days, setDays] = useState(6);
