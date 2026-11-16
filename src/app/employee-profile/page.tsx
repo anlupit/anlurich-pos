@@ -296,15 +296,23 @@ export default function EmployeeProfilePage() {
             <div className="mt-3 overflow-x-auto">
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-[11px] table-fixed leading-tight">
-                <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Type</th><th className="px-1 py-0.5 text-left">Account</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || employee.payoutType || ''}</td><td className="px-1 py-0.5 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
           </div>
           <div className="border rounded-xl p-3 min-w-0">
             <div className="font-bold text-lg mb-2">2. Payroll Adjustments</div>
-            <label className="text-sm block mb-2">From <input type="date" className="border rounded px-2 py-1" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPresentDates([]); }} /> To <input type="date" className="border rounded px-2 py-1" value={toDate} onChange={(e) => { setToDate(e.target.value); setPresentDates([]); }} /></label>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <label className="text-sm">From <input type="date" className="border rounded px-2 py-1" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPresentDates([]); }} /> To <input type="date" className="border rounded px-2 py-1" value={toDate} onChange={(e) => { setToDate(e.target.value); setPresentDates([]); }} /></label>
+              {['Cash', 'Gcash', 'Gotym', 'Bank Transfer'].map((type) => (
+                <div key={type} className="text-sm">
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={employee.payoutType === type} onChange={() => setEmployee({ ...employee, payoutType: type })} /> {type}</label>
+                  {type !== 'Cash' && employee.payoutType === type && <input className="border rounded w-28 px-1 py-0.5 mt-1 block" placeholder="Account no." value={employee.accountNumber || ''} onChange={(e) => setEmployee({ ...employee, accountNumber: e.target.value })} />}
+                </div>
+              ))}
+            </div>
             <div className="flex flex-col gap-1">
               {Array.from({ length: Math.max(1, Math.round((new Date(`${toDate}T00:00:00`).getTime() - new Date(`${fromDate}T00:00:00`).getTime()) / 86400000) + 1) }, (_, i) => {
                 const date = new Date(`${fromDate}T00:00:00`);
@@ -332,6 +340,7 @@ export default function EmployeeProfilePage() {
             <div className="text-center mb-3">
               <div className="font-black text-xl text-[#1e3a8a]">{LETTERHEAD[employee.branch] || employee.branch}</div>
               <div className="font-bold">SALARY PAYOUT {new Date(`${fromDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric' })} - {new Date(`${toDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+              <div className="text-sm font-bold text-blue-800">{employee.payoutType || 'No payout type ticked'}{employee.payoutType && employee.payoutType !== 'Cash' && employee.accountNumber ? ` — ${employee.accountNumber}` : ''}</div>
             </div>
             <div className="font-bold text-left mb-2">Salary Computation</div>
             <div className="text-sm space-y-1">
@@ -353,8 +362,7 @@ export default function EmployeeProfilePage() {
               {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime {undertimeAmount} hrs x {money(dayRate / 8)}{!dayRate ? ' — set daily rate on profile' : ''}</span><span>{money((dayRate / 8) * undertimeAmount)}</span></div>}
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
-                {Number(employee.cashAdvanceTotal || 0) > 0 && <div className="text-xs text-blue-800">Previous cash advance balance<br/><b>{money(employee.cashAdvanceTotal)}</b></div>}
-                {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance to next salary<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
+                <div className="text-xs"><span className="font-bold">Cash Advance Balance</span><br/><b>{money(cashAdvanceBalance)}</b></div>
                 <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(payoutAmount)}</div></div>
               </div>
             </div>
