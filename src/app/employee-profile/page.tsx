@@ -33,7 +33,7 @@ function historyDate(h: any) {
 }
 
 function sortHistory(rows: any[]) {
-  return [...rows].sort((a, b) => String(b.toDate || b.fromDate || b.date || b.period || '').localeCompare(String(a.toDate || a.fromDate || a.date || a.period || '')));
+  return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => String(b?.toDate || b?.fromDate || b?.date || b?.period || '').localeCompare(String(a?.toDate || a?.fromDate || a?.date || a?.period || '')));
 }
 
 export default function EmployeeProfilePage() {
@@ -85,7 +85,7 @@ export default function EmployeeProfilePage() {
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('id') || '';
     const cached = sessionStorage.getItem(`employee-${id}`);
-    if (cached) setEmployee(JSON.parse(cached));
+    if (cached) { try { setEmployee(JSON.parse(cached)); } catch {} }
     const branch = localStorage.getItem('anlurich-branch') || '';
     fetch(`/api/records?table=employee_profiles&branch=${branch}&id=${id}`, { cache: 'no-store' })
       .then((r) => r.json())
@@ -326,8 +326,13 @@ export default function EmployeeProfilePage() {
               ))}
             </div>
             <div className="flex flex-col gap-1">
-              {Array.from({ length: Math.max(1, Math.round((new Date(`${toDate}T00:00:00`).getTime() - new Date(`${fromDate}T00:00:00`).getTime()) / 86400000) + 1) }, (_, i) => {
-                const date = new Date(`${fromDate}T00:00:00`);
+              {(() => {
+                const start = new Date(`${fromDate}T00:00:00`);
+                const end = new Date(`${toDate}T00:00:00`);
+                if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+                const count = Math.min(31, Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1));
+                return Array.from({ length: count }, (_, i) => {
+                const date = new Date(start);
                 date.setDate(date.getDate() + i);
                 const key = date.toISOString().slice(0, 10);
                 const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -335,7 +340,8 @@ export default function EmployeeProfilePage() {
                   <label className="flex items-center gap-1"><input type="checkbox" checked={presentDates.includes(key)} onChange={(e) => { setPresentDates((prev) => e.target.checked ? [...prev, key] : prev.filter((d) => d !== key)); if (!e.target.checked && halfDate === key) setHalfDate(''); }} />{label}</label>
                   {presentDates.includes(key) && <label className="flex items-center gap-1 text-xs text-orange-700"><input type="radio" name="halfday" checked={halfDate === key} onChange={() => setHalfDate(key)} />Half day</label>}
                 </div>;
-              })}
+              });
+              })()}
             </div>
             <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => { setShowOvertime(e.target.checked); if (!e.target.checked) setOvertime(0); }} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => { setShowAdvance(e.target.checked); if (!e.target.checked) setAdvanceRequest(0); }} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
