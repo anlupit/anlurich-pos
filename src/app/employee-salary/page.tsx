@@ -214,7 +214,25 @@ export default function EmployeeSalaryPage() {
     img.src = URL.createObjectURL(file);
   };
 
-  const terminateSelected = async () => {
+  const deleteEmployee = async (e: any) => {
+    if (!confirm(`Delete ${e.name} and all salary and payout records?`)) return;
+    const b = e.branch || branch;
+    const [salaries, payouts] = await Promise.all([
+      fetch(`/api/records?table=employee_salaries&branch=${b}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+      fetch(`/api/records?table=payout_summaries&branch=${b}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+    ]);
+    const mine = (row: any) => String(row.employeeName || row.name || '').toLowerCase() === String(e.name || '').toLowerCase() || String(row.id || '').includes(String(e.id));
+    for (const row of (Array.isArray(salaries) ? salaries : []).filter(mine)) {
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', deleteId: row.id, branch: b }) });
+    }
+    for (const row of (Array.isArray(payouts) ? payouts : []).filter(mine)) {
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'payout_summaries', deleteId: row.id, branch: b }) });
+    }
+    const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', deleteId: e.id, branch: b }) });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok || result.ok === false) { alert('Employee was not deleted in Supabase.'); return; }
+    setEmployees((prev) => prev.filter((row) => row.id !== e.id));
+  };
     if (!selectedId) return alert('Select an employee first');
     if (!confirm('Terminate this employee?')) return;
     const row = employees.find((e) => e.id === selectedId);
@@ -377,7 +395,7 @@ export default function EmployeeSalaryPage() {
                 <td className="p-2 font-medium">{e.name}</td>
                 <td className="p-2">{e.position || '—'}</td>
                 <td className="p-2">{e.phone || '—'}</td>
-                <td className="p-2 text-right"><button onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-blue-700 font-medium">View Profile / Create Salary</button></td>
+                <td className="p-2 text-right"><button onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-blue-700 font-medium">View Profile / Create Salary</button> <button onClick={() => deleteEmployee(e)} className="text-red-600 font-bold ml-3">Delete</button></td>
               </tr>
             ))}
             {employees.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No employees found in Supabase for this branch. Check that you are logged in to the correct branch.</td></tr>}
