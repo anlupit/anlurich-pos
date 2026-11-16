@@ -298,6 +298,11 @@ export async function GET(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  return POST(new Request(req.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, deleteId: body.id || body.deleteId, branch: body.branch }) }));
+}
+
 export async function POST(req: Request) {
   if (!process.env.DATABASE_URL) return NextResponse.json({ ok: false, error: 'DATABASE_URL is missing' }, { status: 500 });
   try {

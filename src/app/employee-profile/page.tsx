@@ -201,7 +201,9 @@ export default function EmployeeProfilePage() {
   };
 
   const deleteHistory = async (row: any) => {
-    await fetch('/api/records', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', id: row.id, branch: row.branch }) });
+    const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', deleteId: row.id, branch: row.branch || employee.branch }) });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok || result.ok === false) { alert('Not deleted in Supabase. It will come back. Try again.'); return; }
     const next = history.filter((h) => h.id !== row.id);
     const balance = Math.max(0, next.reduce((n, h) => n + Number(h.advanceRequest || 0) - Number(h.cashAdvance || 0), 0));
     const profile = { ...employee, cashAdvanceTotal: balance };
