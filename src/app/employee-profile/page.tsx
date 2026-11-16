@@ -119,7 +119,7 @@ export default function EmployeeProfilePage() {
   const pagibig = deductGov && !alreadyDeducted ? Number(employee.pagibigAmount || 0) : 0;
   const gross = base + allowance + overtimePay;
   const salaryNet = gross - undertimePay - sss - phil - pagibig;
-  const totalPayout = salaryNet - cashAdvance + advanceRequest;
+  const totalPayout = salaryNet - (showCADeduct ? cashAdvance : 0) + (showAdvance ? advanceRequest : 0);
   const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
 
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - (showUndertime ? (dayRate / 8) * undertimeAmount : 0) - (showPersonal ? personalCharge : 0);
@@ -228,7 +228,21 @@ export default function EmployeeProfilePage() {
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="font-bold text-lg mb-2">1. Employee Information</div>
             <div className="flex justify-between items-start mb-2">
-              <div className="text-2xl font-black">{employee.name}</div>
+              <div>
+                <div className="text-2xl font-black">{employee.name}</div>
+                {editing ? <input type="date" className="border rounded px-2 py-1 h-8 text-sm" value={employee.birthdate || ''} onChange={(e) => setEmployee({ ...employee, birthdate: e.target.value })} /> : <div className="text-sm text-gray-600">Birthday: {employee.birthdate || '—'}</div>}
+                {editing ? <input type="date" className="border rounded px-2 py-1 h-8 text-sm mt-1" value={employee.started || ''} onChange={(e) => setEmployee({ ...employee, started: e.target.value })} /> : <div className="text-sm text-gray-600">Day started: {employee.started || '—'}</div>}
+                {editing ? (
+                  <div className="flex gap-1 mt-1">
+                    <select className="border rounded px-2 py-1 text-sm" value={employee.payoutType || ''} onChange={(e) => setEmployee({ ...employee, payoutType: e.target.value })}>
+                      <option value="">Payout type</option><option>Cash</option><option>Gcash</option><option>Gotym</option><option>Bank Transfer</option>
+                    </select>
+                    <select className="border rounded px-2 py-1 text-sm" value={employee.payout || 'weekly'} onChange={(e) => setEmployee({ ...employee, payout: e.target.value })}>
+                      <option value="weekly">Weekly</option><option value="semi">15th and 30th</option>
+                    </select>
+                  </div>
+                ) : <div className="text-sm text-gray-600">Payout: {employee.payoutType || '—'} · {employee.payout === 'semi' ? '15th and 30th' : 'Weekly'}</div>}
+              </div>
               <button onClick={() => editing ? saveProfile() : setEditing(true)} className="bg-[#1e3a8a] text-white px-3 py-1 rounded text-sm">{editing ? 'Save' : 'Edit Employee'}</button>
             </div>
             {editing ? (
@@ -284,16 +298,16 @@ export default function EmployeeProfilePage() {
                 </div>;
               })}
             </div>
-            <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => setShowOvertime(e.target.checked)} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => setShowAdvance(e.target.checked)} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showIncentive} onChange={(e) => setShowIncentive(e.target.checked)} /> Incentive Pay Bonus {showIncentive && <input className="border rounded w-20 px-2 py-1" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showCommission} onChange={(e) => setShowCommission(e.target.checked)} /> Monthly Commission {showCommission && <><input className="border rounded w-20 px-2 py-1" value={commission || ''} onChange={(e) => setCommission(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={commissionDetails} onChange={(e) => setCommissionDetails(e.target.value)} /></>}</label>
-            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showHoliday} onChange={(e) => setShowHoliday(e.target.checked)} /> Holiday Pay {showHoliday && <><input className="border rounded w-20 px-2 py-1" value={holidayPay || ''} onChange={(e) => setHolidayPay(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={holidayDetails} onChange={(e) => setHolidayDetails(e.target.value)} /></>}</label>
+            <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => { setShowOvertime(e.target.checked); if (!e.target.checked) setOvertime(0); }} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => { setShowAdvance(e.target.checked); if (!e.target.checked) setAdvanceRequest(0); }} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showIncentive} onChange={(e) => { setShowIncentive(e.target.checked); if (!e.target.checked) setIncentive(0); }} /> Incentive Pay Bonus {showIncentive && <input className="border rounded w-20 px-2 py-1" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showCommission} onChange={(e) => { setShowCommission(e.target.checked); if (!e.target.checked) { setCommission(0); setCommissionDetails(""); } }} /> Monthly Commission {showCommission && <><input className="border rounded w-20 px-2 py-1" value={commission || ''} onChange={(e) => setCommission(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={commissionDetails} onChange={(e) => setCommissionDetails(e.target.value)} /></>}</label>
+            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showHoliday} onChange={(e) => { setShowHoliday(e.target.checked); if (!e.target.checked) { setHolidayPay(0); setHolidayDetails(""); } }} /> Holiday Pay {showHoliday && <><input className="border rounded w-20 px-2 py-1" value={holidayPay || ''} onChange={(e) => setHolidayPay(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={holidayDetails} onChange={(e) => setHolidayDetails(e.target.value)} /></>}</label>
             <div className="font-bold mt-3">Deductibles</div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={deductGov} onChange={(e) => setDeductGov(e.target.checked)} /> Government Mandatory Contribution</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => setShowCADeduct(e.target.checked)} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => setShowUndertime(e.target.checked)} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => setShowPersonal(e.target.checked)} /> Personal Charge {showPersonal && <><input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={personalDetails} onChange={(e) => setPersonalDetails(e.target.value)} /></>}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => { setShowCADeduct(e.target.checked); if (!e.target.checked) setCashAdvance(0); }} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => { setShowUndertime(e.target.checked); if (!e.target.checked) setUndertimeAmount(0); }} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => { setShowPersonal(e.target.checked); if (!e.target.checked) { setPersonalCharge(0); setPersonalDetails(""); } }} /> Personal Charge {showPersonal && <><input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={personalDetails} onChange={(e) => setPersonalDetails(e.target.value)} /></>}</label>
           </div>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="text-center mb-3">
