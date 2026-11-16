@@ -32,7 +32,9 @@ function historyDate(h: any) {
   return String(h.period || h.date || '').replace(/\s*Week\s*\d+/i, '');
 }
 
-const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function sortHistory(rows: any[]) {
+  return [...rows].sort((a, b) => String(b.toDate || b.fromDate || b.date || b.period || '').localeCompare(String(a.toDate || a.fromDate || a.date || a.period || '')));
+}
 
 export default function EmployeeProfilePage() {
   const [employee, setEmployee] = useState<any>(null);
@@ -71,6 +73,7 @@ export default function EmployeeProfilePage() {
   const [showPersonal, setShowPersonal] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [releaseOpen, setReleaseOpen] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [referenceNo, setReferenceNo] = useState('');
   const [editRow, setEditRow] = useState<any>(null);
   const [deductGov, setDeductGov] = useState(false);
@@ -92,7 +95,7 @@ export default function EmployeeProfilePage() {
         else if (!cached) setLoadError('Employee profile was not found. Open it from the Employee Salary list.');
         fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' })
           .then((r) => r.json())
-          .then((rows) => setHistory((Array.isArray(rows) ? rows : []).filter((r) => String(r.employeeName || '').toLowerCase() === String((row?.name || '')).toLowerCase())));
+          .then((rows) => setHistory(sortHistory((Array.isArray(rows) ? rows : []).filter((r) => String(r.employeeName || '').toLowerCase() === String((row?.name || '')).toLowerCase()))));
       })
       .catch(() => { if (!cached) setLoadError('Could not load the profile. Go back and open it from the list.'); });
   }, []);
@@ -141,6 +144,8 @@ export default function EmployeeProfilePage() {
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
+    if (releasing) return;
+    setReleasing(true);
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
     const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
@@ -174,6 +179,7 @@ export default function EmployeeProfilePage() {
     setShowCADeduct(false);
     setShowUndertime(false);
     setShowPersonal(false);
+    setReleasing(false);
     alert('Salary saved and released. Form cleared for a new record.');
   };
 
@@ -303,7 +309,7 @@ export default function EmployeeProfilePage() {
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-[11px] table-fixed leading-tight">
                 <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
@@ -394,15 +400,15 @@ export default function EmployeeProfilePage() {
       )}
       {releaseOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-4 w-full max-w-sm">
+          <form className="bg-white rounded-xl p-4 w-full max-w-sm" onSubmit={(e) => { e.preventDefault(); confirmRelease(); }}>
             <div className="font-bold text-lg mb-2">Released Payment?</div>
             <div className="text-sm mb-2">Amount to transfer: <b>{money(payoutAmount)}</b></div>
-            <input className="border rounded w-full px-2 py-1 mb-3" placeholder="Reference No. of payment transfer" value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
+            <input autoFocus className="border rounded w-full px-2 py-1 mb-3" placeholder="Reference No. of payment transfer" value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
             <div className="flex gap-2">
-              <button onClick={confirmRelease} className="bg-blue-700 text-white px-4 py-2 rounded">Released</button>
-              <button onClick={() => setReleaseOpen(false)} className="border px-4 py-2 rounded">Cancel</button>
+              <button type="submit" disabled={releasing} className="bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">{releasing ? 'Saving...' : 'Released'}</button>
+              <button type="button" onClick={() => setReleaseOpen(false)} className="border px-4 py-2 rounded">Cancel</button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
