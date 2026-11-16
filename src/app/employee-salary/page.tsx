@@ -215,6 +215,8 @@ export default function EmployeeSalaryPage() {
   };
 
   const deleteEmployee = async (e: any) => {
+    const pin = prompt('Enter delete password');
+    if (pin !== 'anlupit') { alert('Wrong password.'); return; }
     if (!confirm(`Delete ${e.name} and all salary and payout records?`)) return;
     const b = e.branch || branch;
     const [salaries, payouts] = await Promise.all([
@@ -232,13 +234,6 @@ export default function EmployeeSalaryPage() {
     const result = await res.json().catch(() => ({}));
     if (!res.ok || result.ok === false) { alert('Employee was not deleted in Supabase.'); return; }
     setEmployees((prev) => prev.filter((row) => row.id !== e.id));
-  };
-    if (!selectedId) return alert('Select an employee first');
-    if (!confirm('Terminate this employee?')) return;
-    const row = employees.find((e) => e.id === selectedId);
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: { ...row, status: 'terminated' } }) });
-    setEmployees((prev) => prev.filter((e) => e.id !== selectedId));
-    setSelectedId(null);
   };
 
   const downloadList = async () => {
