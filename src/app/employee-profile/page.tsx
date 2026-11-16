@@ -14,10 +14,22 @@ function periodLabel(dates: string[]) {
   if (!dates.length) return '';
   const start = new Date(`${dates[0]}T00:00:00`);
   const end = new Date(`${dates[dates.length - 1]}T00:00:00`);
-  const yearStart = new Date(start.getFullYear(), 0, 1);
-  const week = Math.ceil((((start.getTime() - yearStart.getTime()) / 86400000) + yearStart.getDay() + 1) / 7);
   const month = start.toLocaleString('en-US', { month: 'short' });
-  return `${month} ${start.getDate()}-${end.getDate()} ${start.getFullYear()} Week ${week}`;
+  const endMonth = end.toLocaleString('en-US', { month: 'short' });
+  const range = month === endMonth ? `${month} ${start.getDate()}-${end.getDate()}` : `${month} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
+  return `${range} ${start.getFullYear()}`;
+}
+
+function historyDate(h: any) {
+  if (h.fromDate && h.toDate) {
+    const start = new Date(`${h.fromDate}T00:00:00`);
+    const end = new Date(`${h.toDate}T00:00:00`);
+    const month = start.toLocaleString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleString('en-US', { month: 'short' });
+    const range = month === endMonth ? `${month} ${start.getDate()}-${end.getDate()}` : `${month} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
+    return `${range} ${start.getFullYear()}`;
+  }
+  return String(h.period || h.date || '').replace(/\s*Week\s*\d+/i, '');
 }
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,6 +53,7 @@ export default function EmployeeProfilePage() {
   const [cashAdvance, setCashAdvance] = useState(0);
   const [advanceRequest, setAdvanceRequest] = useState(0);
   const [incentive, setIncentive] = useState(0);
+  const [incentiveDetails, setIncentiveDetails] = useState('');
   const [undertimeAmount, setUndertimeAmount] = useState(0);
   const [personalCharge, setPersonalCharge] = useState(0);
   const [personalDetails, setPersonalDetails] = useState('');
@@ -105,7 +118,8 @@ export default function EmployeeProfilePage() {
   if (!employee) return <div className="p-4">{loadError || 'Loading employee profile...'} <div><button onClick={() => (window.location.href = '/employee-salary')} className="text-blue-600 mt-2">← Back</button></div></div>;
 
   const absentCount = absentDates.split(',').map((d) => d.trim()).filter(Boolean).length;
-  const dayRate = employee.rateType === 'monthly' ? Number(employee.dailyRate || 0) / 26 : Number(employee.dailyRate || 0);
+  const rawRate = Number(String(employee.dailyRate ?? employee.rate ?? 0).replace(/[^0-9.]/g, '')) || 0;
+  const dayRate = employee.rateType === 'monthly' ? rawRate / 26 : rawRate;
   const hourly = dayRate / 8;
   const fullDays = presentDates.filter((d) => d !== halfDate).length;
   const worked = fullDays + (halfDate ? 0.5 : 0);
@@ -121,7 +135,7 @@ export default function EmployeeProfilePage() {
   const salaryNet = gross - sss - phil - pagibig;
   const undertimeDeduct = showUndertime ? (dayRate / 8) * undertimeAmount : 0;
   const totalPayout = salaryNet - (showCADeduct ? cashAdvance : 0) + (showAdvance ? advanceRequest : 0);
-  const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + advanceRequest - cashAdvance);
+  const cashAdvanceBalance = Math.max(0, Number(employee.cashAdvanceTotal || 0) + (showAdvance ? advanceRequest : 0) - (showCADeduct ? cashAdvance : 0));
 
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
 
@@ -130,6 +144,9 @@ export default function EmployeeProfilePage() {
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
     const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
+    const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
+    setEmployee(profile);
     setHistory((prev) => [row, ...prev]);
     setReleaseOpen(false);
     setReferenceNo('');
@@ -137,6 +154,7 @@ export default function EmployeeProfilePage() {
     setHalfDate('');
     setOvertime(0);
     setIncentive(0);
+    setIncentiveDetails('');
     setUndertimeAmount(0);
     setPersonalCharge(0);
     setPersonalDetails('');
@@ -279,7 +297,7 @@ export default function EmployeeProfilePage() {
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-[11px] table-fixed leading-tight">
                 <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Type</th><th className="px-1 py-0.5 text-left">Account</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{h.period || h.date}</td><td className="px-1 py-0.5">{h.payoutType || employee.payoutType || ''}</td><td className="px-1 py-0.5 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <tbody>{history.map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || employee.payoutType || ''}</td><td className="px-1 py-0.5 truncate">{h.accountNumber || employee.accountNumber || ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
@@ -301,7 +319,7 @@ export default function EmployeeProfilePage() {
             </div>
             <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={showOvertime} onChange={(e) => { setShowOvertime(e.target.checked); if (!e.target.checked) setOvertime(0); }} /> Overtime Hours {showOvertime && <input className="border rounded w-20 px-2 py-1" value={overtime || ''} onChange={(e) => setOvertime(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showAdvance} onChange={(e) => { setShowAdvance(e.target.checked); if (!e.target.checked) setAdvanceRequest(0); }} /> Cash Advance Request {showAdvance && <input className="border rounded w-20 px-2 py-1" value={advanceRequest || ''} onChange={(e) => setAdvanceRequest(parseFloat(e.target.value) || 0)} />}</label>
-            <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showIncentive} onChange={(e) => { setShowIncentive(e.target.checked); if (!e.target.checked) setIncentive(0); }} /> Incentive Pay Bonus {showIncentive && <input className="border rounded w-20 px-2 py-1" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} />}</label>
+            <label className="flex items-center gap-2 text-sm mt-1 flex-wrap"><input type="checkbox" checked={showIncentive} onChange={(e) => { setShowIncentive(e.target.checked); if (!e.target.checked) { setIncentive(0); setIncentiveDetails(''); } }} /> Incentive Bonus {showIncentive && <><input className="border rounded w-20 px-2 py-1" placeholder="Amount" value={incentive || ''} onChange={(e) => setIncentive(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={incentiveDetails} onChange={(e) => setIncentiveDetails(e.target.value)} /></>}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showCommission} onChange={(e) => { setShowCommission(e.target.checked); if (!e.target.checked) { setCommission(0); setCommissionDetails(""); } }} /> Monthly Commission {showCommission && <><input className="border rounded w-20 px-2 py-1" value={commission || ''} onChange={(e) => setCommission(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={commissionDetails} onChange={(e) => setCommissionDetails(e.target.value)} /></>}</label>
             <label className="flex items-center gap-2 text-sm mt-1"><input type="checkbox" checked={showHoliday} onChange={(e) => { setShowHoliday(e.target.checked); if (!e.target.checked) { setHolidayPay(0); setHolidayDetails(""); } }} /> Holiday Pay {showHoliday && <><input className="border rounded w-20 px-2 py-1" value={holidayPay || ''} onChange={(e) => setHolidayPay(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={holidayDetails} onChange={(e) => setHolidayDetails(e.target.value)} /></>}</label>
             <div className="font-bold mt-3">Deductibles</div>
@@ -317,10 +335,10 @@ export default function EmployeeProfilePage() {
             </div>
             <div className="font-bold text-left mb-2">Salary Computation</div>
             <div className="text-sm space-y-1">
-              <div className="flex justify-between"><span>Daily Rate x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
+              <div className="flex justify-between"><span>Daily Rate {money(dayRate)} x {worked} = Basic Total Salary</span><b>{money(base)}</b></div>
               <div className="flex justify-between"><span>Allowance x {allowanceDays}</span><b>{money(allowance)}</b></div>
               {showAdvance && <div className="flex justify-between text-blue-700 font-bold"><span>Cash Advance Request</span><span>{money(advanceRequest)}</span></div>}
-              {showIncentive && <div className="flex justify-between"><span>Incentive Pay Bonus</span><span>{money(incentive)}</span></div>}
+              {showIncentive && <div className="flex justify-between"><span>Incentive Bonus{incentiveDetails ? ` — ${incentiveDetails}` : ''}</span><span>{money(incentive)}</span></div>}
               {showCommission && <div className="flex justify-between text-blue-700 font-bold"><span>Monthly Commission {commissionDetails}</span><span>{money(commission)}</span></div>}
               {showHoliday && <div className="flex justify-between text-blue-700 font-bold"><span>Holiday Pay {holidayDetails}</span><span>{money(holidayPay)}</span></div>}
               {showOvertime && <div className="flex justify-between"><span>Overtime Pay</span><span>{money(overtimePay)}</span></div>}
@@ -332,10 +350,11 @@ export default function EmployeeProfilePage() {
                 <div className="flex justify-between text-red-600 font-bold"><span>PAGIBIG</span><span>{money(employee.pagibigAmount)}</span></div>
               </>}
               {showCADeduct && <div className="flex justify-between text-red-600 font-bold"><span>Less: Cash Advance Deduction</span><span>{money(cashAdvance)}</span></div>}
-              {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime {undertimeAmount} hrs x {money(dayRate / 8)}</span><span>{money((dayRate / 8) * undertimeAmount)}</span></div>}
+              {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime {undertimeAmount} hrs x {money(dayRate / 8)}{!dayRate ? ' — set daily rate on profile' : ''}</span><span>{money((dayRate / 8) * undertimeAmount)}</span></div>}
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
-                {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
+                {Number(employee.cashAdvanceTotal || 0) > 0 && <div className="text-xs text-blue-800">Previous cash advance balance<br/><b>{money(employee.cashAdvanceTotal)}</b></div>}
+                {cashAdvanceBalance > 0 ? <div className="text-xs">Cash Advance balance to next salary<br/><b>{money(cashAdvanceBalance)}</b></div> : <div />}
                 <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(payoutAmount)}</div></div>
               </div>
             </div>
