@@ -81,19 +81,6 @@ export default function ProductsPage() {
     pick(found);
     setScan('');
   };
-    if (!selected || !branch) return;
-    setSaving(true);
-    const nextQty = Number(qty) || 0;
-    setStockQty(selected.id, nextQty, location, branch);
-    await fetch('/api/records', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, qty: nextQty, location } }),
-    });
-    setStock((prev) => ({ ...prev, [selected.id]: { qty: nextQty, location } }));
-    setSaving(false);
-    alert('Quantity saved for this branch.');
-  };
 
   const shown = products.filter((p) => {
     const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.brand || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
