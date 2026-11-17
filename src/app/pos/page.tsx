@@ -685,7 +685,9 @@ export default function POSPage() {
     setShowLetterhead(false);
     const style = document.createElement('style');
     style.id = 'a5-receipt';
-    style.innerHTML = `@media print { @page { size: A5 portrait; margin: 6mm; } }`;
+    const branch = (currentBranch() || '').toLowerCase();
+    const modern = ['anlurich', 'avenders', 'sezan'].includes(branch);
+    style.innerHTML = `@media print { @page { size: A5 portrait; margin: ${modern ? '8mm' : '28mm 6mm 6mm 6mm'}; } }`;
     document.head.appendChild(style);
     setTimeout(() => {
       window.print();
@@ -910,33 +912,13 @@ export default function POSPage() {
             <p className="font-semibold mb-4">Sale saved. Print receipt?</p>
             <div className="flex gap-3">
               <button onClick={resetForm} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">No</button>
-              <button onClick={() => { setShowPrintAsk(false); setShowLetterhead(true); }} className="flex-1 bg-blue-700 text-white py-2 rounded-lg">Yes</button>
+              <button onClick={() => { setShowPrintAsk(false); doPrint(); }} className="flex-1 bg-blue-700 text-white py-2 rounded-lg">Yes</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Letterhead select */}
-      {showLetterhead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
-            <p className="font-semibold mb-3">Select branch letterhead</p>
-            <select className="w-full border rounded-lg px-3 py-2 mb-4" value={letterhead} onChange={(e) => setLetterhead(e.target.value)}>
-              <option value="">— Select —</option>
-              <option>ANLURICH OPC</option>
-              <option>AVENDERS AUTO PARTS</option>
-              <option>DASMA AUTO PARTS</option>
-              <option>LIPA AUTO PARTS</option>
-              <option>SEZAN BALIWAG AUTO PARTS</option>
-              <option>TIMITSU BALIWAG AUTO PARTS</option>
-            </select>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowLetterhead(false); resetForm(); }} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Cancel</button>
-              <button onClick={doPrint} disabled={!letterhead} className="flex-1 bg-green-600 text-white py-2 rounded-lg disabled:opacity-50">Print</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Letterhead is already printed on the paper */}
 
       </div>
 
@@ -1192,62 +1174,82 @@ export default function POSPage() {
       })()}
 
       {/* Printable receipt */}
-      {savedSale && letterhead && (
-        <div className="hidden print:block text-[10px] leading-tight">
-          <div className="text-center font-bold text-sm mb-1">{letterhead}</div>
-          <div className="flex justify-between items-end border-b pb-1 mb-1">
-            <div className="font-bold text-xs">INVOICE</div>
-            <div>No. {savedSale.invoiceNo}</div>
-            <div>{savedSale.dateTime || formatDate(savedSale.date)}</div>
+      {savedSale && (() => {
+        const branch = (currentBranch() || '').toLowerCase();
+        const modern = ['anlurich', 'avenders', 'sezan'].includes(branch);
+        const company = branch === 'avenders' ? 'AVENDERS AUTO PARTS' : branch === 'sezan' ? (salesOutlet === 'timitsu' ? 'TIMITSU BALIWAG AUTO PARTS' : 'SEZAN BALIWAG AUTO PARTS') : 'ANLURICH OPC';
+        const showLabor = branch === 'anlurich' || branch === 'avenders';
+        const rows = savedSale.items?.length || 0;
+        const font = rows > 12 ? '8px' : rows > 6 ? '9px' : '11px';
+        const money = (n: number) => Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const net = Math.round((savedSale.total / 1.12) * 100) / 100;
+        if (!modern) return (
+          <div className="hidden print:block text-[10px] leading-tight">
+            <div className="flex justify-between items-end border-b pb-1 mb-1">
+              <div className="font-bold text-xs">INVOICE</div>
+              <div>No. {savedSale.invoiceNo}</div>
+              <div>{savedSale.dateTime || formatDate(savedSale.date)}</div>
+            </div>
+            <div className="flex justify-between mb-1">
+              <div><strong>Customer:</strong> {savedSale.customerName || '—'}</div>
+              <div><strong>Contact:</strong> {savedSale.customerPhone || '—'}</div>
+              <div><strong>Plate:</strong> {savedSale.plateNo || '—'}</div>
+            </div>
+            <table className="w-full"><thead><tr className="border-b"><th className="text-left">Part No. / Description</th><th>Qty</th><th className="text-right">Price</th><th className="text-right">Total</th></tr></thead>
+              <tbody>{savedSale.items.map((item: any) => <tr key={item.itemNo} className="border-b"><td>{item.partNumber} {item.description}</td><td className="text-center">{item.qty}</td><td className="text-right">₱{money(item.price)}</td><td className="text-right">₱{money(item.total)}</td></tr>)}</tbody>
+            </table>
+            <div className="text-right mt-2 font-bold">GRAND TOTAL: ₱{money(savedSale.total)}</div>
           </div>
-          <div className="flex justify-between mb-1">
-            <div><strong>Customer:</strong> {savedSale.customerName || '—'}</div>
-            <div><strong>Contact:</strong> {savedSale.customerPhone || '—'}</div>
-            <div><strong>Plate:</strong> {savedSale.plateNo || '—'}</div>
-            {savedSale.tin && <div><strong>TIN:</strong> {savedSale.tin}</div>}
-          </div>
-          <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '48%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '15%' }} />
-            </colgroup>
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-0.5">No.</th>
-                <th className="text-left py-0.5">Part No. / Description</th>
-                <th className="text-center py-0.5">Qty</th>
-                <th className="text-left py-0.5">Unit</th>
-                <th className="text-right py-0.5">Price</th>
-                <th className="text-right py-0.5">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {savedSale.items.map((item: any) => (
-                <tr key={item.itemNo} className="border-b">
-                  <td className="py-0.5">{item.itemNo}</td>
-                  <td className="py-0.5">{item.partNumber ? `${item.partNumber} ` : ''}{item.description}{item.brand ? ` (${item.brand})` : ''}</td>
-                  <td className="py-0.5 text-center">{item.qty}</td>
-                  <td className="py-0.5">{item.unit}</td>
-                  <td className="py-0.5 text-right">₱{item.price.toLocaleString()}</td>
-                  <td className="py-0.5 text-right">₱{item.total.toLocaleString()}</td>
+        );
+        return (
+          <div className="hidden print:block font-bold" style={{ fontSize: font, lineHeight: 1.25, maxHeight: '60%', overflow: 'hidden' }}>
+            <div className="flex justify-between items-end mb-2">
+              <div style={{ fontSize: '16px' }}>{company}</div>
+              <div style={{ fontSize: '16px' }}>INVOICE</div>
+            </div>
+            <div className="mb-2">
+              <div>BILL TO: {savedSale.customerName || '—'}</div>
+              <div>DATE: {savedSale.dateTime || formatDate(savedSale.date)}</div>
+              <div>INVOICE NO: {savedSale.invoiceNo}</div>
+            </div>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr style={{ background: '#007FFF', color: 'white' }}>
+                  <th className="text-left p-1">Part No</th>
+                  <th className="text-left p-1">Description</th>
+                  <th className="text-left p-1">Brand</th>
+                  <th className="text-center p-1">Qty</th>
+                  {showLabor && <th className="text-right p-1">Labor</th>}
+                  <th className="text-right p-1">Price</th>
+                  <th className="text-right p-1">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="text-right mt-3" style={{ lineHeight: '1.8' }}>
-            <div>Subtotal: ₱{savedSale.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            {savedSale.discount > 0 && <div>Discount: ₱{savedSale.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>}
-            <div>Net of VAT: ₱{(Math.round((savedSale.total / 1.12) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div>12% VAT: ₱{(Math.round((savedSale.total - savedSale.total / 1.12) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="font-bold text-xs border-t pt-1 mt-1">GRAND TOTAL: ₱{savedSale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            {savedSale.paymentMethod === 'Credit' && <div className="text-center font-black text-sm mt-2">TERMS: STRICTLY 30 DAYS ONLY</div>}
+              </thead>
+              <tbody>
+                {savedSale.items.map((item: any) => (
+                  <tr key={item.itemNo}>
+                    <td className="py-0.5">{item.partNumber}</td>
+                    <td className="py-0.5">{item.description}</td>
+                    <td className="py-0.5">{item.brand || ''}</td>
+                    <td className="py-0.5 text-center">{item.qty}</td>
+                    {showLabor && <td className="py-0.5 text-right">{money(item.labor || 0)}</td>}
+                    <td className="py-0.5 text-right">{money(item.price)}</td>
+                    <td className="py-0.5 text-right">{money(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="text-right mt-2">
+              <div>Subtotal {money(savedSale.subtotal)}</div>
+              {savedSale.discount > 0 && <div>Discount {money(savedSale.discount)}</div>}
+              <div>Net of VAT {money(net)}</div>
+              <div>12% VAT {money(savedSale.total - net)}</div>
+              <div className="border-t mt-1 pt-1" style={{ fontSize: '13px' }}>Grand Total {money(savedSale.total)}</div>
+            </div>
+            <div className="text-center mt-2">Thank you for your business.</div>
+            {savedSale.paymentMethod === 'Credit' && <div className="text-center mt-1">TERMS: STRICTLY 30 DAYS ONLY</div>}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
