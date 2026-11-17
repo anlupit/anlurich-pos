@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const LETTERHEAD: Record<string, string> = {
   anlurich: 'Anlurich OPC',
@@ -76,6 +76,7 @@ export default function EmployeeProfilePage() {
   const [history, setHistory] = useState<any[]>([]);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [releasing, setReleasing] = useState(false);
+  const savingRef = useRef(false);
   const [referenceNo, setReferenceNo] = useState('');
   const [editRow, setEditRow] = useState<any>(null);
   const [deductGov, setDeductGov] = useState(false);
@@ -146,7 +147,8 @@ export default function EmployeeProfilePage() {
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
 
   const confirmRelease = async () => {
-    if (releasing) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setReleasing(true);
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
@@ -182,6 +184,7 @@ export default function EmployeeProfilePage() {
     setShowUndertime(false);
     setShowPersonal(false);
     setReleasing(false);
+    savingRef.current = false;
     alert('Salary saved and released. Form cleared for a new record.');
   };
 

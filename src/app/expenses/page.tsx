@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { compressImage } from '../../lib/compressImage';
 import { currentBranch } from '../../lib/branchData';
 
@@ -74,7 +74,8 @@ async function deleteExpense(id: string, branch?: string) {
 
 export default function ExpensesPage() {
   const [branch, setBranch] = useState('');
-  const [rows, setRows] = useState<Expense[]>([]);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     category: CATEGORIES[0],
@@ -106,7 +107,10 @@ export default function ExpensesPage() {
   }, []);
 
   const save = async () => {
+    if (savingRef.current) return;
     if (!form.payee.trim() || !form.amount) return alert('Payee and amount are required');
+    savingRef.current = true;
+    setSaving(true);
     const target = branch === 'admin' ? selectedBranch : branch;
     const item: Expense = {
       id: editing || Date.now().toString(),
@@ -122,9 +126,11 @@ export default function ExpensesPage() {
     };
     const next = editing ? rows.map((r) => (r.id === editing ? item : r)) : [item, ...rows];
     setRows(next);
-    try { await saveExpense(item); } catch { return alert('Expense was NOT saved. Supabase is not connected.'); }
+    try { await saveExpense(item); } catch { savingRef.current = false; setSaving(false); return alert('Expense was NOT saved. Supabase is not connected.'); }
     setEditing(null);
     setForm({ date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], payee: '', reference: '', amount: '', vat: '', notes: '', image: '' });
+    savingRef.current = false;
+    setSaving(false);
   };
 
   const remove = async (id: string) => {
@@ -220,7 +226,7 @@ export default function ExpensesPage() {
           Back Camera
           <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onImage(e.target.files?.[0])} />
         </label>
-        <button onClick={save} className="bg-blue-700 text-white rounded px-4 py-2">{editing ? 'Update Expense' : 'Save Expense'}</button>
+        <button onClick={save} disabled={saving} className="bg-blue-700 text-white rounded px-4 py-2 disabled:opacity-50">{saving ? 'Saving...' : editing ? 'Update Expense' : 'Save Expense'}</button>
       </div>
 
       {branch === 'admin' && (

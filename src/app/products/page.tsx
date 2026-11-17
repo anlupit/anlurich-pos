@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { currentBranch, loadStockCloud, setStockQty } from '../../lib/branchData';
 import { loadProductsCloud } from '../../lib/products';
 
@@ -19,6 +19,7 @@ export default function ProductsPage() {
   const [scan, setScan] = useState('');
   const [received, setReceived] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     const b = currentBranch() || '';
@@ -36,7 +37,8 @@ export default function ProductsPage() {
   };
 
   const save = async () => {
-    if (!selected || !branch) return;
+    if (savingRef.current || !selected || !branch) return;
+    savingRef.current = true;
     setSaving(true);
     const nextQty = Number(qty) || 0;
     const shelf = location || stock[selected.id]?.location || '';
@@ -48,13 +50,15 @@ export default function ProductsPage() {
     });
     setStock((prev) => ({ ...prev, [selected.id]: { qty: nextQty, location: shelf } }));
     setSaving(false);
+    savingRef.current = false;
     alert('Quantity saved for this branch.');
   };
 
   const receive = async () => {
-    if (!selected || !branch) return;
+    if (savingRef.current || !selected || !branch) return;
     const add = Number(received) || 0;
     if (add <= 0) return alert('Enter the delivered quantity.');
+    savingRef.current = true;
     setSaving(true);
     const current = Number(stock[selected.id]?.qty || 0);
     const nextQty = current + add;
@@ -70,6 +74,7 @@ export default function ProductsPage() {
     setReceived('');
     setScan('');
     setSaving(false);
+    savingRef.current = false;
     alert(`Added ${add}. New quantity is ${nextQty}.`);
   };
 
