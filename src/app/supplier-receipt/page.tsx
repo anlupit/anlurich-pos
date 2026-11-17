@@ -87,13 +87,12 @@ export default function SupplierReceiptPage() {
     const latest = await loadProductsCloud().catch(() => catalog);
     if (latest.length) setCatalog(latest);
     const source = latest.length ? latest : catalog;
-    const matches = source.filter((p) =>
-      String(p.partNumber || '').toLowerCase().includes(q) ||
-      String(p.barcode || '').toLowerCase().includes(q) ||
-      String(p.name || '').toLowerCase().includes(q) ||
-      String(p.brand || '').toLowerCase().includes(q)
-    ).slice(0, 8);
-    setLineSuggest(matches.length ? { id, field, matches } : null);
+    const matches = source.filter((p) => {
+      if (field === 'barcode') return String(p.barcode || '').toLowerCase().includes(q);
+      return String(p.partNumber || '').toLowerCase().includes(q);
+    }).slice(0, 8);
+    if (!matches.length) { setLineSuggest(null); return; }
+    setLineSuggest({ id, field, matches });
   };
 
   const pickSuggestion = (id: string, p: any) => {
@@ -294,7 +293,7 @@ export default function SupplierReceiptPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} />
+                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
                   {lineSuggest?.id === line.id && lineSuggest.field === 'barcode' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -308,7 +307,7 @@ export default function SupplierReceiptPage() {
                   )}
                 </td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} />
+                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
                   {lineSuggest?.id === line.id && lineSuggest.field === 'partNumber' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -321,9 +320,9 @@ export default function SupplierReceiptPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '26ch' }} value={line.productName} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '14ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '46ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '26ch' }} value={line.productName} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '14ch' }} value={line.brand} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '46ch' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center text-base font-semibold" style={{ width: '8ch', minWidth: '8ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
                 <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
