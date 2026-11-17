@@ -238,7 +238,41 @@ export default function SearchInvoicePage() {
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input className="border rounded px-3 py-2" placeholder="Customer Name" value={editing.customerName || ''} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} />
               <input className="border rounded px-3 py-2" placeholder="Contact" value={editing.customerPhone || ''} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} />
+              <label className="text-sm">Payment Type
+                <select className="border rounded px-3 py-2 w-full" value={editing.paymentMethod || 'Cash'} onChange={(e) => setEditing({ ...editing, paymentMethod: e.target.value })}>
+                  <option>Cash</option>
+                  <option>GCash</option>
+                  <option>Maya</option>
+                  <option>Credit / Debit Card</option>
+                  <option>Bank Transfer</option>
+                  <option>Check</option>
+                  <option>Credit</option>
+                </select>
+              </label>
+              <input className="border rounded px-3 py-2 self-end" placeholder="Reference No." value={editing.referenceNo || ''} onChange={(e) => setEditing({ ...editing, referenceNo: e.target.value })} />
             </div>
+            {editing.paymentMethod === 'Credit' && (
+              <div className="border rounded p-3 mb-3 text-sm">
+                <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={editing.paid !== false} onChange={(e) => setEditing({ ...editing, paid: e.target.checked })} /> {editing.paid === false ? 'UNPAID' : 'PAID'}</label>
+                {editing.paid !== false && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <label>Paid by
+                      <select className="border rounded px-2 py-1 w-full" value={editing.paidBy || 'Cash'} onChange={(e) => setEditing({ ...editing, paidBy: e.target.value })}>
+                        <option>Cash</option>
+                        <option>Check</option>
+                      </select>
+                    </label>
+                    {(editing.paidBy || 'Cash') === 'Check' && (
+                      <>
+                        <input className="border rounded px-2 py-1" placeholder="Check No." value={editing.paymentRef || editing.referenceNo || ''} onChange={(e) => setEditing({ ...editing, paymentRef: e.target.value })} />
+                        <input className="border rounded px-2 py-1" placeholder="Bank Name" value={editing.bankName || ''} onChange={(e) => setEditing({ ...editing, bankName: e.target.value })} />
+                        <input type="date" className="border rounded px-2 py-1" value={editing.checkDate || ''} onChange={(e) => setEditing({ ...editing, checkDate: e.target.value })} />
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <table className="w-full text-sm mb-3">
               <thead className="bg-gray-100">
                 <tr>

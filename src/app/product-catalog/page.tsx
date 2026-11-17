@@ -27,7 +27,7 @@ export default function ProductCatalogPage() {
     Promise.all([loadProductsCloud(), searchInvoicesCloud({})]).then(([rows, invoices]) => {
       const local = loadProducts();
       const byPart = new Map<string, Product>();
-      [...(Array.isArray(rows) ? rows : []), ...local].forEach((p) => {
+      [...local, ...(Array.isArray(rows) ? rows : [])].forEach((p) => {
         const key = String(p.partNumber || p.id || '').trim().toLowerCase();
         if (key) byPart.set(key, p);
       });
@@ -146,11 +146,12 @@ export default function ProductCatalogPage() {
     if (!form.partNumber.trim() || !form.name.trim()) return alert('Part Number and Name are required');
     const data: Product = {
       id: editingId || Date.now().toString(),
-      barcode: form.barcode || undefined,
-      partNumber: form.partNumber,
-      oemPartNumber: form.oemPartNumber || undefined,
-      brand: form.brand || undefined,
-      name: form.name,
+      barcode: form.barcode.trim() || undefined,
+      partNumber: form.partNumber.trim(),
+      oemPartNumber: form.oemPartNumber.trim() || undefined,
+      brand: form.brand.trim() || undefined,
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
       description: form.description || undefined,
       category: form.category || undefined,
       position: form.position || undefined,
@@ -162,11 +163,10 @@ export default function ProductCatalogPage() {
       sellingPrice: sellingFromMarkup(form.costPrice, form.markupPercent) ? parseFloat(sellingFromMarkup(form.costPrice, form.markupPercent)) : undefined,
       bufferOrderQty: form.bufferOrderQty ? parseFloat(form.bufferOrderQty) : 0,
     };
-    const updated = editingId
-      ? products.map((p) => (p.id === editingId ? data : p))
-      : [...products, data];
+    const updated = products.map((p) => (p.id === data.id || String(p.partNumber || '').trim().toLowerCase() === data.partNumber.toLowerCase() ? data : p));
+    const next = updated.some((p) => p.id === data.id) ? updated : [...updated, data];
     const emptyForm = { barcode: '', partNumber: '', oemPartNumber: '', brand: '', name: '', description: '', category: '', position: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50', sellingPrice: '', bufferOrderQty: '0' };
-    setProducts(updated);
+    setProducts(next);
     setForm(emptyForm);
     setEditingId(null);
     try {

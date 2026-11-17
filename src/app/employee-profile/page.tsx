@@ -150,7 +150,7 @@ export default function EmployeeProfilePage() {
     setReleasing(true);
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
-    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
@@ -214,6 +214,11 @@ export default function EmployeeProfilePage() {
 
   const saveEditRow = async () => {
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row: editRow }) });
+    if (editRow.cashAdvanceBalance !== undefined && editRow.cashAdvanceBalance !== '') {
+      const profile = { ...employee, cashAdvanceTotal: Number(editRow.cashAdvanceBalance) || 0 };
+      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
+      setEmployee(profile);
+    }
     setHistory((prev) => prev.map((h) => h.id === editRow.id ? editRow : h));
     setEditRow(null);
   };
@@ -311,9 +316,9 @@ export default function EmployeeProfilePage() {
             </div>
             <div className="mt-3 overflow-x-auto">
               <div className="font-bold text-sm mb-1">Salary History</div>
-              <table className="w-full text-[11px] table-fixed leading-tight">
+              <table className="w-full text-sm table-fixed leading-tight">
                 <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h, cashAdvanceBalance: h.cashAdvanceBalance ?? employee.cashAdvanceTotal ?? '' })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
@@ -400,7 +405,7 @@ export default function EmployeeProfilePage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-4 w-full max-w-md grid grid-cols-2 gap-2 text-sm">
             <div className="col-span-2 font-bold">Edit Salary</div>
-            {['period', 'payoutType', 'accountNumber', 'net', 'referenceNo', 'days', 'allowance', 'overtime', 'undertime', 'cashAdvance', 'advanceRequest', 'incentive', 'personalCharge', 'personalDetails', 'sss', 'philhealth', 'pagibig'].map((field) => (
+            {['period', 'payoutType', 'accountNumber', 'net', 'referenceNo', 'days', 'allowance', 'overtime', 'undertime', 'cashAdvance', 'advanceRequest', 'cashAdvanceBalance', 'incentive', 'personalCharge', 'personalDetails', 'sss', 'philhealth', 'pagibig'].map((field) => (
               <input key={field} className="border rounded px-2 py-1" placeholder={field} value={editRow[field] || ''} onChange={(e) => setEditRow({ ...editRow, [field]: e.target.value })} />
             ))}
             <button onClick={saveEditRow} className="bg-blue-700 text-white px-4 py-2 rounded">Save</button>

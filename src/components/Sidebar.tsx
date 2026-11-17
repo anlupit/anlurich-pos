@@ -25,6 +25,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
       { href: '/crm', label: 'CRM Salesman' },
       { href: '/quotation', label: 'Quotation' },
       { href: '/unpaid', label: 'Unpaid Invoice' },
+      { href: '/credit-payment', label: 'Credit Payment Adjustment' },
       { href: '/download', label: 'Download' },
       { href: '/print', label: 'Print Reports' },
     ],
@@ -91,7 +92,7 @@ function Icon({ label }: { label: string }) {
 }
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
+  if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/credit-payment', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
   if (['/products-menu', '/product-catalog', '/bosch-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
   if (['/accounting', '/add-supplier', '/supplier-receipt', '/bosch-supplier', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
