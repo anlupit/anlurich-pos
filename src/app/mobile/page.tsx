@@ -16,7 +16,12 @@ const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { mi
 
 export default function MobileParts() {
   const [branch, setBranch] = useState('');
-  const [mode, setMode] = useState<'menu' | 'search' | 'receive'>('menu');
+  const [mode, setMode] = useState<'menu' | 'search' | 'receive' | 'lazada' | 'shopee' | 'returns'>('menu');
+  const [returnSource, setReturnSource] = useState<'lazada' | 'shopee'>('lazada');
+  const [returnCode, setReturnCode] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [orderNo, setOrderNo] = useState('');
+  const [saleLines, setSaleLines] = useState([{ id: '1', barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }]);
   const [loginFor, setLoginFor] = useState<string | null>(null);
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -113,7 +118,59 @@ export default function MobileParts() {
     alert(`Added ${add}. New quantity is ${nextQty}.`);
   };
 
-  const shown = products.filter((p) => {
+  const lineTotal = (l: { amount: string; qty: string }) => (Number(l.amount) || 0) * (Number(l.qty) || 0);
+  const saleTotal = saleLines.reduce((n, l) => n + lineTotal(l), 0);
+
+  const saveOnline = async (source: 'lazada' | 'shopee') => {
+    if (savingRef.current) return;
+    if (!customerName.trim() || !orderNo.trim()) return alert('Enter customer name and order number.');
+    const valid = saleLines.filter((l) => l.partNumber.trim() && Number(l.qty) > 0);
+    if (!valid.length) return alert('Add at least one part.');
+    savingRef.current = true;
+    setSaving(true);
+    const row = { id: `${branch}-${source}-${orderNo.trim()}`, branch, source, customerName: customerName.trim(), orderNo: orderNo.trim(), lines: valid, total: saleTotal, createdAt: new Date().toISOString() };
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: `${source}_sales`, row }) });
+    for (const l of valid) {
+      const found = products.find((p) => String(p.partNumber || '').toLowerCase() === l.partNumber.toLowerCase());
+      if (found) {
+        const nextQty = Math.max(0, Number(stock[found.id]?.qty || 0) - Number(l.qty || 0));
+        setStockQty(found.id, nextQty, stock[found.id]?.location || '', branch);
+        await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${found.id}`, branch, productId: found.id, partNumber: found.partNumber, qty: nextQty } }) });
+      }
+    }
+    setCustomerName('');
+    setOrderNo('');
+    setSaleLines([{ id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }]);
+    savingRef.current = false;
+    setSaving(false);
+    alert(`${source === 'lazada' ? 'Lazada' : 'Shopee'} sale saved. Stock deducted for this branch.`);
+  };
+
+  const processReturn = async () => {
+    if (savingRef.current || !returnCode.trim()) return alert('Scan the barcode or type the order number.');
+    savingRef.current = true;
+    setSaving(true);
+    const res = await fetch(`/api/records?table=${returnSource}_sales&branch=${branch}`, { cache: 'no-store' });
+    const rows = await res.json().catch(() => []);
+    const code = returnCode.trim().toLowerCase();
+    const sale = (Array.isArray(rows) ? rows : []).find((r: any) => String(r.orderNo || '').toLowerCase() === code || (r.lines || []).some((l: any) => String(l.barcode || '').toLowerCase() === code || String(l.partNumber || '').toLowerCase() === code));
+    if (!sale) { savingRef.current = false; setSaving(false); return alert('Order not found.'); }
+    if (sale.returned) { savingRef.current = false; setSaving(false); return alert('This order was already returned.'); }
+    for (const l of sale.lines || []) {
+      const found = products.find((p) => String(p.partNumber || '').toLowerCase() === String(l.partNumber || '').toLowerCase());
+      if (found) {
+        const nextQty = Number(stock[found.id]?.qty || 0) + Number(l.qty || 0);
+        setStockQty(found.id, nextQty, stock[found.id]?.location || '', branch);
+        await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${found.id}`, branch, productId: found.id, partNumber: found.partNumber, qty: nextQty } }) });
+        setStock((prev) => ({ ...prev, [found.id]: { qty: nextQty, location: prev[found.id]?.location } }));
+      }
+    }
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: `${returnSource}_sales`, row: { ...sale, returned: true, originalTotal: Number(sale.originalTotal || sale.total || 0), returnedAmount: Number(sale.total || 0), netTotal: 0, returnedAt: new Date().toISOString() } }) });
+    setReturnCode('');
+    savingRef.current = false;
+    setSaving(false);
+    alert(`Return saved. Stock added back. Returned amount ₱${Number(sale.total || 0).toLocaleString()} deducted. Original sale kept for monitoring.`);
+  };
     const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.name || ''} ${p.brand || ''}`.toLowerCase();
     return query.trim().length >= 2 && text.includes(query.trim().toLowerCase());
   }).slice(0, 20);
@@ -163,12 +220,48 @@ export default function MobileParts() {
       </div>
       {mode === 'menu' && (
         <div className="grid gap-3">
-          <button onClick={() => { setMode('search'); setSelected(null); setQuery(''); }} className="bg-blue-700 text-white rounded-xl py-8 text-xl font-black">SEARCH PRODUCT</button>
-          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-8 text-xl font-black">RECEIVED INVENTORY</button>
+          <button onClick={() => { setMode('search'); setSelected(null); setQuery(''); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>
+          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-6 text-xl font-black">RECEIVED INVENTORY</button>
+          <button onClick={() => setMode('lazada')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#0f146d' }}>LAZADA SALE</button>
+          <button onClick={() => setMode('shopee')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#ee4d2d' }}>SHOPEE SALE</button>
+          <button onClick={() => setMode('returns')} className="bg-amber-600 text-white rounded-xl py-6 text-xl font-black">ONLINE RETURNS</button>
         </div>
       )}
       {mode !== 'menu' && <button onClick={() => { stopCamera(); setMode('menu'); setSelected(null); }} className="mb-3 text-blue-700 font-bold">← Back</button>}
-      {mode !== 'menu' && (
+      {(mode === 'lazada' || mode === 'shopee') && (
+        <div className="bg-white rounded-xl border p-3">
+          <div className="font-black text-lg mb-2">{mode === 'lazada' ? 'Lazada Sale' : 'Shopee Sale'}</div>
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <input className="border rounded px-3 py-2 w-full mb-3" placeholder="Order Number" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
+          {saleLines.map((l) => (
+            <div key={l.id} className="border rounded-xl p-2 mb-2">
+              <input className="border rounded px-2 py-2 w-full mb-1" placeholder="Barcode" value={l.barcode} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} />
+              <input className="border rounded px-2 py-2 w-full mb-1" placeholder="Part Number" value={l.partNumber} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x))} />
+              <div className="grid grid-cols-2 gap-1">
+                <input className="border rounded px-2 py-2" placeholder="Amount" value={l.amount} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, amount: e.target.value } : x))} />
+                <input className="border rounded px-2 py-2" placeholder="Commission" value={l.commission} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, commission: e.target.value } : x))} />
+                <input className="border rounded px-2 py-2" placeholder="Quantity" value={l.qty} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, qty: e.target.value } : x))} />
+                <div className="border rounded px-2 py-2 font-bold">Total {money(lineTotal(l))}</div>
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setSaleLines([...saleLines, { id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }])} className="w-full border rounded-xl py-2 mb-2">+ Add Line</button>
+          <div className="text-right font-black mb-2">TOTAL {money(saleTotal)}</div>
+          <button onClick={() => saveOnline(mode)} disabled={saving} className="w-full text-white rounded-xl py-3 font-bold disabled:opacity-50" style={{ background: mode === 'lazada' ? '#0f146d' : '#ee4d2d' }}>{saving ? 'Saving...' : 'Save Sale'}</button>
+        </div>
+      )}
+      {mode === 'returns' && (
+        <div className="bg-white rounded-xl border p-4">
+          <div className="font-black text-lg mb-2">Online Returns</div>
+          <select className="border rounded-xl px-3 py-3 w-full mb-2" value={returnSource} onChange={(e) => setReturnSource(e.target.value as 'lazada' | 'shopee')}>
+            <option value="lazada">Lazada returned this</option>
+            <option value="shopee">Shopee returned this</option>
+          </select>
+          <input className="border rounded-xl px-4 py-4 w-full text-lg mb-3" placeholder="Scan barcode or order number" value={returnCode} onChange={(e) => setReturnCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); processReturn(); } }} />
+          <button onClick={processReturn} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Return to Inventory'}</button>
+        </div>
+      )}
+      {(mode === 'search' || mode === 'receive') && (
         <>
           <input autoFocus className="border rounded-xl px-4 py-4 w-full text-lg mb-2" placeholder="Scan barcode or type part number" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); find(query); } }} />
           <div className="flex gap-2 mb-3">

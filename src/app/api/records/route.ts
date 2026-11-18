@@ -173,6 +173,12 @@ async function ensure() {
     );
     CREATE INDEX IF NOT EXISTS bosch_sales_branch_idx ON bosch_sales (branch);
     CREATE INDEX IF NOT EXISTS bosch_sales_date_idx ON bosch_sales (sale_date);
+    CREATE TABLE IF NOT EXISTS lazada_sales (
+      id TEXT PRIMARY KEY, branch TEXT NOT NULL, invoice_number TEXT, customer_name TEXT, sale_date TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS shopee_sales (
+      id TEXT PRIMARY KEY, branch TEXT NOT NULL, invoice_number TEXT, customer_name TEXT, sale_date TEXT, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS product_images (
       id TEXT PRIMARY KEY,
       part_number TEXT,
@@ -230,7 +236,7 @@ export async function GET(req: Request) {
     await ensure();
     const url = new URL(req.url);
     const table = url.searchParams.get('table') || 'supplier_invoices';
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries', 'lazada_sales', 'shopee_sales'].includes(table)) return NextResponse.json({ error: 'Bad table' }, { status: 400 });
     const branch = url.searchParams.get('branch');
     const physical = tableFor(table, branch);
     if (SPLIT.includes(table) && !BRANCHES.includes(String(branch || '').toLowerCase())) {
@@ -309,7 +315,7 @@ export async function POST(req: Request) {
     await ensure();
     const body = await req.json();
     const table = String(body.table || 'supplier_invoices');
-    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
+    if (!['supplier_invoices', 'sales', 'products', 'inventory', 'customers', 'employees', 'no_invoices', 'expenses', 'customer_points', 'bosch_products', 'bosch_invoices', 'bosch_sales', 'product_images', 'salary', 'employee_profiles', 'employee_salaries', 'payout_summaries', 'lazada_sales', 'shopee_sales'].includes(table)) return NextResponse.json({ ok: false, error: 'Bad table' }, { status: 400 });
     if (body.migrateOldInvoices) {
       const invoices = await pool.query(`SELECT data FROM supplier_invoices`);
       for (const row of invoices.rows) {

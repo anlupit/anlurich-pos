@@ -24,6 +24,9 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
       { href: '/customers', label: 'Customer List' },
       { href: '/crm', label: 'CRM Salesman' },
       { href: '/quotation', label: 'Quotation' },
+      { href: '/lazada-sale', label: 'Lazada Sale' },
+      { href: '/shopee-sale', label: 'Shopee Sales' },
+      { href: '/online-returns', label: 'Online Returns' },
       { href: '/unpaid', label: 'Unpaid Invoice' },
       { href: '/credit-payment', label: 'Credit Payment Adjustment' },
       { href: '/download', label: 'Download' },
@@ -92,7 +95,7 @@ function Icon({ label }: { label: string }) {
 }
 
 function groupOf(pathname: string) {
-  if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/credit-payment', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales'].includes(pathname)) return 'sales';
+  if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/credit-payment', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales', '/lazada-sale', '/shopee-sale', '/online-returns'].includes(pathname)) return 'sales';
   if (['/products-menu', '/product-catalog', '/bosch-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
   if (['/accounting', '/add-supplier', '/supplier-receipt', '/bosch-supplier', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
@@ -126,7 +129,7 @@ export default function Sidebar() {
     } else setEmployees([]);
   }, [pathname]);
 
-  if (pathname === '/' || pathname.startsWith('/customer')) return null;
+  if (pathname === '/' || pathname.startsWith('/customer') || pathname.startsWith('/mobile')) return null;
 
   const logout = () => {
     localStorage.removeItem('anlurich-branch');
