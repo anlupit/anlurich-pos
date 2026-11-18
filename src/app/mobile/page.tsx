@@ -31,7 +31,7 @@ export default function MobileParts() {
   const [searchPart, setSearchPart] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
   const [searchName, setSearchName] = useState('');
-  const [searchDesc, setSearchDesc] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [invAction, setInvAction] = useState<'in' | 'out'>('in');
   const [invDetail, setInvDetail] = useState('');
   const [selected, setSelected] = useState<any>(null);
@@ -132,7 +132,7 @@ export default function MobileParts() {
     alert(`${invAction === 'in' ? 'Added' : 'Sent'} ${add}. ${selected.partNumber} ${selected.brand || ''} ${selected.name || ''}. New quantity is ${nextQty}.`);
   };
 
-  const lineTotal = (l: { amount: string; qty: string }) => (Number(l.amount) || 0) * (Number(l.qty) || 0);
+  const lineTotal = (l: { amount: string; qty: string; commission: string }) => ((Number(l.amount) || 0) * (Number(l.qty) || 0)) + (Number(l.commission) || 0);
   const saleTotal = saleLines.reduce((n, l) => n + lineTotal(l), 0);
 
   const saveOnline = async (source: 'lazada' | 'shopee') => {
@@ -277,11 +277,12 @@ export default function MobileParts() {
                 <input className="border rounded px-2 py-2" placeholder="Commission" value={l.commission} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, commission: e.target.value } : x))} />
                 <input className="border rounded px-2 py-2" placeholder="Quantity" value={l.qty} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, qty: e.target.value } : x))} />
                 <div className="border rounded px-2 py-2 font-bold">Total {money(lineTotal(l))}</div>
+                <button onClick={() => setSaleLines(saleLines.filter((x) => x.id !== l.id))} className="bg-red-600 text-white rounded px-3 font-bold">X</button>
               </div>
             </div>
           ))}
           <button onClick={() => setSaleLines([...saleLines, { id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }])} className="w-full border rounded-xl py-2 mb-2">+ Add Line</button>
-          <div className="text-right font-black mb-2">TOTAL {money(saleTotal)}</div>
+          <div className="text-right font-black mb-2">GRAND TOTAL {money(saleTotal)}</div>
           <button onClick={() => saveOnline(mode)} disabled={saving} className="w-full text-white rounded-xl py-3 font-bold disabled:opacity-50" style={{ background: mode === 'lazada' ? '#0f146d' : '#ee4d2d' }}>{saving ? 'Saving...' : 'Save Sale'}</button>
         </div>
       )}
@@ -313,14 +314,25 @@ export default function MobileParts() {
               <input className="border rounded-xl px-3 py-3" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
             </div>
           )}
+          {mode === 'search' && <button onClick={clearSearch} className="w-full bg-gray-600 text-white rounded-xl py-3 mb-2 font-bold">Clear</button>}
           {scanning && <video ref={videoRef} className="w-full rounded-xl mb-3 bg-black" muted playsInline />}
-          {shown.length > 0 && (
+          {mode === 'search' && shown.length > 0 && (
             <div className="bg-white rounded-xl border mb-3 overflow-auto">
               <div className="grid grid-cols-5 text-xs font-bold bg-gray-100 p-2"><span>Part Number</span><span>Brand</span><span>Description</span><span>Cost</span><span>Price</span></div>
               {shown.map((p) => (
-                <button key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t" onClick={() => { setSelected(p); setSearchBarcode(p.barcode || ''); setSearchPart(p.partNumber || ''); }}>
-                  <span>{p.partNumber}</span><span>{p.brand || '—'}</span><span>{p.description || p.name}</span><span>{money(p.costPrice || 0)}</span><span>{money(p.sellingPrice || 0)}</span>
-                </button>
+                <div key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t">
+                  <span>{p.partNumber}</span><span>{p.brand || '—'}</span><span>{p.description || p.name}</span><span>{money(p.costPrice || 0)}</span><span className="font-bold">{money(p.sellingPrice || 0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {mode === 'receive' && shown.length > 0 && (
+            <div className="bg-white rounded-xl border mb-3 overflow-auto">
+              <div className="grid grid-cols-5 text-xs font-bold bg-gray-100 p-2"><span>Part Number</span><span>Brand</span><span>Description</span><span>Cost</span><span>Price</span></div>
+              {shown.map((p) => (
+                <div key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t">
+                  <span>{p.partNumber}</span><span>{p.brand || '—'}</span><span>{p.description || p.name}</span><span>{money(p.costPrice || 0)}</span><span className="font-bold">{money(p.sellingPrice || 0)}</span>
+                </div>
               ))}
             </div>
           )}
