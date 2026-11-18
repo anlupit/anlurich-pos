@@ -27,7 +27,13 @@ export default function MobileParts() {
   const [loginPassword, setLoginPassword] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [stock, setStock] = useState<Record<string, { qty: number; location?: string }>>({});
-  const [query, setQuery] = useState('');
+  const [searchBarcode, setSearchBarcode] = useState('');
+  const [searchPart, setSearchPart] = useState('');
+  const [searchBrand, setSearchBrand] = useState('');
+  const [searchName, setSearchName] = useState('');
+  const [searchDesc, setSearchDesc] = useState('');
+  const [invAction, setInvAction] = useState<'in' | 'out'>('in');
+  const [invDetail, setInvDetail] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [received, setReceived] = useState('');
   const [saving, setSaving] = useState(false);
@@ -44,7 +50,10 @@ export default function MobileParts() {
   }, []);
 
   const loadBranch = (b: string) => {
-    Promise.all([loadProductsCloud().catch(() => []), loadStockCloud(b).catch(() => ({}))]).then(([catalog, qtyMap]) => {
+    Promise.all([
+      fetch('/api/records?table=products', { cache: 'no-store' }).then((r) => r.json()).catch(() => []),
+      loadStockCloud(b).catch(() => ({})),
+    ]).then(([catalog, qtyMap]) => {
       setProducts(Array.isArray(catalog) ? catalog : []);
       setStock(qtyMap || {});
     });
@@ -94,7 +103,7 @@ export default function MobileParts() {
       if (!on || !videoRef.current) return;
       try {
         const codes = await detector.detect(videoRef.current);
-        if (codes[0]?.rawValue) { find(codes[0].rawValue); stopCamera(); return; }
+        if (codes[0]?.rawValue) { setSearchBarcode(codes[0].rawValue); find(codes[0].rawValue); stopCamera(); return; }
       } catch {}
       if (on) requestAnimationFrame(tick);
     };
@@ -104,18 +113,23 @@ export default function MobileParts() {
   const receive = async () => {
     if (savingRef.current || !selected || !branch) return;
     const add = Number(received) || 0;
-    if (add <= 0) return alert('Enter the delivered quantity.');
+    if (add <= 0) return alert('Enter the quantity.');
+    if (invAction === 'out' && !invDetail) return alert('Choose where it was sent.');
     savingRef.current = true;
     setSaving(true);
     const current = Number(stock[selected.id]?.qty || 0);
-    const nextQty = current + add;
+    const nextQty = invAction === 'in' ? current + add : Math.max(0, current - add);
     setStockQty(selected.id, nextQty, stock[selected.id]?.location || '', branch);
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, qty: nextQty } }) });
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, brand: selected.brand, name: selected.name, qty: nextQty, action: invAction, detail: invDetail, moved: add } }) });
     setStock((prev) => ({ ...prev, [selected.id]: { qty: nextQty, location: prev[selected.id]?.location } }));
     setReceived('');
+    setSelected(null);
+    setSearchBarcode('');
+    setSearchPart('');
+    setInvDetail('');
     savingRef.current = false;
     setSaving(false);
-    alert(`Added ${add}. New quantity is ${nextQty}.`);
+    alert(`${invAction === 'in' ? 'Added' : 'Sent'} ${add}. ${selected.partNumber} ${selected.brand || ''} ${selected.name || ''}. New quantity is ${nextQty}.`);
   };
 
   const lineTotal = (l: { amount: string; qty: string }) => (Number(l.amount) || 0) * (Number(l.qty) || 0);
@@ -173,8 +187,17 @@ export default function MobileParts() {
   };
 
   const shown = products.filter((p) => {
-    const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.name || ''} ${p.brand || ''}`.toLowerCase();
-    return query.trim().length >= 2 && text.includes(query.trim().toLowerCase());
+    const barcode = searchBarcode.trim().toLowerCase();
+    const part = searchPart.trim().toLowerCase();
+    const brand = searchBrand.trim().toLowerCase();
+    const name = searchName.trim().toLowerCase();
+    const desc = searchDesc.trim().toLowerCase();
+    if (![barcode, part, brand, name, desc].some(Boolean)) return false;
+    return (!barcode || String(p.barcode || '').toLowerCase().includes(barcode))
+      && (!part || String(p.partNumber || '').toLowerCase().includes(part))
+      && (!brand || String(p.brand || '').toLowerCase().includes(brand))
+      && (!name || String(p.name || '').toLowerCase().includes(name))
+      && (!desc || String(p.description || '').toLowerCase().includes(desc));
   }).slice(0, 20);
 
   if (!branch) return (
@@ -223,7 +246,7 @@ export default function MobileParts() {
       {mode === 'menu' && (
         <div className="grid gap-3">
           <button onClick={() => { setMode('search'); setSelected(null); setQuery(''); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>
-          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-6 text-xl font-black">RECEIVED INVENTORY</button>
+          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-6 text-xl font-black">UPDATE INVENTORY</button>
           <button onClick={() => setMode('lazada')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#0f146d' }}>LAZADA SALE</button>
           <button onClick={() => setMode('shopee')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#ee4d2d' }}>SHOPEE SALE</button>
           <button onClick={() => setMode('returns')} className="bg-amber-600 text-white rounded-xl py-6 text-xl font-black">ONLINE RETURNS</button>
@@ -263,32 +286,57 @@ export default function MobileParts() {
           <button onClick={processReturn} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Return to Inventory'}</button>
         </div>
       )}
+      {mode === 'search' && <div className="font-bold mb-2">Search Product Catalog</div>}
       {(mode === 'search' || mode === 'receive') && (
         <>
-          <input autoFocus className="border rounded-xl px-4 py-4 w-full text-lg mb-2" placeholder="Scan barcode or type part number" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); find(query); } }} />
-          <div className="flex gap-2 mb-3">
-            <button onClick={scanning ? stopCamera : startCamera} className="flex-1 bg-black text-white rounded-xl py-3 font-bold">{scanning ? 'Stop Camera' : 'Scan with Camera'}</button>
-            <button onClick={() => find(query)} className="flex-1 bg-blue-700 text-white rounded-xl py-3 font-bold">Find</button>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="flex gap-1">
+              <input className="border rounded-xl px-3 py-3 w-full" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
+              <button onClick={scanning ? stopCamera : startCamera} className="bg-black text-white rounded-xl px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+            </div>
+            <input className="border rounded-xl px-3 py-3" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
           </div>
+          {mode === 'search' && (
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <input className="border rounded-xl px-3 py-3" placeholder="Brand" value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} />
+              <input className="border rounded-xl px-3 py-3" placeholder="Product Name" value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+              <input className="border rounded-xl px-3 py-3" placeholder="Description" value={searchDesc} onChange={(e) => setSearchDesc(e.target.value)} />
+            </div>
+          )}
           {scanning && <video ref={videoRef} className="w-full rounded-xl mb-3 bg-black" muted playsInline />}
-          {shown.length > 0 && <div className="bg-white rounded-xl border mb-3 max-h-64 overflow-auto">{shown.map((p) => <button key={p.id} className="block w-full text-left px-3 py-3 border-b" onClick={() => { setSelected(p); setQuery(p.partNumber || ''); }}><div className="font-bold">{p.partNumber}</div><div className="text-sm text-gray-600">{p.name}</div></button>)}</div>}
-          {selected && mode === 'search' && (
-            <div className="bg-white rounded-xl border p-4">
-              <div className="text-2xl font-black">{selected.partNumber}</div>
-              <div className="text-lg mb-2">{selected.name}</div>
-              <div>Brand {selected.brand || '—'}</div>
-              <div className="text-lg">Cost {money(selected.costPrice || 0)}</div>
-              <div className="text-lg font-bold">Price {money(selected.sellingPrice || 0)}</div>
+          {shown.length > 0 && (
+            <div className="bg-white rounded-xl border mb-3 overflow-auto">
+              <div className="grid grid-cols-5 text-xs font-bold bg-gray-100 p-2"><span>Part Number</span><span>Brand</span><span>Description</span><span>Cost</span><span>Price</span></div>
+              {shown.map((p) => (
+                <button key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t" onClick={() => { setSelected(p); setSearchBarcode(p.barcode || ''); setSearchPart(p.partNumber || ''); }}>
+                  <span>{p.partNumber}</span><span>{p.brand || '—'}</span><span>{p.description || p.name}</span><span>{money(p.costPrice || 0)}</span><span>{money(p.sellingPrice || 0)}</span>
+                </button>
+              ))}
             </div>
           )}
           {selected && mode === 'receive' && (
             <div className="bg-white rounded-xl border p-4">
-              <div className="text-xs text-gray-500">Beginning inventory · {branch.toUpperCase()}</div>
-              <div className="text-2xl font-black">{selected.partNumber}</div>
-              <div className="text-lg mb-1">{selected.name}</div>
+              <div className="text-xs text-gray-500">Update inventory · {branch.toUpperCase()}</div>
+              <div className="text-xl font-black">{selected.partNumber}</div>
+              <div className="font-bold">{selected.brand || 'No brand'}</div>
+              <div className="mb-1">{selected.name}</div>
               <div className="text-sm text-gray-500 mb-3">Current stock {stock[selected.id]?.qty || 0}</div>
-              <input autoFocus inputMode="numeric" className="border rounded-xl px-4 py-4 w-full text-2xl text-center mb-2" placeholder="Quantity" value={received} onChange={(e) => setReceived(e.target.value.replace(/[^0-9]/g, ''))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); receive(); } }} />
-              <button onClick={receive} disabled={saving} className="w-full bg-green-700 text-white rounded-xl py-4 text-lg font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Add to this branch'}</button>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <button onClick={() => setInvAction('in')} className={`rounded-xl py-2 font-bold ${invAction === 'in' ? 'bg-green-700 text-white' : 'border'}`}>Input Quantity</button>
+                <button onClick={() => setInvAction('out')} className={`rounded-xl py-2 font-bold ${invAction === 'out' ? 'bg-red-700 text-white' : 'border'}`}>Output Quantity</button>
+              </div>
+              <input inputMode="numeric" className="border rounded-xl px-4 py-4 w-full text-2xl text-center mb-2" placeholder="Quantity" value={received} onChange={(e) => setReceived(e.target.value.replace(/[^0-9]/g, ''))} />
+              {invAction === 'out' && (
+                <select className="border rounded-xl px-3 py-3 w-full mb-2" value={invDetail} onChange={(e) => setInvDetail(e.target.value)}>
+                  <option value="">Details</option>
+                  <option>Sent to Anlurich</option>
+                  <option>Sent to Avenders</option>
+                  <option>Sent to Dasma</option>
+                  <option>Sent to Lipa</option>
+                  <option>Sent to Baliwag Auto Parts</option>
+                </select>
+              )}
+              <button onClick={receive} disabled={saving} className="w-full bg-green-700 text-white rounded-xl py-4 text-lg font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save Inventory'}</button>
             </div>
           )}
         </>
