@@ -31,6 +31,7 @@ export default function MobileParts() {
   const [searchPart, setSearchPart] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
   const [searchName, setSearchName] = useState('');
+  const [searchDesc, setSearchDesc] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [invAction, setInvAction] = useState<'in' | 'out'>('in');
   const [invDetail, setInvDetail] = useState('');
