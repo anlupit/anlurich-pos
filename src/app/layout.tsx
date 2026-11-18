@@ -11,15 +11,22 @@ export const metadata = {
   icons: { icon: '/favicon.png' },
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-gray-50">
         <CloudSync />
         <AuthGuard />
-        <div className="flex h-screen">
+        <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">{children}</main>
+          <main className="flex-1 min-w-0 overflow-auto">{children}</main>
         </div>
       </body>
     </html>
