@@ -99,7 +99,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <a href="/api/download-app" className="text-center bg-[#1e3a8a] text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download Android App</a>
+          <a href="/anlurich-app.apk" className="text-center bg-[#1e3a8a] text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download Android App</a>
           <a href="/iphone" className="text-center bg-black text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download iPhone/iPad App</a>
         </div>
 
