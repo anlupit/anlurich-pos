@@ -97,12 +97,13 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0">
+        <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0 relative">
           {banner ? (
             <img src={banner} alt="Banner" className="w-full h-full object-cover object-center" />
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
+          <a href="/mobile" className="absolute top-3 left-3 bg-[#1e3a8a] text-white rounded-lg px-4 py-2 text-sm md:text-base font-black shadow">Download Anlurich APP</a>
         </div>
 
         <div className="text-sm font-semibold mb-2 text-center md:text-right">Powered & Designed by Anlu</div>
