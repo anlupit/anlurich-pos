@@ -35,6 +35,7 @@ export default function MobileParts() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [invAction, setInvAction] = useState<'in' | 'out'>('in');
   const [invDetail, setInvDetail] = useState('');
+  const [location, setLocation] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [received, setReceived] = useState('');
   const [saving, setSaving] = useState(false);
@@ -121,8 +122,8 @@ export default function MobileParts() {
     setSaving(true);
     const current = Number(stock[selected.id]?.qty || 0);
     const nextQty = invAction === 'in' ? current + add : Math.max(0, current - add);
-    setStockQty(selected.id, nextQty, stock[selected.id]?.location || '', branch);
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, brand: selected.brand, name: selected.name, qty: nextQty, action: invAction, detail: invDetail, moved: add } }) });
+    setStockQty(selected.id, nextQty, location, branch);
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, brand: selected.brand, name: selected.name, qty: nextQty, location, action: invAction, detail: invDetail, moved: add } }) });
     setStock((prev) => ({ ...prev, [selected.id]: { qty: nextQty, location: prev[selected.id]?.location } }));
     setReceived('');
     setSelected(null);
@@ -211,6 +212,18 @@ export default function MobileParts() {
       && (!name || String(p.name || '').toLowerCase().includes(name))
       && (!desc || String(p.description || '').toLowerCase().includes(desc));
   }).slice(0, 20);
+
+  const partSuggest = searchPart.trim().length >= 1
+    ? products.filter((p) => String(p.partNumber || '').toLowerCase().includes(searchPart.trim().toLowerCase())).slice(0, 12)
+    : [];
+
+  const pickPart = (p: any) => {
+    setSelected(p);
+    setSearchPart(p.partNumber || '');
+    setSearchBarcode(p.barcode || '');
+    setSearchBrand(p.brand || '');
+    setLocation(stock[p.id]?.location || '');
+  };
 
   if (!branch) return (
     <div className="min-h-screen p-3" style={{ background: '#f4f6fb' }}>
@@ -307,7 +320,16 @@ export default function MobileParts() {
               <input className="border rounded-xl px-3 py-3 w-full" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
               <button onClick={scanning ? stopCamera : startCamera} className="bg-black text-white rounded-xl px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
             </div>
-            <input className="border rounded-xl px-3 py-3" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
+            <div className="relative">
+              <input className="border rounded-xl px-3 py-3 w-full" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
+              {partSuggest.length > 0 && (
+                <div className="absolute z-10 bg-white border rounded-xl w-full max-h-40 overflow-auto shadow">
+                  {partSuggest.map((p) => (
+                    <button key={p.id} className="block w-full text-left px-3 py-2 border-b font-bold" onClick={() => pickPart(p)}>{p.partNumber}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {mode === 'search' && (
             <div className="grid grid-cols-3 gap-2 mb-2">
@@ -342,14 +364,13 @@ export default function MobileParts() {
             <div className="bg-white rounded-xl border p-4">
               <div className="text-xs text-gray-500">Update inventory · {branch.toUpperCase()}</div>
               <div className="text-xl font-black">{selected.partNumber}</div>
-              <div className="font-bold">{selected.brand || 'No brand'}</div>
-              <div className="mb-1">{selected.name}</div>
-              <div className="text-sm text-gray-500 mb-3">Current stock {stock[selected.id]?.qty || 0}</div>
+              <div className="font-bold mb-1">Brand {selected.brand || '—'}</div>
+              <div className="text-sm text-gray-500 mb-2">Current stock {stock[selected.id]?.qty || 0}</div>
+              <input className="border rounded-xl px-3 py-3 w-full mb-2" placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <button onClick={() => setInvAction('in')} className={`rounded-xl py-2 font-bold ${invAction === 'in' ? 'bg-green-700 text-white' : 'border'}`}>Input Quantity</button>
-                <button onClick={() => setInvAction('out')} className={`rounded-xl py-2 font-bold ${invAction === 'out' ? 'bg-red-700 text-white' : 'border'}`}>Output Quantity</button>
+                <input inputMode="numeric" className="border rounded-xl px-3 py-3 text-center" placeholder="QTY IN" value={invAction === 'in' ? received : ''} onChange={(e) => { setInvAction('in'); setReceived(e.target.value.replace(/[^0-9]/g, '')); }} />
+                <input inputMode="numeric" className="border rounded-xl px-3 py-3 text-center" placeholder="QTY OUT" value={invAction === 'out' ? received : ''} onChange={(e) => { setInvAction('out'); setReceived(e.target.value.replace(/[^0-9]/g, '')); }} />
               </div>
-              <input inputMode="numeric" className="border rounded-xl px-4 py-4 w-full text-2xl text-center mb-2" placeholder="Quantity" value={received} onChange={(e) => setReceived(e.target.value.replace(/[^0-9]/g, ''))} />
               {invAction === 'out' && (
                 <select className="border rounded-xl px-3 py-3 w-full mb-2" value={invDetail} onChange={(e) => setInvDetail(e.target.value)}>
                   <option value="">Details</option>
