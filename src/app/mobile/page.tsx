@@ -195,6 +195,8 @@ export default function MobileParts() {
     setSelected(null);
     stopCamera();
   };
+
+  const shown = products.filter((p) => {
     const barcode = searchBarcode.trim().toLowerCase();
     const part = searchPart.trim().toLowerCase();
     const brand = searchBrand.trim().toLowerCase();
