@@ -171,6 +171,8 @@ export default function MobileParts() {
     setSaving(false);
     alert(`Return saved. Stock added back. Returned amount ₱${Number(sale.total || 0).toLocaleString()} deducted. Original sale kept for monitoring.`);
   };
+
+  const shown = products.filter((p) => {
     const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.name || ''} ${p.brand || ''}`.toLowerCase();
     return query.trim().length >= 2 && text.includes(query.trim().toLowerCase());
   }).slice(0, 20);
