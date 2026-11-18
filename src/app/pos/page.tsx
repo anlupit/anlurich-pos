@@ -76,6 +76,8 @@ export default function POSPage() {
     { id: '1', barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
   ]);
   const [discount, setDiscount] = useState('');
+  const [lessEwt, setLessEwt] = useState(false);
+  const [ewtPercent, setEwtPercent] = useState('1');
   const [cashTender, setCashTender] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [referenceNo, setReferenceNo] = useState('');
@@ -410,9 +412,11 @@ export default function POSPage() {
   const lineTotal = (l: Line) => l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0);
   const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const discountAmt = parseFloat(discount) || 0;
-  const grandTotal = Math.max(0, subtotal - discountAmt);
-  const netOfVAT = Math.round((grandTotal / 1.12) * 100) / 100;
-  const vat = Math.round((grandTotal - netOfVAT) * 100) / 100;
+  const amountBeforeEwt = Math.max(0, subtotal - discountAmt);
+  const netOfVAT = Math.round((amountBeforeEwt / 1.12) * 100) / 100;
+  const vat = Math.round((amountBeforeEwt - netOfVAT) * 100) / 100;
+  const ewt = lessEwt ? Math.round(netOfVAT * ((parseFloat(ewtPercent) || 0) / 100) * 100) / 100 : 0;
+  const grandTotal = Math.max(0, Math.round((amountBeforeEwt - ewt) * 100) / 100);
   const change = (parseFloat(cashTender) || 0) - grandTotal;
 
   useEffect(() => {
@@ -493,6 +497,8 @@ export default function POSPage() {
         }),
         subtotal,
         discount: discountAmt,
+        ewt,
+        ewtPercent: lessEwt ? Number(ewtPercent) || 0 : 0,
         pointsRedeemed: noInvoice ? 0 : redeemPts,
         noPoints: noInvoice,
         noInvoice,
@@ -686,8 +692,8 @@ export default function POSPage() {
     const style = document.createElement('style');
     style.id = 'a5-receipt';
     const branch = (currentBranch() || '').toLowerCase();
-    const modern = ['anlurich', 'avenders', 'sezan'].includes(branch);
-    style.innerHTML = `@media print { @page { size: A5 portrait; margin: ${modern ? '8mm' : '28mm 6mm 6mm 6mm'}; } }`;
+    const modern = true;
+    style.innerHTML = `@media print { @page { size: A5 portrait; margin: 38mm 8mm 8mm 8mm; } }`;
     document.head.appendChild(style);
     setTimeout(() => {
       window.print();
@@ -886,6 +892,11 @@ export default function POSPage() {
               <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
             </div>
             {redeemPts > 0 && <div className="flex justify-between text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
+            <div className="flex justify-between items-center">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={lessEwt} onChange={(e) => setLessEwt(e.target.checked)} /> Less EWT</label>
+              {lessEwt && <input type="number" min={0} step="0.01" className="border rounded px-2 py-1 w-20 text-right" value={ewtPercent} onChange={(e) => setEwtPercent(e.target.value)} placeholder="%" />}
+            </div>
+            {lessEwt && <div className="flex justify-between text-red-700"><span>EWT {ewtPercent || 0}%</span><span>-₱{ewt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
             <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-sm text-gray-600"><span>Net of VAT</span><span>₱{netOfVAT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
@@ -1176,8 +1187,7 @@ export default function POSPage() {
       {/* Printable receipt */}
       {savedSale && (() => {
         const branch = (currentBranch() || '').toLowerCase();
-        const modern = ['anlurich', 'avenders', 'sezan'].includes(branch);
-        const company = branch === 'avenders' ? 'AVENDERS AUTO PARTS' : branch === 'sezan' ? (salesOutlet === 'timitsu' ? 'TIMITSU BALIWAG AUTO PARTS' : 'SEZAN BALIWAG AUTO PARTS') : 'ANLURICH OPC';
+        const modern = true;
         const showLabor = branch === 'anlurich' || branch === 'avenders';
         const rows = savedSale.items?.length || 0;
         const font = rows > 12 ? '8px' : rows > 6 ? '9px' : '11px';
@@ -1203,9 +1213,8 @@ export default function POSPage() {
         );
         return (
           <div className="hidden print:block font-bold" style={{ fontSize: font, lineHeight: 1.25, maxHeight: '60%', overflow: 'hidden' }}>
-            <div className="flex justify-between items-end mb-2">
-              <div style={{ fontSize: '16px' }}>{company}</div>
-              <div style={{ fontSize: '16px' }}>INVOICE</div>
+            <div className="flex justify-end items-end mb-2">
+              <div style={{ fontSize: '16px' }}>BILLING STATEMENT</div>
             </div>
             <div className="mb-2">
               <div>BILL TO: {savedSale.customerName || '—'}</div>
