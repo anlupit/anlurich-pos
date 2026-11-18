@@ -129,7 +129,7 @@ export default function Sidebar() {
     } else setEmployees([]);
   }, [pathname]);
 
-  if (pathname === '/' || pathname.startsWith('/customer') || pathname.startsWith('/mobile')) return null;
+  if (pathname === '/' || pathname.startsWith('/customer') || pathname.startsWith('/mobile') || pathname.startsWith('/iphone')) return null;
 
   const logout = () => {
     localStorage.removeItem('anlurich-branch');
