@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { loadUsers } from '../lib/users';
-import { installAnlurichApp } from '../components/InstallApp';
 
 const BUTTONS = [
   { id: 'anlurich', name: 'Anlurich OPC', location: 'Silang Cavite' },
@@ -98,12 +97,7 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <a href="/anlurich-app.apk" className="text-center bg-[#1e3a8a] text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download Android App</a>
-          <a href="/iphone" className="text-center bg-black text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download iPhone/iPad App</a>
-        </div>
-
-        <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0 relative">
+        <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0">
           {banner ? (
             <img src={banner} alt="Banner" className="w-full h-full object-cover object-center" />
           ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { currentBranch } from '../../lib/branchData';
 
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
@@ -39,6 +39,7 @@ export default function BoschSupplierInvoicePage() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [suggest, setSuggest] = useState<{ id: string; matches: Tool[] } | null>(null);
 
   useEffect(() => {
@@ -67,14 +68,16 @@ export default function BoschSupplierInvoicePage() {
   const total = lines.reduce((n, l) => n + l.qty * l.price, 0);
 
   const save = async () => {
-    if (saving) return;
+    if (savingRef.current) return;
     if (!supplier.trim()) return alert('Enter supplier name');
     if (!invoiceNo.trim()) return alert('Enter invoice number');
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (!valid.length) return alert('Add at least one item');
+    savingRef.current = true;
     setSaving(true);
     const invoices = await loadInvoices();
     if (invoices.some((i: any) => String(i.supplier).toLowerCase() === supplier.trim().toLowerCase() && String(i.invoiceNo).toLowerCase() === invoiceNo.trim().toLowerCase())) {
+      savingRef.current = false;
       setSaving(false);
       return alert('This Bosch invoice is already recorded.');
     }
@@ -107,6 +110,7 @@ export default function BoschSupplierInvoicePage() {
         return saved ? saveTool(saved) : Promise.resolve();
       }));
     } catch (err: any) {
+      savingRef.current = false;
       setSaving(false);
       return alert(err?.message || 'Invoice saved, but Bosch catalog quantity was not saved to Supabase.');
     }
@@ -114,6 +118,7 @@ export default function BoschSupplierInvoicePage() {
     setInvoiceNo('');
     setDate(new Date().toISOString().slice(0, 10));
     setLines([emptyLine()]);
+    savingRef.current = false;
     setSaving(false);
     alert(`Bosch supplier invoice saved.\nCatalog stock updated:\n${added.join('\n')}`);
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos, searchInvoicesCloud, loadInvoices } from '../../lib/branchData';
 import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
 
@@ -31,6 +31,7 @@ export default function SupplierReceiptPage() {
   const [discount2, setDiscount2] = useState('');
   const [discount3, setDiscount3] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: '', address: '', tin: '', contact: '', phone: '', email: '' });
   const [lines, setLines] = useState<Line[]>([
@@ -140,10 +141,24 @@ export default function SupplierReceiptPage() {
     setShowAddSupplier(false);
   };
 
+  const warnDuplicate = async () => {
+    const no = invoiceNumber.trim();
+    const supplier = supplierName.trim();
+    if (!no || !supplier) return;
+    const existing = await searchInvoicesCloud({ supplier, invoiceNo: no }).catch(() => []);
+    const oldCloud = await loadInvoicesCloud().catch(() => []);
+    const hit = [...loadInvoices(), ...(existing || []), ...(oldCloud || [])].find((inv) =>
+      String(inv.invoiceNumber || inv.invoiceNo || '').trim().toLowerCase() === no.toLowerCase() &&
+      String(inv.supplierName || '').trim().toLowerCase() === supplier.toLowerCase()
+    );
+    if (hit) alert(`Duplicate invoice. ${supplier} invoice ${no} is already recorded. Do not encode the parts.`);
+  };
+
   const handleSave = async () => {
-    if (saving) return;
+    if (savingRef.current) return;
     if (!supplierName.trim()) return alert('Enter supplier name');
     if (!invoiceNumber.trim()) return alert('Enter invoice number');
+    savingRef.current = true;
     setSaving(true);
     const existing = await searchInvoicesCloud({ supplier: supplierName.trim(), invoiceNo: invoiceNumber.trim() }).catch(() => loadInvoices());
     const oldCloud = await loadInvoicesCloud().catch(() => []);
@@ -152,11 +167,13 @@ export default function SupplierReceiptPage() {
       String(inv.invoiceNumber || inv.invoiceNo || '').trim().toLowerCase() === invoiceNumber.trim().toLowerCase()
     );
     if (duplicate) {
+      savingRef.current = false;
       setSaving(false);
       return alert(`Duplicate invoice. ${supplierName} invoice ${invoiceNumber} is already recorded. Do not encode it again.`);
     }
     const valid = lines.filter((l) => l.partNumber.trim() && l.qty > 0);
     if (valid.length === 0) {
+      savingRef.current = false;
       setSaving(false);
       return alert('Add at least one item');
     }
@@ -182,6 +199,7 @@ export default function SupplierReceiptPage() {
     try {
       await saveInvoice(invoice);
     } catch {
+      savingRef.current = false;
       setSaving(false);
       return alert('Invoice was NOT saved. Supabase is not connected. Check the cloud connection and try again.');
     }
@@ -195,6 +213,7 @@ export default function SupplierReceiptPage() {
     setDiscount3('');
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
+    savingRef.current = false;
     setSaving(false);
     const result = await upsertCatalogFromInvoice(invoice.lines).catch(() => null);
     if (result) alert(`Catalog details saved. Inventory for this branch updated.`);
@@ -258,7 +277,7 @@ export default function SupplierReceiptPage() {
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Invoice Number</label>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} onBlur={warnDuplicate} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
@@ -298,9 +317,7 @@ export default function SupplierReceiptPage() {
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
-                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
-                          <div className="text-gray-600">{p.description || p.name}</div>
-                          <div className="text-green-700">₱{Number(p.sellingPrice || p.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                          {p.partNumber}
                         </button>
                       ))}
                     </div>
@@ -312,9 +329,7 @@ export default function SupplierReceiptPage() {
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
                         <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
-                          <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
-                          <div className="text-gray-600">{p.description || p.name}</div>
-                          <div className="text-green-700">₱{Number(p.sellingPrice || p.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                          {p.partNumber}
                         </button>
                       ))}
                     </div>

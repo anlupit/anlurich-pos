@@ -14,6 +14,9 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState<any[]>([]);
   const savingRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const stopRef = useRef<any>(null);
+  const [scanning, setScanning] = useState(false);
   const title = source === 'lazada' ? 'Lazada Sale' : 'Shopee Sales';
   const color = source === 'lazada' ? '#0f146d' : '#ee4d2d';
   const lineTotal = (l: { amount: string; qty: string }) => (Number(l.amount) || 0) * (Number(l.qty) || 0);
@@ -27,6 +30,32 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
       .then((list) => setRows(Array.isArray(list) ? list : []))
       .catch(() => setRows([]));
   }, [source]);
+
+  const scanOrder = async () => {
+    const Detector = (window as any).BarcodeDetector;
+    if (!Detector || !navigator.mediaDevices?.getUserMedia) return alert('Use a Bluetooth scanner in the order number field, or type it.');
+    setScanning(true);
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+    const detector = new Detector({ formats: ['code_128', 'ean_13', 'qr_code', 'code_39'] });
+    let on = true;
+    stopRef.current = () => { on = false; };
+    const tick = async () => {
+      if (!on || !videoRef.current) return;
+      try {
+        const codes = await detector.detect(videoRef.current);
+        if (codes[0]?.rawValue) {
+          setOrderNo(codes[0].rawValue);
+          on = false;
+          stream.getTracks().forEach((t) => t.stop());
+          setScanning(false);
+          return;
+        }
+      } catch {}
+      if (on) requestAnimationFrame(tick);
+    };
+    tick();
+  };
 
   const save = async () => {
     if (savingRef.current) return;
@@ -69,7 +98,11 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Order Number</label>
-          <input className="border rounded-lg px-3 py-2 w-full" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
+          <div className="flex gap-2">
+            <input className="border rounded-lg px-3 py-2 flex-1" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
+            <button type="button" onClick={scanOrder} className="bg-black text-white rounded-lg px-3 font-bold">Scan</button>
+          </div>
+          {scanning && <video ref={videoRef} className="w-full rounded-lg mt-2 bg-black" muted playsInline />}
         </div>
       </div>
 

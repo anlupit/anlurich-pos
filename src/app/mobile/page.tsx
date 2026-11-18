@@ -186,7 +186,15 @@ export default function MobileParts() {
     alert(`Return saved. Stock added back. Returned amount ₱${Number(sale.total || 0).toLocaleString()} deducted. Original sale kept for monitoring.`);
   };
 
-  const shown = products.filter((p) => {
+  const clearSearch = () => {
+    setSearchBarcode('');
+    setSearchPart('');
+    setSearchBrand('');
+    setSearchName('');
+    setSearchDesc('');
+    setSelected(null);
+    stopCamera();
+  };
     const barcode = searchBarcode.trim().toLowerCase();
     const part = searchPart.trim().toLowerCase();
     const brand = searchBrand.trim().toLowerCase();
