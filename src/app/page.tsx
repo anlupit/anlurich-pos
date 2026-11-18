@@ -98,7 +98,10 @@ export default function Home() {
           ))}
         </div>
 
-        <a href="/anlurich-app.apk" download className="block w-full text-center bg-[#1e3a8a] text-white rounded-xl px-4 py-3 mb-2 text-lg font-black shadow">Download Anlurich APP</a>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <a href="/api/download-app" className="text-center bg-[#1e3a8a] text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download Android App</a>
+          <a href="/iphone" className="text-center bg-black text-white rounded-xl px-4 py-4 text-lg font-black shadow">Download iPhone/iPad App</a>
+        </div>
 
         <div className="flex-1 rounded-xl overflow-hidden mb-2 shadow bg-white min-h-0 relative">
           {banner ? (
@@ -106,7 +109,6 @@ export default function Home() {
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-sky-200 via-blue-100 to-orange-200" />
           )}
-          <a href="/anlurich-app.apk" download className="absolute top-3 left-3 bg-[#1e3a8a] text-white rounded-lg px-3 py-2 text-xs md:text-sm font-black shadow">Android App</a>
         </div>
 
         <div className="text-sm font-semibold mb-2 text-center md:text-right">Powered & Designed by Anlu</div>
