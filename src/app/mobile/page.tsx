@@ -1,0 +1,203 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { currentBranch, loadStockCloud, setStockQty } from '../../lib/branchData';
+import { loadProductsCloud } from '../../lib/products';
+import { loadUsers } from '../../lib/users';
+
+const BUTTONS = [
+  { id: 'anlurich', name: 'Anlurich OPC' },
+  { id: 'avenders', name: 'Avenders' },
+  { id: 'dasma', name: 'Dasma Auto Parts' },
+  { id: 'lipa', name: 'Lipa Auto Parts' },
+  { id: 'sezan', name: 'Baliwag Auto Parts' },
+];
+const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export default function MobileParts() {
+  const [branch, setBranch] = useState('');
+  const [mode, setMode] = useState<'menu' | 'search' | 'receive'>('menu');
+  const [loginFor, setLoginFor] = useState<string | null>(null);
+  const [loginName, setLoginName] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [products, setProducts] = useState<any[]>([]);
+  const [stock, setStock] = useState<Record<string, { qty: number; location?: string }>>({});
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<any>(null);
+  const [received, setReceived] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const savingRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const stopRef = useRef<any>(null);
+
+  useEffect(() => {
+    const b = currentBranch() || '';
+    setBranch(b);
+    if (b) loadBranch(b);
+    return () => stopCamera();
+  }, []);
+
+  const loadBranch = (b: string) => {
+    Promise.all([loadProductsCloud().catch(() => []), loadStockCloud(b).catch(() => ({}))]).then(([catalog, qtyMap]) => {
+      setProducts(Array.isArray(catalog) ? catalog : []);
+      setStock(qtyMap || {});
+    });
+  };
+
+  const submitLogin = async () => {
+    if (!loginFor) return;
+    const users = await loadUsers();
+    const ok = users.some((u) => u.branch === loginFor && u.name === loginName.trim() && u.password === loginPassword);
+    if (!ok) return alert('Wrong login.');
+    localStorage.setItem('anlurich-branch', loginFor);
+    sessionStorage.setItem('anlurich-auth', loginFor);
+    setBranch(loginFor);
+    setLoginFor(null);
+    loadBranch(loginFor);
+  };
+
+  const find = (code: string) => {
+    const key = code.trim().toLowerCase();
+    if (!key) return;
+    const found = products.find((p) => String(p.barcode || '').trim().toLowerCase() === key || String(p.partNumber || '').trim().toLowerCase() === key);
+    if (!found) return alert('Part not found.');
+    setSelected(found);
+    setQuery(found.partNumber || '');
+    setReceived('');
+  };
+
+  const stopCamera = () => {
+    stopRef.current?.();
+    stopRef.current = null;
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    stream?.getTracks().forEach((t) => t.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setScanning(false);
+  };
+
+  const startCamera = async () => {
+    const Detector = (window as any).BarcodeDetector;
+    if (!Detector || !navigator.mediaDevices?.getUserMedia) return alert('Use a Bluetooth scanner, or type the barcode.');
+    setScanning(true);
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+    const detector = new Detector({ formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'code_39'] });
+    let on = true;
+    stopRef.current = () => { on = false; };
+    const tick = async () => {
+      if (!on || !videoRef.current) return;
+      try {
+        const codes = await detector.detect(videoRef.current);
+        if (codes[0]?.rawValue) { find(codes[0].rawValue); stopCamera(); return; }
+      } catch {}
+      if (on) requestAnimationFrame(tick);
+    };
+    tick();
+  };
+
+  const receive = async () => {
+    if (savingRef.current || !selected || !branch) return;
+    const add = Number(received) || 0;
+    if (add <= 0) return alert('Enter the delivered quantity.');
+    savingRef.current = true;
+    setSaving(true);
+    const current = Number(stock[selected.id]?.qty || 0);
+    const nextQty = current + add;
+    setStockQty(selected.id, nextQty, stock[selected.id]?.location || '', branch);
+    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'inventory', row: { id: `${branch}-${selected.id}`, branch, productId: selected.id, partNumber: selected.partNumber, qty: nextQty } }) });
+    setStock((prev) => ({ ...prev, [selected.id]: { qty: nextQty, location: prev[selected.id]?.location } }));
+    setReceived('');
+    savingRef.current = false;
+    setSaving(false);
+    alert(`Added ${add}. New quantity is ${nextQty}.`);
+  };
+
+  const shown = products.filter((p) => {
+    const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.name || ''} ${p.brand || ''}`.toLowerCase();
+    return query.trim().length >= 2 && text.includes(query.trim().toLowerCase());
+  }).slice(0, 20);
+
+  if (!branch) return (
+    <div className="min-h-screen p-3" style={{ background: '#f4f6fb' }}>
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain" />
+          <h1 className="text-lg font-black tracking-wide text-[#1e3a8a]">AUTO PARTS INVENTORY SYSTEM</h1>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {BUTTONS.map((b) => (
+            <button key={b.id} onClick={() => { setLoginFor(b.id); setLoginName(''); setLoginPassword(''); }} className="h-12 bg-gradient-to-b from-[#7c6bff] to-[#6d5efc] text-white rounded-xl font-semibold shadow">{b.name}</button>
+          ))}
+        </div>
+        <div className="rounded-xl overflow-hidden shadow bg-white h-48 mb-2">
+          <img src="/banner.png" alt="Banner" className="w-full h-full object-cover" />
+        </div>
+        <div className="text-sm font-semibold text-center">Powered & Designed by Anlu</div>
+      </div>
+      {loginFor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <form className="bg-white rounded-xl p-5 w-full max-w-sm" onSubmit={(e) => { e.preventDefault(); submitLogin(); }}>
+            <h2 className="font-bold mb-1">Login</h2>
+            <p className="text-sm text-gray-500 mb-3">{BUTTONS.find((b) => b.id === loginFor)?.name}</p>
+            <input className="w-full border rounded px-3 py-2 mb-2" placeholder="Login Name" value={loginName} onChange={(e) => setLoginName(e.target.value)} />
+            <input type="password" className="w-full border rounded px-3 py-2 mb-3" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setLoginFor(null)} className="flex-1 bg-gray-400 text-white py-2 rounded">Cancel</button>
+              <button type="submit" className="flex-1 bg-purple-600 text-white py-2 rounded">Enter</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-3 max-w-3xl mx-auto">
+      <div className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
+        <img src="/logo.png" alt="Logo" className="w-12 h-12 bg-white rounded object-contain" />
+        <div>
+          <div className="text-xs opacity-80">{branch.toUpperCase()}</div>
+          <h1 className="text-2xl font-black">Anlurich APP</h1>
+        </div>
+      </div>
+      {mode === 'menu' && (
+        <div className="grid gap-3">
+          <button onClick={() => { setMode('search'); setSelected(null); setQuery(''); }} className="bg-blue-700 text-white rounded-xl py-8 text-xl font-black">SEARCH PRODUCT</button>
+          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-8 text-xl font-black">RECEIVED INVENTORY</button>
+        </div>
+      )}
+      {mode !== 'menu' && <button onClick={() => { stopCamera(); setMode('menu'); setSelected(null); }} className="mb-3 text-blue-700 font-bold">← Back</button>}
+      {mode !== 'menu' && (
+        <>
+          <input autoFocus className="border rounded-xl px-4 py-4 w-full text-lg mb-2" placeholder="Scan barcode or type part number" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); find(query); } }} />
+          <div className="flex gap-2 mb-3">
+            <button onClick={scanning ? stopCamera : startCamera} className="flex-1 bg-black text-white rounded-xl py-3 font-bold">{scanning ? 'Stop Camera' : 'Scan with Camera'}</button>
+            <button onClick={() => find(query)} className="flex-1 bg-blue-700 text-white rounded-xl py-3 font-bold">Find</button>
+          </div>
+          {scanning && <video ref={videoRef} className="w-full rounded-xl mb-3 bg-black" muted playsInline />}
+          {shown.length > 0 && <div className="bg-white rounded-xl border mb-3 max-h-64 overflow-auto">{shown.map((p) => <button key={p.id} className="block w-full text-left px-3 py-3 border-b" onClick={() => { setSelected(p); setQuery(p.partNumber || ''); }}><div className="font-bold">{p.partNumber}</div><div className="text-sm text-gray-600">{p.name}</div></button>)}</div>}
+          {selected && mode === 'search' && (
+            <div className="bg-white rounded-xl border p-4">
+              <div className="text-2xl font-black">{selected.partNumber}</div>
+              <div className="text-lg mb-2">{selected.name}</div>
+              <div>Brand {selected.brand || '—'}</div>
+              <div className="text-lg">Cost {money(selected.costPrice || 0)}</div>
+              <div className="text-lg font-bold">Price {money(selected.sellingPrice || 0)}</div>
+            </div>
+          )}
+          {selected && mode === 'receive' && (
+            <div className="bg-white rounded-xl border p-4">
+              <div className="text-xs text-gray-500">Beginning inventory · {branch.toUpperCase()}</div>
+              <div className="text-2xl font-black">{selected.partNumber}</div>
+              <div className="text-lg mb-1">{selected.name}</div>
+              <div className="text-sm text-gray-500 mb-3">Current stock {stock[selected.id]?.qty || 0}</div>
+              <input autoFocus inputMode="numeric" className="border rounded-xl px-4 py-4 w-full text-2xl text-center mb-2" placeholder="Quantity" value={received} onChange={(e) => setReceived(e.target.value.replace(/[^0-9]/g, ''))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); receive(); } }} />
+              <button onClick={receive} disabled={saving} className="w-full bg-green-700 text-white rounded-xl py-4 text-lg font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Add to this branch'}</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
