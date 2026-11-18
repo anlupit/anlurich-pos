@@ -77,7 +77,8 @@ export default function MobileParts() {
     const found = products.find((p) => String(p.barcode || '').trim().toLowerCase() === key || String(p.partNumber || '').trim().toLowerCase() === key);
     if (!found) return alert('Part not found.');
     setSelected(found);
-    setQuery(found.partNumber || '');
+    setSearchBarcode(found.barcode || '');
+    setSearchPart(found.partNumber || '');
     setReceived('');
   };
 
@@ -255,8 +256,8 @@ export default function MobileParts() {
       </div>
       {mode === 'menu' && (
         <div className="grid gap-3">
-          <button onClick={() => { setMode('search'); setSelected(null); setQuery(''); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>
-          <button onClick={() => { setMode('receive'); setSelected(null); setQuery(''); }} className="bg-green-700 text-white rounded-xl py-6 text-xl font-black">UPDATE INVENTORY</button>
+          <button onClick={() => { setMode('search'); setSelected(null); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>
+          <button onClick={() => { setMode('receive'); setSelected(null); }} className="bg-green-700 text-white rounded-xl py-6 text-xl font-black">UPDATE INVENTORY</button>
           <button onClick={() => setMode('lazada')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#0f146d' }}>LAZADA SALE</button>
           <button onClick={() => setMode('shopee')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#ee4d2d' }}>SHOPEE SALE</button>
           <button onClick={() => setMode('returns')} className="bg-amber-600 text-white rounded-xl py-6 text-xl font-black">ONLINE RETURNS</button>
