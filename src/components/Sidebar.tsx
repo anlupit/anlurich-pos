@@ -11,6 +11,7 @@ const MAIN = [
   { href: '/download-reports', label: 'Download Reports' },
   { href: '/employee-salary', label: 'Create Employee Salary' },
   { href: '/check-voucher', label: 'Check Voucher' },
+  { href: '/mobile', label: 'Phone App Mode' },
 ];
 
 const GROUPS: Record<string, { title: string; items: { href: string; label: string }[] }> = {
@@ -66,6 +67,7 @@ const ICONS: Record<string, string> = {
   'Stock Request': 'M7 3h10v18H7zM9 7h6M9 11h6M9 15h4',
   'Download Reports': 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
   'Create Employee Salary': 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0',
+  'Phone App Mode': 'M8 3h8v18H8zM11 18h2',
   'POS System': 'M4 6h16v10H4zM8 20h8',
   'Bosch POS': 'M4 6h16v10H4zM8 20h8',
   'No Invoice': 'M6 3h8l4 4v14H6zM10 11h6M10 15h4',
