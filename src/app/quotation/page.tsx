@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { saveQuotation, updateQuotation, loadQuotations, deleteQuotation, currentBranch, formatDate } from '../../lib/branchData';
+import { saveQuotation, updateQuotation, loadQuotations, loadQuotationsCloud, deleteQuotation, currentBranch, formatDate } from '../../lib/branchData';
 
 type QuoteLine = {
   id: string;
@@ -27,6 +27,7 @@ export default function QuotationPage() {
   const [quotationNo, setQuotationNo] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [plateNo, setPlateNo] = useState('');
   const [carMake, setCarMake] = useState('');
   const [carModel, setCarModel] = useState('');
@@ -86,8 +87,8 @@ export default function QuotationPage() {
   const lineTotal = (l: QuoteLine) => l.qty * l.price + (hasLabor ? (Number(l.laborPrice) || 0) : 0);
   const grandTotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);
 
-  const searchQuotations = () => {
-    const all = loadQuotations();
+  const searchQuotations = async () => {
+    const all = await loadQuotationsCloud();
     const plate = qPlate.trim().toLowerCase();
     const name = qCustomer.trim().toLowerCase();
     const no = qNo.trim().toLowerCase();
@@ -97,7 +98,7 @@ export default function QuotationPage() {
         const plateOk = !plate || String(q.plateNo || '').toLowerCase().includes(plate);
         const nameOk = !name || String(q.customerName || '').toLowerCase().includes(name);
         const noOk = !no || String(q.quotationNo || '').toLowerCase().includes(no);
-        return plateOk && nameOk && noOk && (plate || name || no);
+        return plateOk && nameOk && noOk;
       });
     setQResults(found.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
     setQSearched(true);
@@ -113,6 +114,7 @@ export default function QuotationPage() {
     setEditingId(q.id || q.quotationNo);
     setCustomerName(q.customerName || '');
     setCustomerPhone(q.customerPhone || '');
+    setCustomerEmail(q.customerEmail || '');
     setQuotationNo(q.quotationNo || '');
     setPlateNo(q.plateNo || '');
     setCarMake(q.carMake || '');
@@ -142,6 +144,7 @@ export default function QuotationPage() {
   const resetForm = () => {
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerEmail('');
     setPlateNo('');
     setCarMake('');
     setCarModel('');
@@ -179,6 +182,22 @@ export default function QuotationPage() {
     setPrintSnap(snap);
     resetForm();
     setShowPrintAsk(true);
+  };
+
+  const emailCustomer = () => {
+    const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
+    if (!customerEmail.trim()) return alert('Enter the customer email.');
+    if (!valid.length) return alert('Add at least one item.');
+    const body = [
+      `Quotation No. ${quotationNo}`,
+      `Customer: ${customerName}`,
+      `Plate: ${plateNo}`,
+      '',
+      ...valid.map((l) => `${l.partNumber}  ${l.description}  ${l.brand}  Qty ${l.qty}  ${l.price}`),
+      '',
+      `Grand Total: ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    ].join('\n');
+    window.location.href = `mailto:${encodeURIComponent(customerEmail.trim())}?subject=${encodeURIComponent(`Quotation ${quotationNo}`)}&body=${encodeURIComponent(body)}`;
   };
 
   const printCurrent = () => {
@@ -281,6 +300,7 @@ export default function QuotationPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
             <input className="border rounded-lg px-3 py-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             <input className="border rounded-lg px-3 py-2" placeholder="Contact Number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+            <input className="border rounded-lg px-3 py-2" placeholder="Customer Email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
             <input className="border rounded-lg px-3 py-2 bg-gray-50" value={quotationNo} readOnly placeholder="Quotation No." />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -333,6 +353,7 @@ export default function QuotationPage() {
             <span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <button onClick={handleSave} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold">{editingId ? 'Update Quotation' : 'Save Quotation'}</button>
+          <button onClick={emailCustomer} className="w-full bg-blue-700 text-white py-3 rounded-lg font-bold mt-2">Email to Customer</button>
           <button onClick={printCurrent} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Print A5</button>
         </div>
       </div>
@@ -352,9 +373,14 @@ export default function QuotationPage() {
 
       {printSnap && (
       <div className="print-quote hidden print:block text-[10px] leading-tight">
-        <div className="text-center font-bold text-sm mb-1">{branchHeader.name}</div>
-        <div className="flex justify-between items-end border-b pb-1 mb-1">
-          <div className="font-bold text-xs">QUOTATION</div>
+        <div className="text-center mb-2">
+          <img src="/logo.png" alt="Anlurich OPC" className="h-12 mx-auto object-contain" />
+          <div className="font-black text-sm">ANLURICH OPC</div>
+          <div>Bosch Bldg. Sitio Muzon Brgy Puting Kahoy Silang Cavite 4118</div>
+          <div>TIN No. 767-570-804-000</div>
+          <div className="font-black text-sm mt-1">QUOTATION</div>
+        </div>
+        <div className="flex justify-between border-b pb-1 mb-1">
           <div>No. {printSnap.quotationNo}</div>
           <div>{formatDate(printSnap.date)}</div>
         </div>
