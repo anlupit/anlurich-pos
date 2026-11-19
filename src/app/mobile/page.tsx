@@ -261,13 +261,13 @@ export default function MobileParts() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 max-w-3xl mx-auto">
-      <div className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
+      <a href={`/branch/${branch}`} className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
         <img src="/logo.png" alt="Logo" className="w-12 h-12 bg-white rounded object-contain" />
         <div>
           <div className="text-xs opacity-80">{branch.toUpperCase()}</div>
           <h1 className="text-2xl font-black">Anlurich APP</h1>
         </div>
-      </div>
+      </a>
       {mode === 'menu' && (
         <div className="grid gap-3">
           <button onClick={() => { setMode('search'); setSelected(null); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>

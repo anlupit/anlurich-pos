@@ -97,7 +97,7 @@ export default function ProductsPage() {
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-black text-[#1e3a8a] mb-1">Product Inventory</h1>
-      <div className="text-sm text-gray-500 mb-3">Quantity and shelf are for this branch only. Product details come from the catalog.</div>
+      <div className="text-sm text-gray-500 mb-3">Branch: {(branch || 'not logged in').toUpperCase()}. Quantity and shelf are for this branch only.</div>
       <div className="grid gap-3" style={{ gridTemplateColumns: '320px 1fr' }}>
         <div className="border rounded-xl p-3 bg-white">
           <div className="font-bold text-lg mb-2">1. Receive Stock</div>
@@ -112,17 +112,13 @@ export default function ProductsPage() {
               <div>Brand {selected.brand || '—'}</div>
               <div>Barcode {selected.barcode || '—'}</div>
               <div className="mb-2">Selling {money(selected.sellingPrice || 0)}</div>
-              <label className="block mb-2">Delivered quantity
+              <label className="block mb-2">Quantity
                 <input className="border rounded px-2 py-2 w-full mt-1" value={received} onChange={(e) => setReceived(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); receive(); } }} />
-              </label>
-              <button onClick={receive} disabled={saving} className="bg-green-700 text-white px-4 py-2 rounded w-full mb-2 disabled:opacity-50">{saving ? 'Saving...' : 'Add Delivered Quantity'}</button>
-              <label className="block mb-2">Set quantity instead
-                <input className="border rounded px-2 py-2 w-full mt-1" value={qty} onChange={(e) => setQty(e.target.value)} />
               </label>
               <label className="block mb-2">Shelf location
                 <input className="border rounded px-2 py-2 w-full mt-1" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="A-01" />
               </label>
-              <button onClick={save} disabled={saving} className="bg-blue-700 text-white px-4 py-2 rounded w-full disabled:opacity-50">{saving ? 'Saving...' : 'Save Quantity'}</button>
+              <button onClick={receive} disabled={saving} className="bg-green-700 text-white px-4 py-2 rounded w-full mb-2 disabled:opacity-50">{saving ? 'Saving...' : 'Add Quantity'}</button>
             </div>
           ) : <div className="text-sm text-gray-400">Select a product from the list.</div>}
         </div>

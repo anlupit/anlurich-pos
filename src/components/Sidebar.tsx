@@ -120,7 +120,7 @@ export default function Sidebar() {
       lipa: 'Lipa Auto Parts',
       admin: 'ADMIN',
     };
-    const id = localStorage.getItem('anlurich-branch') || '';
+    const id = (sessionStorage.getItem('anlurich-auth') || localStorage.getItem('anlurich-branch') || '').toLowerCase();
     setBranchId(id);
     setBranchName(names[id] || '');
     if (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) {

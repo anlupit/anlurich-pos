@@ -73,13 +73,13 @@ export default function BackupPage() {
   return (
     <div className="min-h-screen p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold text-yellow-600">Backup and Restore</h1>
+        <h1 className="text-xl font-bold text-yellow-600">End of Day Backup</h1>
         <button onClick={goBack} className="text-blue-600 text-sm">← Back to Dashboard</button>
       </div>
-      <p className="text-sm text-gray-600 mb-4">Download all sales, invoices, products, and stock. Keep the file safe. You can restore it if Supabase has a problem.</p>
+      <p className="text-sm text-gray-600 mb-4">Do this before you close for the day. It downloads sales, invoices, products, and stock into one file. Keep that file. You can restore it if something is lost.</p>
       <div className="bg-white rounded-xl shadow p-4 space-y-4 max-w-xl">
         <button onClick={downloadBackup} disabled={busy} className="bg-blue-700 text-white px-5 py-2 rounded-lg font-bold disabled:opacity-50">
-          {busy ? 'Working...' : 'Download Backup'}
+          {busy ? 'Working...' : 'Download End of Day Backup'}
         </button>
         <div>
           <label className="block text-sm font-medium mb-1">Restore from backup file</label>

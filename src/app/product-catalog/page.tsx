@@ -295,16 +295,15 @@ export default function ProductCatalogPage() {
       sellingPrice,
     }; }).filter((p) => p.partNumber && p.name);
     if (newProducts.length === 0) return alert('No valid rows. Need Part Number and Name columns.');
-    const replace = confirm('Replace the whole catalog with this file?\n\nOK = replace old products\nCancel = add/update only');
-    const merged = replace ? [] : [...products];
+    const existing = await loadProductsCloud().catch(() => products);
+    const merged = [...existing];
     let added = 0;
     let updatedCount = 0;
     newProducts.forEach((incoming) => {
       const part = incoming.partNumber.toLowerCase();
-      const barcode = String(incoming.barcode || '').toLowerCase();
+      const brand = String(incoming.brand || '').toLowerCase();
       const index = merged.findIndex((p) =>
-        p.partNumber.toLowerCase() === part ||
-        (barcode && String(p.barcode || '').toLowerCase() === barcode)
+        p.partNumber.toLowerCase() === part && String(p.brand || '').toLowerCase() === brand
       );
       if (index >= 0) {
         merged[index] = { ...merged[index], ...incoming, id: merged[index].id };
@@ -317,7 +316,7 @@ export default function ProductCatalogPage() {
     setProducts(merged);
     try {
       await saveProducts(merged);
-      alert(replace ? `Catalog replaced. ${merged.length} products saved.` : `Saved to Supabase. Added ${added}, updated ${updatedCount}.`);
+      alert(`Added ${added}, updated ${updatedCount}. Old products were kept.`);
     } catch (err: any) {
       alert(`Saved on this computer only.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }

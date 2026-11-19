@@ -9,7 +9,7 @@ export function formatDate(value?: string): string {
 
 export function currentBranch(): string {
   if (typeof window === 'undefined') return '';
-  const stored = localStorage.getItem('anlurich-branch') || sessionStorage.getItem('anlurich-auth') || '';
+  const stored = sessionStorage.getItem('anlurich-auth') || localStorage.getItem('anlurich-branch') || '';
   return stored.toLowerCase();
 }
 
