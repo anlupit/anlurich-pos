@@ -39,6 +39,8 @@ export default function QuotationPage() {
   const [qCustomer, setQCustomer] = useState('');
   const [qNo, setQNo] = useState('');
   const [qResults, setQResults] = useState<any[]>([]);
+  const [viewQuote, setViewQuote] = useState<any>(null);
+  const [viewEmail, setViewEmail] = useState('');
   const [qSearched, setQSearched] = useState(false);
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [printSnap, setPrintSnap] = useState<any>(null);
@@ -156,7 +158,7 @@ export default function QuotationPage() {
     setEditingId(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
     if (valid.length === 0) return alert('Add at least one item');
     const taken = !editingId && loadQuotations().some((q) => String(q.quotationNo) === quotationNo);
@@ -166,6 +168,7 @@ export default function QuotationPage() {
       quotationNo: uniqueNo,
       customerName,
       customerPhone,
+      customerEmail,
       plateNo,
       carMake,
       carModel,
@@ -177,28 +180,32 @@ export default function QuotationPage() {
       branch: currentBranch(),
       date: new Date().toISOString(),
     };
-    if (editingId) updateQuotation(snap);
-    else saveQuotation(snap);
+    try {
+      if (editingId) await updateQuotation(snap);
+      else await saveQuotation(snap);
+    } catch (err: any) {
+      return alert(err?.message || 'Quotation was not saved to Supabase.');
+    }
     setPrintSnap(snap);
     resetForm();
     setShowPrintAsk(true);
   };
 
-  const emailCustomer = () => {
-    const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
-    if (!customerEmail.trim()) return alert('Enter the customer email.');
-    if (!valid.length) return alert('Add at least one item.');
+  const emailQuote = (q: any, email: string) => {
+    if (!email.trim()) return alert('Enter the customer email.');
     const body = [
-      `Quotation No. ${quotationNo}`,
-      `Customer: ${customerName}`,
-      `Plate: ${plateNo}`,
+      `Quotation No. ${q.quotationNo}`,
+      `Customer: ${q.customerName || ''}`,
+      `Plate: ${q.plateNo || ''}`,
       '',
-      ...valid.map((l) => `${l.partNumber}  ${l.description}  ${l.brand}  Qty ${l.qty}  ${l.price}`),
+      ...(q.lines || []).map((l: any) => `${l.partNumber || ''}  ${l.description || ''}  ${l.brand || ''}  Qty ${l.qty || 0}  ${l.price || 0}`),
       '',
-      `Grand Total: ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      `Grand Total: ${Number(q.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
     ].join('\n');
-    window.location.href = `mailto:${encodeURIComponent(customerEmail.trim())}?subject=${encodeURIComponent(`Quotation ${quotationNo}`)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:${encodeURIComponent(email.trim())}?subject=${encodeURIComponent(`Quotation ${q.quotationNo}`)}&body=${encodeURIComponent(body)}`;
   };
+
+  const emailCustomer = () => emailQuote({ quotationNo, customerName, plateNo, lines, grandTotal }, customerEmail);
 
   const printCurrent = () => {
     const valid = lines.filter((l) => l.partNumber.trim() || l.description.trim());
@@ -283,7 +290,7 @@ export default function QuotationPage() {
                       <td className="p-2">{q.plateNo || '—'}</td>
                       <td className="p-2 text-right">₱{q.grandTotal?.toLocaleString()}</td>
                       <td className="p-2 text-center whitespace-nowrap">
-                        <button onClick={() => openQuotation(q)} className="text-blue-600 text-xs font-medium mr-2">Edit</button>
+                        <button onClick={() => { setViewQuote(q); setViewEmail(q.customerEmail || ''); }} className="text-blue-600 text-xs font-medium mr-2">View / Edit</button>
                         <button onClick={() => deleteQuote(q)} className="text-red-600 text-xs font-medium">Delete</button>
                       </td>
                     </tr>
@@ -357,6 +364,25 @@ export default function QuotationPage() {
           <button onClick={printCurrent} className="w-full mt-2 bg-gray-700 text-white py-3 rounded-lg font-bold">Print A5</button>
         </div>
       </div>
+
+      {viewQuote && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-5 w-full max-w-lg">
+            <div className="font-bold text-lg mb-1">Quotation {viewQuote.quotationNo}</div>
+            <div className="text-sm mb-2">{viewQuote.customerName} · {viewQuote.plateNo || 'No plate'}</div>
+            <div className="text-sm mb-3 max-h-40 overflow-auto">
+              {(viewQuote.lines || []).map((l: any) => <div key={l.id}>{l.partNumber} {l.description} · Qty {l.qty} · {l.price}</div>)}
+            </div>
+            <div className="font-bold mb-3">Total ₱{Number(viewQuote.grandTotal || 0).toLocaleString()}</div>
+            <input className="border rounded px-3 py-2 w-full mb-3" placeholder="Customer Email" value={viewEmail} onChange={(e) => setViewEmail(e.target.value)} />
+            <div className="flex gap-2">
+              <button onClick={() => emailQuote(viewQuote, viewEmail)} className="flex-1 bg-blue-700 text-white py-2 rounded-lg">Email to Customer</button>
+              <button onClick={() => { openQuotation(viewQuote); setViewQuote(null); }} className="flex-1 bg-green-600 text-white py-2 rounded-lg">Edit</button>
+              <button onClick={() => setViewQuote(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPrintAsk && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

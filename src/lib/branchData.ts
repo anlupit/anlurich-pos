@@ -581,6 +581,20 @@ export function loadQuotations(branch?: string): any[] {
   } catch { return []; }
 }
 
+export async function loadQuotationsCloud(branch?: string): Promise<any[]> {
+  const branches = branch && branch !== 'admin' ? [branch] : ['anlurich', 'dasma', 'lipa', 'sezan', 'avenders'];
+  const all: any[] = [];
+  for (const b of branches) {
+    const key = `anlurich-quotations-${b}`;
+    const cloud = await pullCloud(key);
+    const local = loadQuotations(b);
+    all.push(...(Array.isArray(cloud) ? cloud : []), ...local);
+  }
+  const byId = new Map<string, any>();
+  all.forEach((q) => byId.set(String(q.id || q.quotationNo || JSON.stringify(q)), q));
+  return Array.from(byId.values());
+}
+
 export function deleteQuotationAt(index: number) {
   const b = currentBranch() || 'unknown';
   const key = `anlurich-quotations-${b}`;
