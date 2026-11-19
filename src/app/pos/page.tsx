@@ -274,7 +274,7 @@ export default function POSPage() {
   };
     const lookupProduct = (id: string, partNumber: string) => {
     updateLine(id, 'partNumber', partNumber);
-    const found = catalogList().find((p) => p.partNumber.toLowerCase() === partNumber.toLowerCase());
+    const found = catalogList().find((p) => String(p.partNumber || '').toLowerCase() === String(partNumber || '').toLowerCase());
     if (found) {
       setLines((prev) =>
         prev.map((l) =>
@@ -367,7 +367,7 @@ export default function POSPage() {
         });
       });
     freshProducts.forEach((p) => {
-      const cpn = p.partNumber.toLowerCase();
+      const cpn = String(p.partNumber || '').toLowerCase();
       const cbc = (p.barcode || '').toLowerCase();
       const partOk = !pn || cpn.includes(pn);
       const barcodeOk = !bc || cbc.includes(bc);
@@ -491,7 +491,7 @@ export default function POSPage() {
         dateTime: saleDateTime,
         branch: saleBranch,
         items: valid.map((l, i) => {
-          const catalog = catalogList().find((p) => p.partNumber.toLowerCase() === l.partNumber.toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === l.barcode.toLowerCase()));
+          const catalog = catalogList().find((p) => String(p.partNumber || '').toLowerCase() === String(l.partNumber || '').toLowerCase() || (l.barcode && String(p.barcode || '').toLowerCase() === String(l.barcode || '').toLowerCase()));
           const cost = Number(catalog?.costPrice) || 0;
           return { itemNo: i + 1, partNumber: l.partNumber, barcode: l.barcode || '', brand: l.brand || '', description: l.description || l.partNumber, qty: l.qty, unit: l.unit, price: l.price, labor: hasLabor ? Number(l.labor || 0) : 0, costPrice: cost, total: l.qty * l.price + (hasLabor ? Number(l.labor || 0) : 0) };
         }),
@@ -540,11 +540,11 @@ export default function POSPage() {
       }
       if (bosch) {
         const next = boschCatalog.map((p) => {
-          const sold = valid.find((l) => l.partNumber.toLowerCase() === String(p.partNumber || '').toLowerCase());
+          const sold = valid.find((l) => String(l.partNumber || '').toLowerCase() === String(p.partNumber || '').toLowerCase());
           return sold ? { ...p, qty: Math.max(0, Number(p.qty || 0) - Number(sold.qty || 0)) } : p;
         });
         setBoschCatalog(next);
-        await Promise.all(next.filter((p) => valid.some((l) => l.partNumber.toLowerCase() === String(p.partNumber || '').toLowerCase())).map((p) =>
+        await Promise.all(next.filter((p) => valid.some((l) => String(l.partNumber || '').toLowerCase() === String(p.partNumber || '').toLowerCase())).map((p) =>
           fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_products', row: p }) })
         )).catch(() => {});
       }
