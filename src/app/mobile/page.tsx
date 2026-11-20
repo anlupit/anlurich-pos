@@ -289,10 +289,16 @@ export default function MobileParts() {
         <div className="bg-white rounded-xl border p-3">
           <div className="font-black text-lg mb-2">{mode === 'lazada' ? 'Lazada Sale' : 'Shopee Sale'}</div>
           <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-          <input className="border rounded px-3 py-2 w-full mb-3" placeholder="Order Number" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
+          <div className="flex gap-2 mb-3">
+            <input className="border rounded px-3 py-2 w-full" placeholder="Order Number" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
+            <button onClick={() => scanning ? stopCamera() : startCamera(setOrderNo)} className="bg-black text-white rounded px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+          </div>
           {saleLines.map((l) => (
             <div key={l.id} className="border rounded-xl p-2 mb-2">
-              <input className="border rounded px-2 py-2 w-full mb-1" placeholder="Barcode" value={l.barcode} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} />
+              <div className="flex gap-1 mb-1">
+                <input className="border rounded px-2 py-2 w-full" placeholder="Barcode" value={l.barcode} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} />
+                <button onClick={() => scanning ? stopCamera() : startCamera((code) => setSaleLines((rows) => rows.map((x) => x.id === l.id ? { ...x, barcode: code, partNumber: x.partNumber || code } : x)))} className="bg-black text-white rounded px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+              </div>
               <input className="border rounded px-2 py-2 w-full mb-1" placeholder="Part Number" value={l.partNumber} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x))} />
               <div className="grid grid-cols-2 gap-1">
                 <input className="border rounded px-2 py-2" placeholder="Amount" value={l.amount} onChange={(e) => setSaleLines(saleLines.map((x) => x.id === l.id ? { ...x, amount: e.target.value } : x))} />
@@ -304,6 +310,7 @@ export default function MobileParts() {
             </div>
           ))}
           <button onClick={() => setSaleLines([...saleLines, { id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }])} className="w-full border rounded-xl py-2 mb-2">+ Add Line</button>
+          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
           <div className="text-right font-black mb-2">GRAND TOTAL {money(saleTotal)}</div>
           <button onClick={() => saveOnline(mode)} disabled={saving} className="w-full text-white rounded-xl py-3 font-bold disabled:opacity-50" style={{ background: mode === 'lazada' ? '#0f146d' : '#ee4d2d' }}>{saving ? 'Saving...' : 'Save Sale'}</button>
         </div>
