@@ -84,33 +84,40 @@ export default function MobileParts() {
     setReceived('');
   };
 
-  const stopCamera = () => {
-    stopRef.current?.();
+  const stopCamera = async () => {
+    try { await stopRef.current?.stop(); } catch {}
     stopRef.current = null;
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
     setScanning(false);
   };
 
-  const startCamera = async () => {
-    const Detector = (window as any).BarcodeDetector;
-    if (!Detector || !navigator.mediaDevices?.getUserMedia) return alert('Use a Bluetooth scanner, or type the barcode.');
+  const startCamera = async (onCode: (code: string) => void) => {
+    if (scanning) return stopCamera();
     setScanning(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-    const detector = new Detector({ formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'code_39'] });
-    let on = true;
-    stopRef.current = () => { on = false; };
-    const tick = async () => {
-      if (!on || !videoRef.current) return;
-      try {
-        const codes = await detector.detect(videoRef.current);
-        if (codes[0]?.rawValue) { setSearchBarcode(codes[0].rawValue); find(codes[0].rawValue); stopCamera(); return; }
-      } catch {}
-      if (on) requestAnimationFrame(tick);
-    };
-    tick();
+    if (!(window as any).Html5Qrcode) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject();
+        document.body.appendChild(s);
+      }).catch(() => null);
+    }
+    const Html5Qrcode = (window as any).Html5Qrcode;
+    if (!Html5Qrcode) { setScanning(false); return alert('Camera scanner did not load. Type the barcode.'); }
+    await new Promise((r) => setTimeout(r, 50));
+    const scanner = new Html5Qrcode('phone-scanner');
+    stopRef.current = scanner;
+    try {
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 140 } },
+        (text: string) => { onCode(text); stopCamera(); },
+        () => {}
+      );
+    } catch {
+      setScanning(false);
+      alert('Allow the camera, then tap Scan again.');
+    }
   };
 
   const receive = async () => {
@@ -261,13 +268,13 @@ export default function MobileParts() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 max-w-3xl mx-auto">
-      <div className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
+      <a href={`/branch/${branch}`} className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
         <img src="/logo.png" alt="Logo" className="w-12 h-12 bg-white rounded object-contain" />
         <div>
           <div className="text-xs opacity-80">{branch.toUpperCase()}</div>
           <h1 className="text-2xl font-black">Anlurich APP</h1>
         </div>
-      </div>
+      </a>
       {mode === 'menu' && (
         <div className="grid gap-3">
           <button onClick={() => { setMode('search'); setSelected(null); }} className="bg-blue-700 text-white rounded-xl py-6 text-xl font-black">SEARCH PRODUCT</button>
@@ -308,7 +315,11 @@ export default function MobileParts() {
             <option value="lazada">Lazada returned this</option>
             <option value="shopee">Shopee returned this</option>
           </select>
-          <input className="border rounded-xl px-4 py-4 w-full text-lg mb-3" placeholder="Scan barcode or order number" value={returnCode} onChange={(e) => setReturnCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); processReturn(); } }} />
+          <div className="flex gap-2 mb-3">
+            <input className="border rounded-xl px-4 py-4 w-full text-lg" placeholder="Scan barcode or order number" value={returnCode} onChange={(e) => setReturnCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); processReturn(); } }} />
+            <button onClick={() => scanning ? stopCamera() : startCamera(setReturnCode)} className="bg-black text-white rounded-xl px-4 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+          </div>
+          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
           <button onClick={processReturn} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Return to Inventory'}</button>
         </div>
       )}
@@ -318,7 +329,7 @@ export default function MobileParts() {
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div className="flex gap-1">
               <input className="border rounded-xl px-3 py-3 w-full" placeholder="Barcode" value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
-              <button onClick={scanning ? stopCamera : startCamera} className="bg-black text-white rounded-xl px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+              <button onClick={() => scanning ? stopCamera() : startCamera((code) => { setSearchBarcode(code); find(code); })} className="bg-black text-white rounded-xl px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
             </div>
             <div className="relative">
               <input className="border rounded-xl px-3 py-3 w-full" placeholder="Part Number" value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
@@ -339,7 +350,7 @@ export default function MobileParts() {
             </div>
           )}
           {mode === 'search' && <button onClick={clearSearch} className="w-full bg-gray-600 text-white rounded-xl py-3 mb-2 font-bold">Clear</button>}
-          {scanning && <video ref={videoRef} className="w-full rounded-xl mb-3 bg-black" muted playsInline />}
+          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
           {mode === 'search' && shown.length > 0 && (
             <div className="bg-white rounded-xl border mb-3 overflow-auto">
               <div className="grid grid-cols-5 text-xs font-bold bg-gray-100 p-2"><span>Part Number</span><span>Brand</span><span>Description</span><span>Cost</span><span>Price</span></div>
