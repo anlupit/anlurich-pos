@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { currentBranch, loadStockCloud, setStockQty } from '../../lib/branchData';
-import { loadProductsCloud } from '../../lib/products';
+import { loadProductsCloud, saveProductCloud } from '../../lib/products';
 import { loadUsers } from '../../lib/users';
 
 const BUTTONS = [
@@ -12,7 +12,13 @@ const BUTTONS = [
   { id: 'lipa', name: 'Lipa Auto Parts' },
   { id: 'sezan', name: 'Baliwag Auto Parts' },
 ];
-const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const BRANCH_NAME: Record<string, string> = {
+  anlurich: 'ANLURICH OPC',
+  dasma: 'DASMA AUTO PARTS',
+  lipa: 'LIPA AUTO PARTS',
+  sezan: 'SEZAN BALIWAG AP',
+  avenders: 'AVENDERS AUTO PARTS',
+};
 
 export default function MobileParts() {
   const [branch, setBranch] = useState('');
@@ -37,6 +43,7 @@ export default function MobileParts() {
   const [invDetail, setInvDetail] = useState('');
   const [location, setLocation] = useState('');
   const [selected, setSelected] = useState<any>(null);
+  const [editProduct, setEditProduct] = useState<any>(null);
   const [received, setReceived] = useState('');
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -165,6 +172,7 @@ export default function MobileParts() {
     setCustomerName('');
     setOrderNo('');
     setSaleLines([{ id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }]);
+    stopCamera();
     savingRef.current = false;
     setSaving(false);
     alert(`${source === 'lazada' ? 'Lazada' : 'Shopee'} sale saved. Stock deducted for this branch.`);
@@ -194,6 +202,15 @@ export default function MobileParts() {
     savingRef.current = false;
     setSaving(false);
     alert(`Return saved. Stock added back. Returned amount ₱${Number(sale.total || 0).toLocaleString()} deducted. Original sale kept for monitoring.`);
+  };
+
+  const saveProductEdit = async () => {
+    if (!editProduct) return;
+    const saved = await saveProductCloud(editProduct).catch((err) => { alert(err?.message || 'Product was not saved.'); return null; });
+    if (!saved) return;
+    setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved } : p));
+    setEditProduct(null);
+    alert('Product updated.');
   };
 
   const clearSearch = () => {
@@ -271,8 +288,7 @@ export default function MobileParts() {
       <a href={`/branch/${branch}`} className="bg-[#1e3a8a] text-white rounded-xl p-4 mb-3 flex items-center gap-3">
         <img src="/logo.png" alt="Logo" className="w-12 h-12 bg-white rounded object-contain" />
         <div>
-          <div className="text-xs opacity-80">{branch.toUpperCase()}</div>
-          <h1 className="text-2xl font-black">Anlurich APP</h1>
+          <h1 className="text-xl font-serif italic tracking-wide">Mobile App Mode <span className="not-italic font-sans font-bold">({BRANCH_NAME[branch] || branch.toUpperCase()})</span></h1>
         </div>
       </a>
       {mode === 'menu' && (
@@ -291,7 +307,7 @@ export default function MobileParts() {
           <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           <div className="flex gap-2 mb-3">
             <input className="border rounded px-3 py-2 w-full" placeholder="Order Number" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
-            <button onClick={() => scanning ? stopCamera() : startCamera(setOrderNo)} className="bg-black text-white rounded px-3 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
+            <button onClick={() => scanning ? stopCamera() : startCamera(setOrderNo)} className="bg-black text-white rounded px-3 font-bold">Scan</button>
           </div>
           {saleLines.map((l) => (
             <div key={l.id} className="border rounded-xl p-2 mb-2">
@@ -310,7 +326,7 @@ export default function MobileParts() {
             </div>
           ))}
           <button onClick={() => setSaleLines([...saleLines, { id: Date.now().toString(), barcode: '', partNumber: '', amount: '', commission: '', qty: '1' }])} className="w-full border rounded-xl py-2 mb-2">+ Add Line</button>
-          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
+
           <div className="text-right font-black mb-2">GRAND TOTAL {money(saleTotal)}</div>
           <button onClick={() => saveOnline(mode)} disabled={saving} className="w-full text-white rounded-xl py-3 font-bold disabled:opacity-50" style={{ background: mode === 'lazada' ? '#0f146d' : '#ee4d2d' }}>{saving ? 'Saving...' : 'Save Sale'}</button>
         </div>
@@ -326,7 +342,7 @@ export default function MobileParts() {
             <input className="border rounded-xl px-4 py-4 w-full text-lg" placeholder="Scan barcode or order number" value={returnCode} onChange={(e) => setReturnCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); processReturn(); } }} />
             <button onClick={() => scanning ? stopCamera() : startCamera(setReturnCode)} className="bg-black text-white rounded-xl px-4 font-bold">{scanning ? 'Stop' : 'Scan'}</button>
           </div>
-          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
+
           <button onClick={processReturn} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Return to Inventory'}</button>
         </div>
       )}
@@ -357,12 +373,12 @@ export default function MobileParts() {
             </div>
           )}
           {mode === 'search' && <button onClick={clearSearch} className="w-full bg-gray-600 text-white rounded-xl py-3 mb-2 font-bold">Clear</button>}
-          {scanning && <div id="phone-scanner" className="w-full rounded-xl mb-3 bg-black min-h-[220px]" />}
+
           {mode === 'search' && shown.length > 0 && (
             <div className="bg-white rounded-xl border mb-3 overflow-auto">
               <div className="grid grid-cols-5 text-xs font-bold bg-gray-100 p-2"><span>Part Number</span><span>Brand</span><span>Description</span><span>Cost</span><span>Price</span></div>
               {shown.map((p) => (
-                <div key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t">
+                <div key={p.id} className="grid grid-cols-5 w-full text-left text-sm px-2 py-2 border-t" onClick={() => setEditProduct({ ...p })}>
                   <span>{p.partNumber}</span><span>{p.brand || '—'}</span><span>{p.description || p.name}</span><span>{money(p.costPrice || 0)}</span><span className="font-bold">{money(p.sellingPrice || 0)}</span>
                 </div>
               ))}
@@ -403,6 +419,34 @@ export default function MobileParts() {
             </div>
           )}
         </>
+      )}
+      {editProduct && (
+        <div className="fixed inset-0 z-[180] bg-black/60 flex items-center justify-center p-3">
+          <div className="bg-white rounded-2xl p-4 w-full max-w-sm max-h-[90vh] overflow-auto">
+            <div className="font-black text-lg mb-1">View / Edit</div>
+            <div className="text-sm text-gray-500 mb-2">{editProduct.partNumber}</div>
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="Product Name" value={editProduct.name || ''} onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="Brand" value={editProduct.brand || ''} onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="Description" value={editProduct.description || ''} onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="OEM Part Number" value={editProduct.oemPartNumber || ''} onChange={(e) => setEditProduct({ ...editProduct, oemPartNumber: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="Car Make" value={editProduct.carMake || ''} onChange={(e) => setEditProduct({ ...editProduct, carMake: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-2" placeholder="Car Model" value={editProduct.carModel || ''} onChange={(e) => setEditProduct({ ...editProduct, carModel: e.target.value })} />
+            <input className="border rounded-xl px-3 py-2 w-full mb-3" placeholder="Year Model" value={editProduct.yearModel || ''} onChange={(e) => setEditProduct({ ...editProduct, yearModel: e.target.value })} />
+            <div className="flex gap-2">
+              <button onClick={saveProductEdit} className="flex-1 bg-blue-700 text-white rounded-xl py-3 font-bold">Save</button>
+              <button onClick={() => setEditProduct(null)} className="flex-1 bg-gray-500 text-white rounded-xl py-3 font-bold">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {scanning && (
+        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-3 w-full max-w-sm">
+            <div className="font-black text-center mb-2">Scan Barcode</div>
+            <div id="phone-scanner" className="w-full min-h-[260px] bg-black rounded-xl overflow-hidden" />
+            <button onClick={stopCamera} className="w-full bg-red-600 text-white rounded-xl py-3 mt-3 font-bold">Cancel</button>
+          </div>
+        </div>
       )}
     </div>
   );
