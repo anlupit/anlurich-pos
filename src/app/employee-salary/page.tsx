@@ -325,6 +325,7 @@ export default function EmployeeSalaryPage() {
           <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-left bg-slate-100 hover:bg-blue-50 border rounded-lg px-4 py-2 font-medium">{e.name}</button>
         ))}
         <button onClick={() => (window.location.href = '/payout-summary')} className="mt-2 bg-teal-700 text-white rounded-lg px-4 py-2">Generate Report</button>
+        <button onClick={() => setShowAdd(true)} className="bg-blue-700 text-white rounded-lg px-4 py-2">Add Employee</button>
       </div>
 
       {showAdd && <div className="bg-white rounded-xl shadow p-6 mb-4">
