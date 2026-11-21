@@ -22,7 +22,7 @@ const BRANCH_NAME: Record<string, string> = {
 
 export default function MobileParts() {
   const [branch, setBranch] = useState('');
-  const [mode, setMode] = useState<'menu' | 'search' | 'receive' | 'lazada' | 'shopee' | 'returns'>('menu');
+  const [mode, setMode] = useState<'menu' | 'search' | 'receive' | 'lazada' | 'shopee' | 'returns' | 'add'>('menu');
   const [returnSource, setReturnSource] = useState<'lazada' | 'shopee'>('lazada');
   const [returnCode, setReturnCode] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -47,6 +47,7 @@ export default function MobileParts() {
   const [received, setReceived] = useState('');
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [newProduct, setNewProduct] = useState({ barcode: '', partNumber: '', brand: '', name: '', description: '', oemPartNumber: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50' });
   const savingRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopRef = useRef<any>(null);
@@ -84,7 +85,41 @@ export default function MobileParts() {
     loadBranch(loginFor);
   };
 
-  const find = (code: string) => {
+  const sellingFromMarkup = (cost: string, markup: string) => {
+    const c = parseFloat(cost) || 0;
+    const m = parseFloat(markup) || 0;
+    if (!c) return 0;
+    return Math.ceil((c * (1 + m / 100)) / 100) * 100;
+  };
+
+  const saveNewProduct = async () => {
+    if (savingRef.current) return;
+    if (!newProduct.partNumber.trim()) return alert('Enter the part number.');
+    savingRef.current = true;
+    setSaving(true);
+    const item = {
+      id: Date.now().toString(),
+      barcode: newProduct.barcode.trim(),
+      partNumber: newProduct.partNumber.trim(),
+      brand: newProduct.brand.trim(),
+      name: newProduct.name.trim() || newProduct.partNumber.trim(),
+      description: newProduct.description.trim(),
+      oemPartNumber: newProduct.oemPartNumber.trim(),
+      carMake: newProduct.carMake.trim(),
+      carModel: newProduct.carModel.trim(),
+      yearModel: newProduct.yearModel.trim(),
+      costPrice: parseFloat(newProduct.costPrice) || 0,
+      markupPercent: parseFloat(newProduct.markupPercent) || 50,
+      sellingPrice: sellingFromMarkup(newProduct.costPrice, newProduct.markupPercent),
+    };
+    const saved = await saveProductCloud(item as any).catch((err) => { alert(err?.message || 'Product was not saved.'); return null; });
+    savingRef.current = false;
+    setSaving(false);
+    if (!saved) return;
+    setProducts((prev) => [...prev, saved]);
+    setNewProduct({ barcode: '', partNumber: '', brand: '', name: '', description: '', oemPartNumber: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50' });
+    alert('Product added to the catalog.');
+  };
     const key = code.trim().toLowerCase();
     if (!key) return;
     const found = products.find((p) => String(p.barcode || '').trim().toLowerCase() === key || String(p.partNumber || '').trim().toLowerCase() === key);
@@ -302,9 +337,31 @@ export default function MobileParts() {
           <button onClick={() => setMode('lazada')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#0f146d' }}>LAZADA SALE</button>
           <button onClick={() => setMode('shopee')} className="rounded-xl py-6 text-xl font-black text-white" style={{ background: '#ee4d2d' }}>SHOPEE SALE</button>
           <button onClick={() => setMode('returns')} className="bg-amber-600 text-white rounded-xl py-6 text-xl font-black">ONLINE RETURNS</button>
+          <button onClick={() => setMode('add')} className="bg-purple-700 text-white rounded-xl py-6 text-xl font-black">ADD NEW PRODUCT</button>
         </div>
       )}
       {mode !== 'menu' && <button onClick={() => { stopCamera(); setMode('menu'); setSelected(null); }} className="mb-3 text-blue-700 font-bold">← Back</button>}
+      {mode === 'add' && (
+        <div className="bg-white rounded-xl border p-3">
+          <div className="font-black text-lg mb-2">Add New Product</div>
+          <div className="flex gap-2 mb-2">
+            <input className="border rounded px-3 py-2 w-full" placeholder="Barcode" value={newProduct.barcode} onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })} />
+            <button onClick={() => startCamera((code) => setNewProduct((p) => ({ ...p, barcode: code })))} className="bg-black text-white rounded px-3 font-bold">Scan</button>
+          </div>
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Part Number" value={newProduct.partNumber} onChange={(e) => setNewProduct({ ...newProduct, partNumber: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Brand" value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Product Name" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Description" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="OEM Part Number" value={newProduct.oemPartNumber} onChange={(e) => setNewProduct({ ...newProduct, oemPartNumber: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Car Make" value={newProduct.carMake} onChange={(e) => setNewProduct({ ...newProduct, carMake: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Car Model" value={newProduct.carModel} onChange={(e) => setNewProduct({ ...newProduct, carModel: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Year Model" value={newProduct.yearModel} onChange={(e) => setNewProduct({ ...newProduct, yearModel: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Cost Price" value={newProduct.costPrice} onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })} />
+          <input className="border rounded px-3 py-2 w-full mb-2" placeholder="Mark Up %" value={newProduct.markupPercent} onChange={(e) => setNewProduct({ ...newProduct, markupPercent: e.target.value })} />
+          <div className="font-bold mb-3">Selling Price {sellingFromMarkup(newProduct.costPrice, newProduct.markupPercent).toLocaleString()}</div>
+          <button onClick={saveNewProduct} disabled={saving} className="w-full bg-purple-700 text-white rounded-xl py-3 font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save Product'}</button>
+        </div>
+      )}
       {(mode === 'lazada' || mode === 'shopee') && (
         <div className="bg-white rounded-xl border p-3">
           <div className="font-black text-lg mb-2">{mode === 'lazada' ? 'Lazada Sale' : 'Shopee Sale'}</div>
