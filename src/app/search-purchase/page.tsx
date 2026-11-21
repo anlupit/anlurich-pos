@@ -239,6 +239,11 @@ export default function SearchPurchasePage() {
       </div>
 
       <div className="overflow-x-auto">
+      {searched && results.length > 0 && (
+        <div className="flex justify-end mb-2">
+          <button onClick={downloadResults} className="bg-green-700 text-white px-4 py-2 rounded-lg font-bold">Download</button>
+        </div>
+      )}
       {searched && mode === 'invoice' && (
         <div className="bg-white rounded-xl shadow overflow-x-auto">
           <table className="w-full" style={{ fontSize: '20px' }}>

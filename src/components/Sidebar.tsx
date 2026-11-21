@@ -54,6 +54,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
       { href: '/add-supplier', label: 'Add Supplier' },
       { href: '/supplier-receipt', label: 'Record Supplier Invoice' },
       { href: '/bosch-supplier', label: 'Record Bosch Invoice' },
+      { href: '/search-bosch', label: 'Search Bosch Invoice' },
       { href: '/search-purchase', label: 'Search Purchase Invoice' },
       { href: '/supplier-return', label: 'Supplier Return' },
       { href: '/expenses', label: 'Company Expense' },
@@ -84,6 +85,7 @@ const ICONS: Record<string, string> = {
   'Backup and Restore': 'M12 4v8m0 0l-3-3m3 3l3-3M5 18h14',
   'Add Supplier': 'M12 5v14M5 12h14',
   'Record Supplier Invoice': 'M6 3h12v18H6zM9 8h6M9 12h6',
+  'Search Bosch Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
   'Search Purchase Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
   'Supplier Return': 'M7 7l-3 5h16l-3-5M8 17h8',
   'Company Expense': 'M4 6h16v12H4zM4 10h16',
@@ -100,7 +102,7 @@ function Icon({ label }: { label: string }) {
 function groupOf(pathname: string) {
   if (['/sales', '/pos', '/bosch-pos', '/no-invoice', '/search-invoice', '/quotation', '/unpaid', '/credit-payment', '/download', '/print', '/customers', '/crm', '/activity', '/online-sales', '/lazada-sale', '/shopee-sale', '/online-returns'].includes(pathname)) return 'sales';
   if (['/products-menu', '/product-catalog', '/bosch-catalog', '/products', '/low-stock', '/stock-history', '/backup'].includes(pathname)) return 'products';
-  if (['/accounting', '/add-supplier', '/supplier-receipt', '/bosch-supplier', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
+  if (['/accounting', '/add-supplier', '/supplier-receipt', '/bosch-supplier', '/search-bosch', '/search-purchase', '/supplier-return', '/expenses'].includes(pathname)) return 'accounting';
   return '';
 }
 
