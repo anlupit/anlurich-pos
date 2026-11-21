@@ -14,6 +14,16 @@ const MAIN = [
   { href: '/mobile', label: 'Phone App Mode' },
 ];
 
+const ADMIN_MAIN = [
+  { href: '/personal-expense', label: 'Record Expense' },
+  { href: '/users', label: 'Password Manager' },
+  { href: '/activity', label: 'Activity Log' },
+  { href: '/check-voucher', label: 'Check Voucher' },
+  { href: '/low-stock', label: 'Low Stock' },
+  { href: '/stock-history', label: 'Stock History' },
+  { href: '/backup', label: 'Backup and Restore' },
+];
+
 const GROUPS: Record<string, { title: string; items: { href: string; label: string }[] }> = {
   sales: {
     title: 'Sales',
@@ -88,7 +98,8 @@ const ICONS: Record<string, string> = {
   'Search Bosch Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
   'Search Purchase Invoice': 'M11 4a7 7 0 100 14 7 7 0 000-14zm9 16l-4-4',
   'Supplier Return': 'M7 7l-3 5h16l-3-5M8 17h8',
-  'Company Expense': 'M4 6h16v12H4zM4 10h16',
+  'Record Expense': 'M4 6h16v12H4zM4 10h16',
+  'Password Manager': 'M7 11V8a5 5 0 0110 0v3M6 11h12v9H6z',
 };
 
 function Icon({ label }: { label: string }) {
@@ -112,7 +123,7 @@ export default function Sidebar() {
   const [branchId, setBranchId] = useState('');
   const [employees, setEmployees] = useState<any[]>([]);
   const [salaryUnlocked, setSalaryUnlocked] = useState(false);
-  const [salaryOpen, setSalaryOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const names: Record<string, string> = {
@@ -154,13 +165,16 @@ export default function Sidebar() {
 
   const group = groupOf(pathname);
   const boschOk = ['anlurich', 'sezan', 'admin'].includes(branchId);
-  const menu = (group ? GROUPS[group].items : MAIN)
+  const menu = (group && branchId !== 'admin' ? GROUPS[group].items : branchId === 'admin' ? ADMIN_MAIN : MAIN)
     .filter((item) => item.href !== pathname)
     .filter((item) => boschOk || !item.href.startsWith('/bosch'));
   const title = group ? GROUPS[group].title : 'MENU';
 
   return (
-    <aside className="w-52 h-screen overflow-y-auto bg-gradient-to-b from-blue-500 to-orange-400 text-white p-2 flex flex-col print:hidden">
+    <>
+      <button onClick={() => setOpen(true)} className="md:hidden fixed top-2 left-2 z-[80] bg-blue-800 text-white rounded-lg px-3 py-2 font-bold shadow">Menu</button>
+      {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 z-[90] bg-black/40" />}
+      <aside className={`side-menu w-52 h-screen overflow-y-auto bg-gradient-to-b from-blue-500 to-orange-400 text-white p-2 flex flex-col print:hidden fixed md:static z-[100] top-0 left-0 ${open ? 'block' : 'hidden md:flex'}`}>
       <button onClick={goDashboard} className="text-left mb-2 bg-blue-800 hover:bg-blue-900 rounded-lg px-3 py-3 w-full">
         <div className="text-lg font-black">Main Page</div>
         <div className="text-sm font-bold opacity-90">{title}</div>
@@ -193,5 +207,6 @@ export default function Sidebar() {
       </button>
       <div className="text-[10px] mt-2 opacity-80">Powered & Designed by Anlu</div>
     </aside>
+    </>
   );
 }
