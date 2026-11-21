@@ -111,6 +111,8 @@ export default function ProductsPage() {
     XLSX.utils.book_append_sheet(book, sheet, 'Inventory');
     XLSX.writeFile(book, `${branch || 'branch'}-inventory.xlsx`);
   };
+
+  const shown = products.filter((p) => {
     const text = `${p.partNumber || ''} ${p.barcode || ''} ${p.brand || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
     const brandOk = !brand.trim() || String(p.brand || '').toLowerCase().includes(brand.trim().toLowerCase());
     const qtyNow = Number(stock[p.id]?.qty || 0);
