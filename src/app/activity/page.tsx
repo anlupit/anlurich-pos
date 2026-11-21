@@ -18,8 +18,11 @@ export default function ActivityPage() {
       .catch(() => setRows([]));
   }, []);
 
+  const branch = currentBranch();
+  const isAdmin = branch === 'admin';
   const filtered = rows.filter((r) => {
-    const text = `${r.who || ''} ${r.action || ''} ${r.invoiceNo || ''} ${r.detail || ''}`.toLowerCase();
+    if (!isAdmin && String(r.branch || '').toLowerCase() !== branch) return false;
+    const text = `${r.who || ''} ${r.action || ''} ${r.invoiceNo || ''} ${r.detail || ''} ${r.branch || ''}`.toLowerCase();
     return !q || text.includes(q.toLowerCase());
   });
 
@@ -31,7 +34,7 @@ export default function ActivityPage() {
   return (
     <div className="min-h-screen p-4 overflow-x-hidden">
       <div className="flex justify-between items-center mb-3">
-        <h1 className="text-xl font-bold text-yellow-600">Activity Log</h1>
+        <h1 className="text-xl font-bold text-yellow-600">{isAdmin ? 'Admin Activity Log — All Branches' : `Activity Log — ${branch.toUpperCase()}`}</h1>
         <button onClick={goBack} className="text-blue-600 text-sm">← Back to Dashboard</button>
       </div>
       <input className="border rounded px-2 py-1 mb-3" placeholder="Search who, invoice, action" value={q} onChange={(e) => setQ(e.target.value)} />
