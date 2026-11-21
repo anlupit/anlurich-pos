@@ -120,6 +120,8 @@ export default function MobileParts() {
     setNewProduct({ barcode: '', partNumber: '', brand: '', name: '', description: '', oemPartNumber: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50' });
     alert('Product added to the catalog.');
   };
+
+  const find = (code: string) => {
     const key = code.trim().toLowerCase();
     if (!key) return;
     const found = products.find((p) => String(p.barcode || '').trim().toLowerCase() === key || String(p.partNumber || '').trim().toLowerCase() === key);
