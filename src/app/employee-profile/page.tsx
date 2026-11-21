@@ -73,6 +73,8 @@ export default function EmployeeProfilePage() {
   const [showCADeduct, setShowCADeduct] = useState(false);
   const [showUndertime, setShowUndertime] = useState(false);
   const [showPersonal, setShowPersonal] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
   const [history, setHistory] = useState<any[]>([]);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [releasing, setReleasing] = useState(false);
@@ -152,7 +154,7 @@ export default function EmployeeProfilePage() {
     setReleasing(true);
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
-    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, notes: showNotes ? notes : '', referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
@@ -215,15 +217,31 @@ export default function EmployeeProfilePage() {
     setEmployee(profile);
   };
 
-  const saveEditRow = async () => {
-    await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row: editRow }) });
-    if (editRow.cashAdvanceBalance !== undefined && editRow.cashAdvanceBalance !== '') {
-      const profile = { ...employee, cashAdvanceTotal: Number(editRow.cashAdvanceBalance) || 0 };
-      await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
-      setEmployee(profile);
-    }
-    setHistory((prev) => prev.map((h) => h.id === editRow.id ? editRow : h));
-    setEditRow(null);
+  const loadHistory = (h: any) => {
+    if (h.fromDate) setFromDate(h.fromDate);
+    if (h.toDate) setToDate(h.toDate);
+    setEmployee((prev: any) => ({ ...prev, payoutType: h.payoutType || prev?.payoutType || '', accountNumber: h.accountNumber || prev?.accountNumber || '' }));
+    setAdvanceRequest(Number(h.advanceRequest || 0));
+    setShowAdvance(Number(h.advanceRequest || 0) > 0);
+    setCashAdvance(Number(h.cashAdvance || 0));
+    setShowCADeduct(Number(h.cashAdvance || 0) > 0);
+    setIncentive(Number(h.incentive || 0));
+    setIncentiveDetails(h.incentiveDetails || '');
+    setShowIncentive(Number(h.incentive || 0) > 0);
+    setCommission(Number(h.commission || 0));
+    setCommissionDetails(h.commissionDetails || '');
+    setShowCommission(Number(h.commission || 0) > 0);
+    setHolidayPay(Number(h.holidayPay || 0));
+    setHolidayDetails(h.holidayDetails || '');
+    setShowHoliday(Number(h.holidayPay || 0) > 0);
+    setUndertimeAmount(Number(h.undertime || 0));
+    setShowUndertime(Number(h.undertime || 0) > 0);
+    setPersonalCharge(Number(h.personalCharge || 0));
+    setPersonalDetails(h.personalDetails || '');
+    setShowPersonal(Number(h.personalCharge || 0) > 0);
+    setNotes(h.notes || '');
+    setShowNotes(Boolean(h.notes));
+    setReferenceNo(h.referenceNo || '');
   };
 
   const requestAdvance = async () => {
@@ -321,7 +339,7 @@ export default function EmployeeProfilePage() {
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-sm table-fixed leading-tight">
                 <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5"><button onClick={() => setEditRow({ ...h, cashAdvanceBalance: h.cashAdvanceBalance ?? employee.cashAdvanceTotal ?? '' })} className="text-blue-700">Edit</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5 whitespace-nowrap"><button onClick={() => loadHistory(h)} className="text-blue-700">Edit / Load</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
@@ -365,6 +383,7 @@ export default function EmployeeProfilePage() {
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showCADeduct} onChange={(e) => { setShowCADeduct(e.target.checked); if (!e.target.checked) setCashAdvance(0); }} /> Less Cash Advance {showCADeduct && <input className="border rounded w-20 px-2 py-1" value={cashAdvance || ''} onChange={(e) => setCashAdvance(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showUndertime} onChange={(e) => { setShowUndertime(e.target.checked); if (!e.target.checked) setUndertimeAmount(0); }} /> Undertime {showUndertime && <input className="border rounded w-20 px-2 py-1" value={undertimeAmount || ''} onChange={(e) => setUndertimeAmount(parseFloat(e.target.value) || 0)} />}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showPersonal} onChange={(e) => { setShowPersonal(e.target.checked); if (!e.target.checked) { setPersonalCharge(0); setPersonalDetails(""); } }} /> Personal Charge {showPersonal && <><input className="border rounded w-20 px-2 py-1" value={personalCharge || ''} onChange={(e) => setPersonalCharge(parseFloat(e.target.value) || 0)} /><input className="border rounded w-28 px-2 py-1" placeholder="Details" value={personalDetails} onChange={(e) => setPersonalDetails(e.target.value)} /></>}</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showNotes} onChange={(e) => { setShowNotes(e.target.checked); if (!e.target.checked) setNotes(''); }} /> Notes {showNotes && <input className="border rounded flex-1 px-2 py-1" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />}</label>
           </div>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="text-center mb-3">
@@ -392,7 +411,7 @@ export default function EmployeeProfilePage() {
               {showUndertime && <div className="flex justify-between text-red-600 font-bold"><span>Undertime {undertimeAmount} hrs x {money(dayRate / 8)}{!dayRate ? ' — set daily rate on profile' : ''}</span><span>{money((dayRate / 8) * undertimeAmount)}</span></div>}
               {showPersonal && <div className="flex justify-between text-red-600 font-bold"><span>Personal Charge {personalDetails}</span><span>{money(personalCharge)}</span></div>}
               <div className="flex justify-between items-end pt-3">
-                <div className="text-xs"><span className="font-bold">Cash Advance Balance</span><br/><b>{money(cashAdvanceBalance)}</b></div>
+                <div className="text-xs"><span className="font-bold">Cash Advance Balance</span><br/><b>{money(cashAdvanceBalance)}</b>{showNotes && notes && <div className="mt-2"><span className="font-bold">Notes:</span> {notes}</div>}</div>
                 <div className="text-right"><div className="text-sm">Total Payout</div><div className="text-4xl font-black border-b-4 border-double">{money(payoutAmount)}</div></div>
               </div>
             </div>
@@ -404,18 +423,6 @@ export default function EmployeeProfilePage() {
           <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
       </div>
-      {editRow && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-4 w-full max-w-md grid grid-cols-2 gap-2 text-sm">
-            <div className="col-span-2 font-bold">Edit Salary</div>
-            {['period', 'payoutType', 'accountNumber', 'net', 'referenceNo', 'days', 'allowance', 'overtime', 'undertime', 'cashAdvance', 'advanceRequest', 'cashAdvanceBalance', 'incentive', 'personalCharge', 'personalDetails', 'sss', 'philhealth', 'pagibig'].map((field) => (
-              <input key={field} className="border rounded px-2 py-1" placeholder={field} value={editRow[field] || ''} onChange={(e) => setEditRow({ ...editRow, [field]: e.target.value })} />
-            ))}
-            <button onClick={saveEditRow} className="bg-blue-700 text-white px-4 py-2 rounded">Save</button>
-            <button onClick={() => setEditRow(null)} className="border px-4 py-2 rounded">Cancel</button>
-          </div>
-        </div>
-      )}
       {releaseOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <form className="bg-white rounded-xl p-4 w-full max-w-sm" onSubmit={(e) => { e.preventDefault(); confirmRelease(); }}>
