@@ -80,18 +80,24 @@ export default function EmployeeProfilePage() {
   const [releasing, setReleasing] = useState(false);
   const savingRef = useRef(false);
   const [referenceNo, setReferenceNo] = useState('');
+  const [transactionNo, setTransactionNo] = useState('');
   const [editRow, setEditRow] = useState<any>(null);
   const [deductGov, setDeductGov] = useState(false);
   const [deductMonth, setDeductMonth] = useState(new Date().toISOString().slice(0, 7));
   const [alreadyDeducted, setAlreadyDeducted] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(false);
+  const [editingId, setEditingId] = useState('');
 
   useEffect(() => {
+    const branch = localStorage.getItem('anlurich-branch') || '';
+    if (sessionStorage.getItem(`salary-ok-${branch}`) !== '1') {
+      window.location.href = '/employee-salary';
+      return;
+    }
     const id = new URLSearchParams(window.location.search).get('id') || '';
     const cached = sessionStorage.getItem(`employee-${id}`);
     if (cached) { try { setEmployee(JSON.parse(cached)); } catch {} }
-    const branch = localStorage.getItem('anlurich-branch') || '';
     fetch(`/api/records?table=employee_profiles&branch=${branch}&id=${id}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((rows) => {
@@ -147,6 +153,10 @@ export default function EmployeeProfilePage() {
   const cashAdvanceBalance = Math.max(0, historyBalance + (showAdvance ? advanceRequest : 0) - (showCADeduct ? cashAdvance : 0));
 
   const payoutAmount = totalPayout + (showIncentive ? incentive : 0) + (showCommission ? commission : 0) + (showHoliday ? holidayPay : 0) - undertimeDeduct - (showPersonal ? personalCharge : 0);
+  const now = new Date();
+  const dayCode = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getFullYear()).slice(2)}`;
+  const nextTxn = `${dayCode}-${String(history.filter((h) => String(h.transactionNo || '').startsWith(dayCode)).length + 1).padStart(2, '0')}`;
+  const shownTxn = transactionNo || nextTxn;
 
   const confirmRelease = async () => {
     if (savingRef.current) return;
@@ -154,14 +164,19 @@ export default function EmployeeProfilePage() {
     setReleasing(true);
     const dates = presentDates.slice().sort();
     const period = periodLabel(dates) || new Date().toISOString().slice(0, 10);
-    const row = { id: `${employee.branch}-${employee.id}-${period}`, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, notes: showNotes ? notes : '', referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const now = new Date();
+    const dayCode = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getFullYear()).slice(2)}`;
+    const used = history.filter((h) => String(h.transactionNo || '').startsWith(dayCode)).length + 1;
+    const txn = editingId ? (transactionNo || `${dayCode}-${String(used).padStart(2, '0')}`) : `${dayCode}-${String(used).padStart(2, '0')}`;
+    const row = { id: editingId || `${employee.branch}-${employee.id}-${txn}`, transactionNo: txn, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, presentDates, halfDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, deductGov, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, incentive: showIncentive ? incentive : 0, incentiveDetails, commission: showCommission ? commission : 0, commissionDetails, holidayPay: showHoliday ? holidayPay : 0, holidayDetails, overtime: showOvertime ? overtime : 0, undertime: showUndertime ? undertimeAmount : 0, personalCharge: showPersonal ? personalCharge : 0, personalDetails, notes: showNotes ? notes : '', referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
     const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
     setEmployee(profile);
-    setHistory((prev) => [row, ...prev]);
+    setHistory((prev) => editingId ? prev.map((h) => h.id === editingId ? row : h) : [row, ...prev]);
     setReleaseOpen(false);
     setReferenceNo('');
+    setTransactionNo('');
     setPresentDates([]);
     setHalfDate('');
     setOvertime(0);
@@ -185,6 +200,7 @@ export default function EmployeeProfilePage() {
     setShowCADeduct(false);
     setShowUndertime(false);
     setShowPersonal(false);
+    setEditingId('');
     setReleasing(false);
     savingRef.current = false;
     alert('Salary saved and released. Form cleared for a new record.');
@@ -218,8 +234,27 @@ export default function EmployeeProfilePage() {
   };
 
   const loadHistory = (h: any) => {
-    if (h.fromDate) setFromDate(h.fromDate);
-    if (h.toDate) setToDate(h.toDate);
+    setEditingId(h.id || '');
+    const from = h.fromDate || '';
+    const to = h.toDate || '';
+    if (from) setFromDate(from);
+    if (to) setToDate(to);
+    const savedDays = Array.isArray(h.presentDates) ? h.presentDates : [];
+    if (savedDays.length) {
+      setPresentDates(savedDays);
+    } else if (from && to) {
+      const start = new Date(`${from}T00:00:00`);
+      const end = new Date(`${to}T00:00:00`);
+      const days: string[] = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        if (d.getDay() === 0) continue;
+        days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+      }
+      setPresentDates(days);
+    } else {
+      setPresentDates([]);
+    }
+    setHalfDate(h.halfDate || '');
     setEmployee((prev: any) => ({ ...prev, payoutType: h.payoutType || prev?.payoutType || '', accountNumber: h.accountNumber || prev?.accountNumber || '' }));
     setAdvanceRequest(Number(h.advanceRequest || 0));
     setShowAdvance(Number(h.advanceRequest || 0) > 0);
@@ -234,14 +269,18 @@ export default function EmployeeProfilePage() {
     setHolidayPay(Number(h.holidayPay || 0));
     setHolidayDetails(h.holidayDetails || '');
     setShowHoliday(Number(h.holidayPay || 0) > 0);
+    setOvertime(Number(h.overtime || 0));
+    setShowOvertime(Number(h.overtime || 0) > 0);
     setUndertimeAmount(Number(h.undertime || 0));
     setShowUndertime(Number(h.undertime || 0) > 0);
     setPersonalCharge(Number(h.personalCharge || 0));
     setPersonalDetails(h.personalDetails || '');
     setShowPersonal(Number(h.personalCharge || 0) > 0);
+    setDeductGov(Boolean(h.deductGov) || Number(h.sss || 0) > 0 || Number(h.philhealth || 0) > 0 || Number(h.pagibig || 0) > 0);
     setNotes(h.notes || '');
     setShowNotes(Boolean(h.notes));
     setReferenceNo(h.referenceNo || '');
+    setTransactionNo(h.transactionNo || '');
   };
 
   const requestAdvance = async () => {
@@ -338,8 +377,8 @@ export default function EmployeeProfilePage() {
             <div className="mt-3 overflow-x-auto">
               <div className="font-bold text-sm mb-1">Salary History</div>
               <table className="w-full text-sm table-fixed leading-tight">
-                <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5 text-left">Ref No.</th><th className="px-1 py-0.5"></th></tr></thead>
-                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 truncate">{h.referenceNo || '—'}</td><td className="px-1 py-0.5 whitespace-nowrap"><button onClick={() => loadHistory(h)} className="text-blue-700">Edit / Load</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
+                <thead><tr className="bg-gray-100"><th className="px-1 py-0.5 text-left">Transaction</th><th className="px-1 py-0.5 text-left">Dates</th><th className="px-1 py-0.5 text-left">Payout</th><th className="px-1 py-0.5 text-right">Total</th><th className="px-1 py-0.5"></th></tr></thead>
+                <tbody>{sortHistory(history).map((h) => <tr key={h.id} className="border-t"><td className="px-1 py-0.5 font-bold">{h.transactionNo || '—'}</td><td className="px-1 py-0.5">{historyDate(h)}</td><td className="px-1 py-0.5">{h.payoutType || '—'}{h.payoutType && h.payoutType !== 'Cash' && h.accountNumber ? ` — ${h.accountNumber}` : ''}</td><td className="px-1 py-0.5 text-right">{money(h.net)}</td><td className="px-1 py-0.5 whitespace-nowrap"><button onClick={() => loadHistory(h)} className="text-blue-700">Edit / Load</button> <button onClick={() => deleteHistory(h)} className="text-red-600">X</button></td></tr>)}</tbody>
               </table>
             </div>
             </>)}
@@ -364,7 +403,7 @@ export default function EmployeeProfilePage() {
                 return Array.from({ length: count }, (_, i) => {
                 const date = new Date(start);
                 date.setDate(date.getDate() + i);
-                const key = date.toISOString().slice(0, 10);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 return <div key={key} className="flex items-center gap-2 text-sm">
                   <label className="flex items-center gap-1"><input type="checkbox" checked={presentDates.includes(key)} onChange={(e) => { setPresentDates((prev) => e.target.checked ? [...prev, key] : prev.filter((d) => d !== key)); if (!e.target.checked && halfDate === key) setHalfDate(''); }} />{label}</label>
@@ -387,6 +426,8 @@ export default function EmployeeProfilePage() {
           </div>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="text-center mb-3">
+              <div className="text-lg font-black text-[#1e3a8a]">Transaction No. {shownTxn}</div>
+              <div className="text-xs text-gray-500 mb-1">Auto-Generated</div>
               <div className="font-black text-xl text-[#1e3a8a]">{LETTERHEAD[employee.branch] || employee.branch}</div>
               <div className="font-bold">SALARY PAYOUT {new Date(`${fromDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric' })} - {new Date(`${toDate}T00:00:00`).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
               <div className="text-sm font-bold text-blue-800">{employee.payoutType || 'No payout type ticked'}{employee.payoutType && employee.payoutType !== 'Cash' && employee.accountNumber ? ` — ${employee.accountNumber}` : ''}</div>
@@ -418,7 +459,7 @@ export default function EmployeeProfilePage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
-          <button onClick={() => setReleaseOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-lg">Save Salary</button>
+          <button onClick={() => setReleaseOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-lg">{editingId ? 'Update' : 'Save Salary'}</button>
           <button onClick={downloadSalary} className="border border-green-700 text-green-700 px-4 py-2 rounded-lg">Download</button>
           <button onClick={printSalary} className="border border-blue-700 text-blue-700 px-4 py-2 rounded-lg">Print</button>
         </div>
