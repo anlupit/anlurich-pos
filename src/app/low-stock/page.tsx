@@ -75,7 +75,7 @@ export default function LowStockPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 overflow-x-hidden">
+    <div className="min-h-screen p-4 overflow-x-auto">
       <div className="flex justify-between items-center mb-3">
         <h1 className="text-xl font-bold text-yellow-600">Low Stock Report</h1>
         <button onClick={goBack} className="text-blue-600 text-sm">← Back to Dashboard</button>

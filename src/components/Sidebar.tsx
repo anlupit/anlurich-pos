@@ -143,7 +143,8 @@ export default function Sidebar() {
   };
 
   const goDashboard = () => {
-    const id = localStorage.getItem('anlurich-branch');
+    const id = (localStorage.getItem('anlurich-branch') || '').toLowerCase();
+    sessionStorage.removeItem(`salary-ok-${id}`);
     if (id && id !== 'admin') window.location.href = `/branch/${id}`;
     else if (id === 'admin') window.location.href = '/admin';
     else window.location.href = '/';

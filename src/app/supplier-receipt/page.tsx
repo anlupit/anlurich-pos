@@ -292,27 +292,27 @@ export default function SupplierReceiptPage() {
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-2 mb-4">
-        <table className="w-full text-xs table-fixed">
+        <table className="w-full table-fixed" style={{ fontSize: '15px' }}>
           <thead className="bg-teal-500 text-white">
             <tr>
-              <th className="p-1 text-center" style={{ width: '16ch' }}>Barcode</th>
-              <th className="p-1 text-center" style={{ width: '16ch' }}>Part Number</th>
-              <th className="p-1 text-center" style={{ width: '26ch' }}>Product Name</th>
-              <th className="p-1 text-center" style={{ width: '14ch' }}>Brand</th>
-              <th className="p-1 text-center" style={{ width: '46ch' }}>Description</th>
-              <th className="p-1 text-center" style={{ width: '8ch' }}>Qty</th>
-              <th className="p-1 text-center" style={{ width: '6ch' }}>Unit</th>
-              <th className="p-1 text-center" style={{ width: '10ch' }}>Gross Price</th>
-              <th className="p-1 text-center" style={{ width: '10ch' }}>Net Price</th>
-              <th className="p-1 text-center" style={{ width: '10ch' }}>Total Price</th>
-              <th className="p-1 sticky right-0 bg-teal-500" style={{ width: '5ch' }}></th>
+              <th className="p-1 text-center" style={{ width: '11%' }}>Barcode</th>
+              <th className="p-1 text-center" style={{ width: '11%' }}>Part Number</th>
+              <th className="p-1 text-center" style={{ width: '14%' }}>Product Name</th>
+              <th className="p-1 text-center" style={{ width: '9%' }}>Brand</th>
+              <th className="p-1 text-center" style={{ width: '20%' }}>Description</th>
+              <th className="p-1 text-center" style={{ width: '7%' }}>Qty</th>
+              <th className="p-1 text-center" style={{ width: '6%' }}>Unit</th>
+              <th className="p-1 text-center" style={{ width: '8%' }}>Gross Price</th>
+              <th className="p-1 text-center" style={{ width: '8%' }}>Net Price</th>
+              <th className="p-1 text-center" style={{ width: '8%' }}>Total Price</th>
+              <th className="p-1 sticky right-0 bg-teal-500" style={{ width: '3%' }}></th>
             </tr>
           </thead>
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
+                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
                   {lineSuggest?.id === line.id && lineSuggest.field === 'barcode' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -324,7 +324,7 @@ export default function SupplierReceiptPage() {
                   )}
                 </td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
+                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
                   {lineSuggest?.id === line.id && lineSuggest.field === 'partNumber' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
@@ -335,12 +335,12 @@ export default function SupplierReceiptPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '26ch' }} value={line.productName} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '14ch' }} value={line.brand} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '46ch' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center text-base font-semibold" style={{ width: '8ch', minWidth: '8ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
-                <td className="p-1"><input className="w-full border rounded px-1 py-1 text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={0} step="0.01" className="w-full border rounded px-1 py-1 text-right" value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.productName} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.brand} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center font-semibold" style={{ fontSize: '15px' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
+                <td className="p-1"><input type="number" min={0} step="0.01" className="border rounded px-1 py-1 w-full text-right" style={{ fontSize: '15px' }} value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
                 <td className="p-1 text-center font-medium">{money(netPrice(line))}</td>
                 <td className="p-1 text-center font-medium">{money(lineTotal(line))}</td>
                 <td className="p-1 text-center sticky right-0 bg-white">

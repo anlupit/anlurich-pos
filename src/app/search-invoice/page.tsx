@@ -120,7 +120,7 @@ export default function SearchInvoicePage() {
   };
 
   return (
-    <div className="min-h-screen p-4 overflow-x-hidden">
+    <div className="min-h-screen p-4 overflow-x-auto">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {logo ? <img src={logo} alt="Logo" className="w-10 h-10 object-contain" /> : null}

@@ -52,10 +52,14 @@ export default function MobileParts() {
   const stopRef = useRef<any>(null);
 
   useEffect(() => {
+    document.body.classList.add('mobile-app');
     const b = currentBranch() || '';
     setBranch(b);
     if (b) loadBranch(b);
-    return () => stopCamera();
+    return () => {
+      document.body.classList.remove('mobile-app');
+      stopCamera();
+    };
   }, []);
 
   const loadBranch = (b: string) => {

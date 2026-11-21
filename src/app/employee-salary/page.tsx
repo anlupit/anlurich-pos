@@ -310,7 +310,7 @@ export default function EmployeeSalaryPage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 overflow-x-auto">
       <div className="flex items-center gap-3 mb-2">
         {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
         <div>

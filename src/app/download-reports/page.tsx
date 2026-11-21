@@ -156,7 +156,7 @@ export default function DownloadReportsPage() {
   const columns = rows[0] ? Object.keys(rows[0]) : [];
 
   return (
-    <div className="p-4">
+    <div className="p-4 overflow-x-auto">
       <h1 className="text-xl font-bold text-yellow-600 mb-1">Download Reports</h1>
       <div className="text-xs text-gray-500 mb-4">Inventory report from stock movements</div>
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2 items-end">

@@ -791,7 +791,7 @@ export default function POSPage() {
 
       {/* Lines */}
       <div className="bg-white rounded-xl shadow p-2 mb-2 overflow-x-auto">
-        <table className="w-full text-sm md:text-[16px] table-fixed">
+        <table className="text-sm md:text-[16px]" style={{ minWidth: '980px', width: '100%' }}>
           <thead className="bg-teal-500 text-white">
             <tr>
               <th className="p-1 text-left w-[12%]">Barcode</th>

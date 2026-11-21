@@ -4,4 +4,35 @@
 
 body {
   font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: auto;
+  overflow-y: auto;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+@media (max-width: 1180px) {
+  body:not(.mobile-app) table {
+    min-width: 900px;
+  }
+  body:not(.mobile-app) .overflow-x-auto,
+  body:not(.mobile-app) main {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body:not(.mobile-app) input,
+  body:not(.mobile-app) select,
+  body:not(.mobile-app) textarea {
+    max-width: 100%;
+    font-size: 16px;
+  }
+}
+
+body.mobile-app {
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y pinch-zoom;
+}
+body.mobile-app table {
+  min-width: 0;
+  width: 100%;
 }

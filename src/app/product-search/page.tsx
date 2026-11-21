@@ -98,7 +98,7 @@ export default function ProductSearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 overflow-x-hidden print:bg-white print:p-0">
+    <div className="min-h-screen bg-gray-50 p-4 overflow-x-auto print:bg-white print:p-0">
       {/* Header - hide on print */}
       <div className="max-w-6xl mx-auto w-full print:hidden shrink-0">
         <div className="flex justify-between items-center mb-2">

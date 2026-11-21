@@ -173,7 +173,7 @@ export default function CheckVoucherPage() {
         <button onClick={() => setTab('search')} className={`px-4 py-2 rounded ${tab === 'search' ? 'bg-teal-600 text-white' : 'bg-gray-200'}`}>Search Voucher</button>
       </div>
       {tab === 'search' ? (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
           <div className="flex flex-wrap gap-2 p-2">
             <input className="border rounded px-2 py-1 text-sm" placeholder="Supplier Name" value={qSupplier} onChange={(e) => setQSupplier(e.target.value)} />
             <input className="border rounded px-2 py-1 w-24 text-sm" placeholder="Year" value={qYear} onChange={(e) => setQYear(e.target.value)} />

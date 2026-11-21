@@ -189,7 +189,7 @@ export default function SearchPurchasePage() {
   };
 
   return (
-    <div className="min-h-screen p-4 overflow-x-hidden">
+    <div className="min-h-screen p-4 overflow-x-auto">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
           {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}

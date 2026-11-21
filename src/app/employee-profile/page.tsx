@@ -314,7 +314,7 @@ export default function EmployeeProfilePage() {
   };
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
+    <div className="p-4 bg-gray-50 min-h-screen overflow-x-auto">
       <div className="bg-[#1e3a8a] text-white rounded-t-xl px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white rounded" />
@@ -328,7 +328,7 @@ export default function EmployeeProfilePage() {
       <div className="bg-white rounded-b-xl shadow p-4 mb-4">
         <button onClick={() => (window.location.href = '/employee-salary')} className="bg-slate-600 text-white px-4 py-2 rounded-lg mb-3">← Back to Employee Salary</button>
         <h1 className="text-3xl font-black text-[#1e3a8a] mb-4">Employee Profile</h1>
-        <div className="grid gap-3 text-base" style={{ gridTemplateColumns: '1.8fr 1fr 1.2fr' }}>
+        <div className="grid gap-3 text-base overflow-x-auto" style={{ gridTemplateColumns: '1.8fr 1fr 1.2fr', minWidth: '900px' }}>
           <div className="border rounded-xl p-3 min-w-0 bg-white">
             <div className="font-bold text-lg mb-2">1. Employee Information</div>
             <div className="flex justify-between items-start mb-2">
@@ -336,9 +336,11 @@ export default function EmployeeProfilePage() {
                 <div className="text-2xl font-black">{employee.name}</div>
                 <label className="text-sm text-gray-600 block mt-1">Birthday
                   <input type="date" className="border rounded px-2 py-1 h-8 text-sm ml-2" value={employee.birthdate || ''} onChange={(e) => setEmployee({ ...employee, birthdate: e.target.value })} />
+                  {employee.birthdate && <span className="ml-2 font-bold">{new Date(`${employee.birthdate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}</span>}
                 </label>
                 <label className="text-sm text-gray-600 block mt-1">Day Started
                   <input type="date" className="border rounded px-2 py-1 h-8 text-sm ml-2" value={employee.started || ''} onChange={(e) => setEmployee({ ...employee, started: e.target.value })} />
+                  {employee.started && <span className="ml-2 font-bold">{new Date(`${employee.started}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}</span>}
                 </label>
                 {editing ? (
                   <div className="flex gap-1 mt-1">
