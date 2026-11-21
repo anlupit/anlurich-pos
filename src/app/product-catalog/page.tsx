@@ -4,6 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { loadProducts, saveProducts, saveProductCloud, deleteProduct, loadProductsCloud, Product } from '../../lib/products';
 import { searchInvoicesCloud } from '../../lib/branchData';
 
+function code128(value: string) {
+  const patterns = '11011001100,11001101100,11001100110,10010011000,10010001100,10001001100,10011001000,10011000100,10001100100,11001001000'.split(',');
+  const digits = value.replace(/[^0-9A-Za-z]/g, '').slice(0, 18) || '0';
+  let bits = '11010010000';
+  digits.split('').forEach((ch, i) => { bits += patterns[(ch.charCodeAt(0) + i) % patterns.length]; });
+  bits += '1100011101011';
+  return bits.split('').map((b, i) => b === '1' ? `<rect x="${i}" y="0" width="1" height="20"/>` : '').join('');
+}
+
 export default function ProductCatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState({
@@ -323,6 +332,44 @@ export default function ProductCatalogPage() {
     if (fileRef.current) fileRef.current.value = '';
   };
 
+  const makeBarcode = (part: string) => {
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `${day}${part.replace(/[^A-Za-z0-9]/g, '').slice(0, 12)}`;
+  };
+
+  const printLabels = (labels: { part: string; code: string }[]) => {
+    const html = `<!doctype html><html><head><title>Barcode Labels</title>
+      <style>
+        @page { size: 4in 6in; margin: 2mm; }
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .sheet { width: 4in; }
+        .row { display: flex; gap: 5.8mm; margin-bottom: 2mm; }
+        .label { width: 30mm; height: 15mm; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .part { font-size: 7px; font-weight: 700; line-height: 1; }
+        .bars { height: 8mm; width: 28mm; }
+        .code { font-size: 6px; line-height: 1; }
+      </style></head><body><div class="sheet">${
+        Array.from({ length: Math.ceil(labels.length / 3) }, (_, i) => {
+          const chunk = labels.slice(i * 3, i * 3 + 3);
+          return `<div class="row">${chunk.map((l) => `<div class="label"><div class="part">${l.part}</div><svg class="bars" viewBox="0 0 100 20" preserveAspectRatio="none">${code128(l.code)}</svg><div class="code">${l.code}</div></div>`).join('')}</div>`;
+        }).join('')
+      }</div><script>window.print()<\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return alert('Allow pop-ups to print labels.');
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const generateBarcodes = async () => {
+    const rows = selected.length ? products.filter((p) => selected.includes(p.id)) : [];
+    if (!rows.length) return alert('Select the products to generate a barcode.');
+    const next = products.map((p) => selected.includes(p.id) ? { ...p, barcode: makeBarcode(String(p.partNumber || '')) } : p);
+    setProducts(next);
+    try { await saveProducts(next); } catch {}
+    const labels = rows.map((p) => ({ part: String(p.partNumber || ''), code: makeBarcode(String(p.partNumber || '')) }));
+    if (confirm('Barcode generated. Print now on 4x6 thermal waybill sticker paper?')) printLabels(labels);
+  };
+
   const downloadTemplate = () => {
     const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Mark Up %\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,50\nBBF3-20,Brake Fluid,9316068437780,,Bendix,BRAKE FLUID DOT-3 1X12 (900ml),Fluids,,, , ,250.50,50';
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -365,7 +412,7 @@ export default function ProductCatalogPage() {
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
           </label>
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
-          <button onClick={cleanBarcodes} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">Clear Barcode = Part No.</button>
+          <button onClick={generateBarcodes} className="bg-blue-800 text-white px-4 py-2 rounded-lg text-sm">Generate Barcode</button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }} onDoubleClick={(e) => e.stopPropagation()}>
           <input className="border rounded px-2 py-1" placeholder="Part Number *" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} required />
@@ -470,5 +517,4 @@ export default function ProductCatalogPage() {
       )}
     </div>
   );
-
 }

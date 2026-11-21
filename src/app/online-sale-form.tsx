@@ -31,30 +31,34 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
       .catch(() => setRows([]));
   }, [source]);
 
-  const scanOrder = async () => {
-    const Detector = (window as any).BarcodeDetector;
-    if (!Detector || !navigator.mediaDevices?.getUserMedia) return alert('Use a Bluetooth scanner in the order number field, or type it.');
+  const stopCamera = async () => {
+    try { await stopRef.current?.stop(); } catch {}
+    stopRef.current = null;
+    setScanning(false);
+  };
+
+  const startCamera = async (onCode: (code: string) => void) => {
+    if (scanning) return stopCamera();
     setScanning(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-    const detector = new Detector({ formats: ['code_128', 'ean_13', 'qr_code', 'code_39'] });
-    let on = true;
-    stopRef.current = () => { on = false; };
-    const tick = async () => {
-      if (!on || !videoRef.current) return;
-      try {
-        const codes = await detector.detect(videoRef.current);
-        if (codes[0]?.rawValue) {
-          setOrderNo(codes[0].rawValue);
-          on = false;
-          stream.getTracks().forEach((t) => t.stop());
-          setScanning(false);
-          return;
-        }
-      } catch {}
-      if (on) requestAnimationFrame(tick);
-    };
-    tick();
+    if (!(window as any).Html5Qrcode) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject();
+        document.body.appendChild(s);
+      }).catch(() => null);
+    }
+    const Html5Qrcode = (window as any).Html5Qrcode;
+    if (!Html5Qrcode) { setScanning(false); return alert('Camera scanner did not load.'); }
+    const scanner = new Html5Qrcode('sale-scanner');
+    stopRef.current = scanner;
+    try {
+      await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 140 } }, (text: string) => { onCode(text); stopCamera(); }, () => {});
+    } catch {
+      setScanning(false);
+      alert('Allow the camera, then tap Scan again.');
+    }
   };
 
   const save = async () => {
@@ -100,9 +104,17 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
           <label className="block text-sm font-medium mb-1">Order Number</label>
           <div className="flex gap-2">
             <input className="border rounded-lg px-3 py-2 flex-1" value={orderNo} onChange={(e) => setOrderNo(e.target.value)} />
-            <button type="button" onClick={scanOrder} className="bg-black text-white rounded-lg px-3 font-bold">Scan</button>
+            <button type="button" onClick={() => startCamera(setOrderNo)} className="bg-black text-white rounded-lg px-3 font-bold">Scan</button>
           </div>
-          {scanning && <video ref={videoRef} className="w-full rounded-lg mt-2 bg-black" muted playsInline />}
+          {scanning && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-3 w-full max-w-sm">
+                <div className="font-black text-center mb-2">Scan Order Number</div>
+                <div id="sale-scanner" className="w-full min-h-[260px] bg-black rounded-xl overflow-hidden" />
+                <button onClick={stopCamera} className="w-full bg-red-600 text-white rounded-xl py-3 mt-3 font-bold">Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

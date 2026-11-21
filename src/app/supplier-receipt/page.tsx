@@ -215,9 +215,9 @@ export default function SupplierReceiptPage() {
     setLines([{ id: Date.now().toString(), barcode: '', brand: '', partNumber: '', productName: '', description: '', qty: 1, unit: 'pcs', grossPrice: 0 }]);
     savingRef.current = false;
     setSaving(false);
-    const result = await upsertCatalogFromInvoice(invoice.lines).catch(() => null);
-    if (result) alert(`Catalog details saved. Inventory for this branch updated.`);
-    else alert('Invoice saved. Inventory updated. Catalog details were not saved.');
+    const result = await upsertCatalogFromInvoice(invoice.lines).catch((err) => ({ error: err?.message || 'Catalog save failed' }));
+    if (result && !('error' in result)) alert(`Catalog details saved. Added ${result.added}, updated ${result.updated}.`);
+    else alert(`Invoice saved. Inventory updated. Catalog details were not saved.\n\n${(result as any)?.error || ''}`);
     for (const l of valid) {
       await adjustStockByItem({ partNumber: l.partNumber, barcode: l.barcode, qty: l.qty }, Number(l.qty || 0), branch);
     }

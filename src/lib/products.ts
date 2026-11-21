@@ -128,6 +128,7 @@ export async function upsertCatalogFromInvoice(lines: any[]) {
   const products = await loadProductsCloud();
   let added = 0;
   let updated = 0;
+  const changed: Product[] = [];
   for (const l of lines) {
     const part = String(l.partNumber || '').trim();
     if (!part) continue;
@@ -147,9 +148,10 @@ export async function upsertCatalogFromInvoice(lines: any[]) {
       if (barcode) existing.barcode = barcode;
       if (cost > 0) existing.costPrice = Math.round(cost * 100) / 100;
       if (selling) existing.sellingPrice = selling;
+      changed.push(existing);
       updated += 1;
     } else {
-      products.push({
+      const item: Product = {
         id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
         partNumber: part,
         barcode: barcode || undefined,
@@ -158,10 +160,14 @@ export async function upsertCatalogFromInvoice(lines: any[]) {
         description: l.description || undefined,
         costPrice: cost > 0 ? Math.round(cost * 100) / 100 : undefined,
         sellingPrice: selling,
-      });
+      };
+      products.push(item);
+      changed.push(item);
       added += 1;
     }
   }
-  await saveProducts(products);
+  for (const p of changed) {
+    await saveProductCloud(p);
+  }
   return { added, updated };
 }

@@ -20,6 +20,7 @@ const GROUPS: Record<string, { title: string; items: { href: string; label: stri
     items: [
       { href: '/pos', label: 'POS System' },
       { href: '/bosch-pos', label: 'Bosch POS' },
+      { href: '/bosch-dashboard', label: 'Bosch Dashboard' },
       { href: '/no-invoice', label: 'No Invoice' },
       { href: '/search-invoice', label: 'Search Sales Invoice' },
       { href: '/customers', label: 'Customer List' },
