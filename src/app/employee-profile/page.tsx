@@ -90,11 +90,14 @@ export default function EmployeeProfilePage() {
   const [editingId, setEditingId] = useState('');
 
   useEffect(() => {
-    const branch = localStorage.getItem('anlurich-branch') || '';
-    if (sessionStorage.getItem(`salary-ok-${branch}`) !== '1') {
+    const branch = (sessionStorage.getItem('anlurich-auth') || localStorage.getItem('anlurich-branch') || '').toLowerCase();
+    const ok = sessionStorage.getItem(`salary-ok-${branch}`) === '1'
+      || Object.keys(sessionStorage).some((k) => k.startsWith('salary-ok-') && sessionStorage.getItem(k) === '1');
+    if (!ok) {
       window.location.href = '/employee-salary';
       return;
     }
+    sessionStorage.setItem(`salary-ok-${branch}`, '1');
     const id = new URLSearchParams(window.location.search).get('id') || '';
     const cached = sessionStorage.getItem(`employee-${id}`);
     if (cached) { try { setEmployee(JSON.parse(cached)); } catch {} }
@@ -106,7 +109,7 @@ export default function EmployeeProfilePage() {
         else if (!cached) setLoadError('Employee profile was not found. Open it from the Employee Salary list.');
         fetch(`/api/records?table=employee_salaries&branch=${branch}`, { cache: 'no-store' })
           .then((r) => r.json())
-          .then((rows) => setHistory(sortHistory((Array.isArray(rows) ? rows : []).filter((r) => String(r.employeeName || '').toLowerCase() === String((row?.name || '')).toLowerCase()))));
+          .then((rows) => setHistory(sortHistory((Array.isArray(rows) ? rows : []).filter((r) => String(r.employeeName || '').toLowerCase() === String((row?.name || '')).toLowerCase() && String(r.branch || '').toLowerCase() === branch))));
       })
       .catch(() => { if (!cached) setLoadError('Could not load the profile. Go back and open it from the list.'); });
   }, []);
@@ -168,9 +171,10 @@ export default function EmployeeProfilePage() {
     const dayCode = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getFullYear()).slice(2)}`;
     const used = history.filter((h) => String(h.transactionNo || '').startsWith(dayCode)).length + 1;
     const txn = editingId ? (transactionNo || `${dayCode}-${String(used).padStart(2, '0')}`) : `${dayCode}-${String(used).padStart(2, '0')}`;
-    const row = { id: editingId || `${employee.branch}-${employee.id}-${txn}`, transactionNo: txn, branch: employee.branch, employeeName: employee.name, period, fromDate, toDate, presentDates, halfDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, deductGov, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, incentive: showIncentive ? incentive : 0, incentiveDetails, commission: showCommission ? commission : 0, commissionDetails, holidayPay: showHoliday ? holidayPay : 0, holidayDetails, overtime: showOvertime ? overtime : 0, undertime: showUndertime ? undertimeAmount : 0, personalCharge: showPersonal ? personalCharge : 0, personalDetails, notes: showNotes ? notes : '', referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
+    const branch = (sessionStorage.getItem('anlurich-auth') || localStorage.getItem('anlurich-branch') || employee.branch || '').toLowerCase();
+    const row = { id: editingId || `${branch}-${employee.id}-${txn}`, transactionNo: txn, branch, employeeName: employee.name, period, fromDate, toDate, presentDates, halfDate, payoutType: employee.payoutType || '', accountNumber: employee.accountNumber || '', basic: base, daysPresent: worked, dailyRate: dayRate, net: payoutAmount, deductGov, advanceRequest: showAdvance ? advanceRequest : 0, cashAdvance: showCADeduct ? cashAdvance : 0, incentive: showIncentive ? incentive : 0, incentiveDetails, commission: showCommission ? commission : 0, commissionDetails, holidayPay: showHoliday ? holidayPay : 0, holidayDetails, overtime: showOvertime ? overtime : 0, undertime: showUndertime ? undertimeAmount : 0, personalCharge: showPersonal ? personalCharge : 0, personalDetails, notes: showNotes ? notes : '', referenceNo, released: true, date: new Date().toISOString().slice(0, 10) };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_salaries', row }) });
-    const profile = { ...employee, cashAdvanceTotal: cashAdvanceBalance };
+    const profile = { ...employee, branch, cashAdvanceTotal: cashAdvanceBalance };
     await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'employee_profiles', row: profile }) });
     setEmployee(profile);
     setHistory((prev) => editingId ? prev.map((h) => h.id === editingId ? row : h) : [row, ...prev]);
