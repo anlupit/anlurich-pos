@@ -166,7 +166,8 @@ export default function Sidebar() {
             <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium text-left">{e.name}</button>
           )).concat([
             <button key="report" onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 hover:bg-teal-800 rounded-lg px-2 py-2 text-xs font-bold text-left mt-2">Generate Report</button>,
-            <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>
+            <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>,
+            <button key="add" onClick={() => (window.location.href = '/employee-salary?add=1')} className="bg-blue-800 hover:bg-blue-900 rounded-lg px-2 py-2 text-xs font-bold text-left">Add Employee</button>
           ])
         ) : menu.map((item) => (
           item.href === '/employee-salary' ? (
