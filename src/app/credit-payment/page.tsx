@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDate } from '../../lib/branchData';
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -76,7 +77,7 @@ export default function CreditPaymentPage() {
               {shown.map((s) => (
                 <tr key={s.id} className="border-t">
                   <td className="p-2"><input type="checkbox" checked={selected.includes(s.id)} onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id))} /></td>
-                  <td className="p-2">{String(s.date || '').slice(0, 10)}</td>
+                  <td className="p-2">{formatDate(s.date)}</td>
                   <td className="p-2">{s.invoiceNo}</td>
                   <td className="p-2">{s.customerName}</td>
                   <td className="p-2 text-right">{money(s.total)}</td>

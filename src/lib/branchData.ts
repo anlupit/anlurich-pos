@@ -4,7 +4,8 @@ export function formatDate(value?: string): string {
   const raw = String(value);
   const d = new Date(raw.length === 10 ? `${raw}T00:00:00` : raw);
   if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  const month = d.toLocaleDateString('en-US', { month: 'short' });
+  return `${month}. ${d.getDate()}, ${d.getFullYear()}`;
 }
 
 export function currentBranch(): string {

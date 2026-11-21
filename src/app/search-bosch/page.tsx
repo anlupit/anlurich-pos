@@ -3,6 +3,13 @@
 import { useState } from 'react';
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatDate = (value?: string) => {
+  if (!value) return '—';
+  const raw = String(value);
+  const d = new Date(raw.length === 10 ? `${raw}T00:00:00` : raw);
+  if (isNaN(d.getTime())) return raw;
+  return `${d.toLocaleDateString('en-US', { month: 'short' })}. ${d.getDate()}, ${d.getFullYear()}`;
+};
 
 export default function SearchBoschInvoicePage() {
   const [from, setFrom] = useState('');
@@ -44,7 +51,7 @@ export default function SearchBoschInvoicePage() {
     if (!results.length) return alert('Search first.');
     const XLSX = await import('xlsx');
     const data = results.map((r) => ({
-      Date: r.date || r.invoiceDate || '',
+      Date: formatDate(r.date || r.invoiceDate || ''),
       'Invoice No': r.invoiceNo || r.invoiceNumber || '',
       Supplier: r.supplier || r.supplierName || '',
       'Net of VAT': Number(r.netTotal || 0),
@@ -86,7 +93,7 @@ export default function SearchBoschInvoicePage() {
             <tbody>
               {results.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="p-2">{r.date || r.invoiceDate}</td>
+                  <td className="p-2">{formatDate(r.date || r.invoiceDate)}</td>
                   <td className="p-2 font-medium">{r.invoiceNo || r.invoiceNumber}</td>
                   <td className="p-2">{r.supplier || r.supplierName}</td>
                   <td className="p-2 text-right">{money(r.netTotal)}</td>
@@ -107,7 +114,7 @@ export default function SearchBoschInvoicePage() {
               <h2 className="font-black text-lg">Invoice {viewing.invoiceNo}</h2>
               <button onClick={() => setViewing(null)} className="bg-gray-700 text-white px-3 py-1 rounded">Close</button>
             </div>
-            <div className="mb-2">{viewing.supplier} · {viewing.date}</div>
+            <div className="mb-2">{viewing.supplier} · {formatDate(viewing.date)}</div>
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
