@@ -49,10 +49,14 @@ const BRANCHES = [
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function loadExpenses(branch: string): Promise<Expense[]> {
-  const res = await fetch(`/api/records?table=expenses&branch=${branch}`, { cache: 'no-store' });
-  if (!res.ok) return [];
-  const rows = await res.json();
-  return Array.isArray(rows) ? rows : [];
+  try {
+    const res = await fetch(`/api/records?table=expenses&branch=${branch}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
 }
 
 async function saveExpense(item: Expense) {
@@ -93,6 +97,7 @@ export default function ExpensesPage() {
   const [enlarged, setEnlarged] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [personal, setPersonal] = useState<Expense[]>([]);
+  const [rows, setRows] = useState<Expense[]>([]);
   const [pin, setPin] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [pYear, setPYear] = useState('');
