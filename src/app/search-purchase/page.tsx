@@ -45,11 +45,14 @@ export default function SearchPurchasePage() {
       if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv)) return false;
       return true;
     }).sort((a, b) => {
-      const date = String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''));
-      if (date) return date;
-      const supplierSort = String(a.supplierName || '').localeCompare(String(b.supplierName || ''));
+      const dateA = String(a.invoiceDate || a.createdAt || '');
+      const dateB = String(b.invoiceDate || b.createdAt || '');
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      const supplierSort = String(a.supplierName || a.supplier || '').localeCompare(String(b.supplierName || b.supplier || ''));
       if (supplierSort) return supplierSort;
-      return String(b.invoiceNumber || b.invoiceNo || '').localeCompare(String(a.invoiceNumber || a.invoiceNo || ''), undefined, { numeric: true });
+      const numA = parseInt(String(a.invoiceNumber || a.invoiceNo || '').replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(String(b.invoiceNumber || b.invoiceNo || '').replace(/\D/g, ''), 10) || 0;
+      return numB - numA;
     });
     setResults(rows);
     setMode('invoice');
