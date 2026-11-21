@@ -321,6 +321,12 @@ export default function EmployeeSalaryPage() {
       </div>
       <div className="text-xs text-gray-500 mb-4">{NAMES[branch] || branch}</div>
 
+      <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-col gap-2">
+        {employees.map((e) => (
+          <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="text-left bg-slate-100 hover:bg-blue-50 border rounded-lg px-4 py-2 font-medium">{e.name}</button>
+        ))}
+      </div>
+
       {showAdd && <div className="bg-white rounded-xl shadow p-6 mb-4">
         <button onClick={() => setShowAdd(false)} className="text-sm text-blue-600 mb-3">← Back to Employee Dashboard</button>
         <div className="text-center mb-5">

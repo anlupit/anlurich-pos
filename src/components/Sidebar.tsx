@@ -109,6 +109,7 @@ export default function Sidebar() {
   const [branchName, setBranchName] = useState('');
   const [branchId, setBranchId] = useState('');
   const [employees, setEmployees] = useState<any[]>([]);
+  const [salaryUnlocked, setSalaryUnlocked] = useState(false);
   const [salaryOpen, setSalaryOpen] = useState(false);
 
   useEffect(() => {
@@ -124,7 +125,9 @@ export default function Sidebar() {
     const id = (sessionStorage.getItem('anlurich-auth') || localStorage.getItem('anlurich-branch') || '').toLowerCase();
     setBranchId(id);
     setBranchName(names[id] || '');
-    if (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) {
+    const unlocked = sessionStorage.getItem(`salary-ok-${id}`) === '1';
+    setSalaryUnlocked(unlocked);
+    if (unlocked && (pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month'))) {
       fetch(`/api/records?table=employee_profiles&branch=${id}`, { cache: 'no-store' })
         .then((r) => r.json())
         .then((rows) => setEmployees((Array.isArray(rows) ? rows : []).filter((e) => e.name && e.status !== 'terminated')))
@@ -161,14 +164,12 @@ export default function Sidebar() {
       </button>
       {branchName && <div className="bg-blue-700 rounded-lg px-2 py-1 mb-2 text-center font-bold text-[15px] leading-tight break-words">{branchName}</div>}
       <nav className="flex flex-col gap-1 flex-1">
-        {(pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) ? (
-          employees.map((e) => (
-            <button key={e.id} onClick={() => { sessionStorage.setItem(`employee-${e.id}`, JSON.stringify({ ...e, photo: '' })); window.location.href = `/employee-profile?id=${e.id}`; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium text-left">{e.name}</button>
-          )).concat([
-            <button key="report" onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 hover:bg-teal-800 rounded-lg px-2 py-2 text-xs font-bold text-left mt-2">Generate Report</button>,
+        {(pathname.startsWith('/employee-salary') || pathname.startsWith('/employee-profile') || pathname.startsWith('/payout-summary') || pathname.startsWith('/13th-month')) && salaryUnlocked ? (
+          [
+            <button key="report" onClick={() => (window.location.href = '/payout-summary')} className="bg-teal-700 hover:bg-teal-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Generate Report</button>,
             <button key="thirteenth" onClick={() => (window.location.href = '/13th-month')} className="bg-indigo-700 hover:bg-indigo-800 rounded-lg px-2 py-2 text-xs font-bold text-left">Compute 13th Month</button>,
             <button key="add" onClick={() => (window.location.href = '/employee-salary?add=1')} className="bg-blue-800 hover:bg-blue-900 rounded-lg px-2 py-2 text-xs font-bold text-left">Add Employee</button>
-          ])
+          ]
         ) : menu.map((item) => (
           item.href === '/employee-salary' ? (
             <button key={item.href} onClick={() => { sessionStorage.removeItem(`salary-ok-${branchId}`); window.location.href = '/employee-salary'; }} className="bg-blue-700 hover:bg-blue-800 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-2 w-full text-left">
