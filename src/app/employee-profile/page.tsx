@@ -334,8 +334,12 @@ export default function EmployeeProfilePage() {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="text-2xl font-black">{employee.name}</div>
-                {editing ? <input type="date" className="border rounded px-2 py-1 h-8 text-sm" value={employee.birthdate || ''} onChange={(e) => setEmployee({ ...employee, birthdate: e.target.value })} /> : <div className="text-sm text-gray-600">Birthday: {employee.birthdate || '—'}</div>}
-                {editing ? <input type="date" className="border rounded px-2 py-1 h-8 text-sm mt-1" value={employee.started || ''} onChange={(e) => setEmployee({ ...employee, started: e.target.value })} /> : <div className="text-sm text-gray-600">Day started: {employee.started || '—'}</div>}
+                <label className="text-sm text-gray-600 block mt-1">Birthday
+                  <input type="date" className="border rounded px-2 py-1 h-8 text-sm ml-2" value={employee.birthdate || ''} onChange={(e) => setEmployee({ ...employee, birthdate: e.target.value })} />
+                </label>
+                <label className="text-sm text-gray-600 block mt-1">Day Started
+                  <input type="date" className="border rounded px-2 py-1 h-8 text-sm ml-2" value={employee.started || ''} onChange={(e) => setEmployee({ ...employee, started: e.target.value })} />
+                </label>
                 {editing ? (
                   <div className="flex gap-1 mt-1">
                     <select className="border rounded px-2 py-1 text-sm" value={employee.payoutType || ''} onChange={(e) => setEmployee({ ...employee, payoutType: e.target.value })}>
