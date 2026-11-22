@@ -19,6 +19,7 @@ const BRANCH_NAME: Record<string, string> = {
   sezan: 'SEZAN BALIWAG AP',
   avenders: 'AVENDERS AUTO PARTS',
 };
+const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function MobileParts() {
   const [branch, setBranch] = useState('');
@@ -95,6 +96,15 @@ export default function MobileParts() {
   const saveNewProduct = async () => {
     if (savingRef.current) return;
     if (!newProduct.partNumber.trim()) return alert('Enter the part number.');
+    const barcode = newProduct.barcode.trim().toLowerCase();
+    const part = newProduct.partNumber.trim().toLowerCase();
+    const brand = newProduct.brand.trim().toLowerCase();
+    if (barcode && products.some((p) => String(p.barcode || '').trim().toLowerCase() === barcode)) {
+      return alert('This product is already encoded');
+    }
+    if (!barcode && products.some((p) => String(p.partNumber || '').trim().toLowerCase() === part && String(p.brand || '').trim().toLowerCase() === brand)) {
+      return alert('This Product is Already Encoded.');
+    }
     savingRef.current = true;
     setSaving(true);
     const item = {
