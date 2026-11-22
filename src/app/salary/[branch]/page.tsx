@@ -372,7 +372,7 @@ export default function BranchSalaryPage() {
       </div>
 
       {slip && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div id="salary-slip" className="bg-white rounded-xl p-5 w-full max-w-md">
             <div className="text-center font-black">{NAMES[branch] || branch}</div>
             <div className="text-center text-sm">Salary Slip · {period.kind} · {period.date}</div>

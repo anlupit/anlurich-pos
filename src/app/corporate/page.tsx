@@ -147,7 +147,7 @@ export default function CorporatePage() {
       </div>
 
       {showUnpaid && (
-        <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
           <div className="bg-white max-w-4xl mx-auto p-4 rounded">
             <div className="text-center font-bold text-lg">UNPAID CLIENTS</div>
             <div className="text-center text-sm mb-3">{currentBranch()?.toUpperCase()}</div>
@@ -184,7 +184,7 @@ export default function CorporatePage() {
         </div>
       )}
     {saved && (
-        <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
           <div id="corp-invoice" className="bg-white max-w-2xl mx-auto p-6 rounded">
             <div className="text-center font-bold text-lg">{(saved.branch || currentBranch() || '').toUpperCase()}</div>
             <div className="text-center font-black text-xl mb-2">INVOICE</div>

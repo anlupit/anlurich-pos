@@ -232,7 +232,7 @@ export default function SearchInvoicePage() {
         const branch = String(editing.branch || currentBranch() || '').toLowerCase();
         const showLabor = branch === 'anlurich' || branch === 'avenders';
         return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg mb-3">Invoice {editing.invoiceNo}</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">

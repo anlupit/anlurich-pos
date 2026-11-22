@@ -388,7 +388,7 @@ export default function BranchDashboard() {
       </div>
 
       {viewing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold mb-2">Invoice {viewing.invoiceNumber} — {viewing.supplierName}</h3>
             <table className="w-full text-sm mb-3">

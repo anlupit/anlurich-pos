@@ -47,7 +47,49 @@ export default function SearchBoschInvoicePage() {
     setSearched(true);
   };
 
+  const remove = async (row: any) => {
+    if (!confirm(`Delete Bosch invoice ${row.invoiceNo || row.invoiceNumber}?`)) return;
+    const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_invoices', deleteId: row.id }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.ok === false) return alert(body.error || 'Delete failed.');
+    setResults((prev) => prev.filter((r) => r.id !== row.id));
+  };
+
+  const updateLine = (index: number, field: string, value: string) => {
+    if (!viewing) return;
+    const lines = [...(viewing.lines || [])];
+    lines[index] = { ...lines[index], [field]: field === 'qty' || field === 'price' ? Number(value) || 0 : value };
+    const netTotal = lines.reduce((n, l) => n + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
+    const vatTotal = netTotal * 0.12;
+    setViewing({ ...viewing, lines, netTotal, vatTotal, total: netTotal + vatTotal });
+  };
+
+  const updateInvoice = async () => {
+    if (!viewing) return;
+    const res = await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table: 'bosch_invoices', row: viewing }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.ok === false) return alert(body.error || 'Update failed.');
+    setResults((prev) => prev.map((r) => r.id === viewing.id ? viewing : r));
+    setViewing(null);
+    alert('Bosch invoice updated.');
+  };
+
   const download = async () => {
+    if (!results.length) return alert('Search first.');
+    const XLSX = await import('xlsx');
+    const data = results.map((r) => ({
+      Date: formatDate(r.date || r.invoiceDate || ''),
+      'Invoice No': r.invoiceNo || r.invoiceNumber || '',
+      Supplier: r.supplier || r.supplierName || '',
+      'Net of VAT': Number(r.netTotal || 0),
+      '12% VAT': Number(r.vatTotal || 0),
+      'Grand Total': Number(r.total || 0),
+    }));
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Bosch Invoices');
+    XLSX.writeFile(wb, 'bosch-invoices.xlsx');
+  };
     if (!results.length) return alert('Search first.');
     const XLSX = await import('xlsx');
     const data = results.map((r) => ({
@@ -99,7 +141,10 @@ export default function SearchBoschInvoicePage() {
                   <td className="p-2 text-right">{money(r.netTotal)}</td>
                   <td className="p-2 text-right">{money(r.vatTotal)}</td>
                   <td className="p-2 text-right font-bold">{money(r.total)}</td>
-                  <td className="p-2 text-center"><button onClick={() => setViewing(r)} className="text-blue-700 font-bold">View</button></td>
+                  <td className="p-2 text-right whitespace-nowrap">
+                    <button onClick={() => setViewing(JSON.parse(JSON.stringify(r)))} className="text-blue-700 font-bold mr-3">Edit / View</button>
+                    <button onClick={() => remove(r)} className="text-red-600 font-black">X</button>
+                  </td>
                 </tr>
               ))}
               {results.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-gray-400">No Bosch invoices found</td></tr>}
@@ -108,7 +153,7 @@ export default function SearchBoschInvoicePage() {
         </div>
       )}
       {viewing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-4 w-full max-w-4xl max-h-[90vh] overflow-auto">
             <div className="flex justify-between mb-3">
               <h2 className="font-black text-lg">Invoice {viewing.invoiceNo}</h2>
@@ -120,6 +165,7 @@ export default function SearchBoschInvoicePage() {
                 <tr>
                   <th className="p-1 text-left">Part Number</th>
                   <th className="p-1 text-left">Product Name</th>
+                  <th className="p-1 text-left">Description</th>
                   <th className="p-1 text-center">Qty</th>
                   <th className="p-1 text-right">Net Amount</th>
                 </tr>
@@ -127,15 +173,20 @@ export default function SearchBoschInvoicePage() {
               <tbody>
                 {(viewing.lines || []).map((l: any, i: number) => (
                   <tr key={i} className="border-t">
-                    <td className="p-1">{l.partNumber}</td>
-                    <td className="p-1">{l.productName || l.model}</td>
-                    <td className="p-1 text-center">{l.qty}</td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.productName || l.model || ''} onChange={(e) => updateLine(i, 'productName', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
+                    <td className="p-1 text-center"><input className="border rounded px-1 py-1 w-16 text-center" value={l.qty || ''} onChange={(e) => updateLine(i, 'qty', e.target.value)} /></td>
                     <td className="p-1 text-right">{money((l.qty || 0) * (l.price || 0))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <div className="text-right font-black mt-3">Grand Total {money(viewing.total)}</div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setViewing(null)} className="bg-gray-700 text-white px-4 py-2 rounded">Close</button>
+              <button onClick={updateInvoice} className="text-white px-4 py-2 rounded font-bold" style={{ background: '#002366' }}>Update</button>
+            </div>
           </div>
         </div>
       )}

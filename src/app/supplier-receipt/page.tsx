@@ -64,6 +64,25 @@ export default function SupplierReceiptPage() {
     });
   };
 
+  const lookupBarcode = async (id: string, value: string) => {
+    const code = String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (!code) return;
+    const latest = await loadProductsCloud().catch(() => catalog);
+    if (latest.length) setCatalog(latest);
+    const source = latest.length ? latest : catalog;
+    const product = source.find((p) => String(p.barcode || '').replace(/[^a-z0-9]/gi, '').toLowerCase() === code);
+    if (!product) return;
+    setLines((prev) => prev.map((l) => l.id === id ? {
+      ...l,
+      barcode: product.barcode || l.barcode,
+      brand: product.brand || l.brand,
+      partNumber: product.partNumber || l.partNumber,
+      productName: product.name || product.productName || l.productName,
+      description: product.description || product.name || l.description,
+      grossPrice: Number(product.costPrice || l.grossPrice || 0),
+    } : l));
+  };
+
   const updateLine = (id: string, field: keyof Line, value: string | number) => {
     setLines((prev) => prev.map((l) => {
       if (l.id !== id) return l;
@@ -312,7 +331,7 @@ export default function SupplierReceiptPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1">
-                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} />
+                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} onBlur={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value); } }} />
                 </td>
                 <td className="p-1 relative">
                   <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
@@ -356,7 +375,7 @@ export default function SupplierReceiptPage() {
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-lg">
             <h3 className="font-bold text-lg mb-3">Add Supplier</h3>
             <div className="space-y-2">

@@ -475,7 +475,7 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
       {releaseOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]">
           <form className="bg-white rounded-xl p-4 w-full max-w-sm" onSubmit={(e) => { e.preventDefault(); confirmRelease(); }}>
             <div className="font-bold text-lg mb-2">Released Payment?</div>
             <div className="text-sm mb-2">Amount to transfer: <b>{money(payoutAmount)}</b></div>

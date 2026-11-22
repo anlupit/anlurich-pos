@@ -144,7 +144,7 @@ export default function PrintReportsPage() {
       </div>
 
       {pick === 'sales' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <div className="font-bold mb-3">Choose sales date</div>
             <input type="date" className="w-full border rounded px-3 py-2 mb-4" value={salesDate} onChange={(e) => setSalesDate(e.target.value)} />
@@ -157,7 +157,7 @@ export default function PrintReportsPage() {
       )}
 
       {pick === 'purchases' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <div className="font-bold mb-3">Choose month and year</div>
             <div className="flex gap-2 mb-4">
@@ -181,7 +181,7 @@ export default function PrintReportsPage() {
       )}
 
       {pick === 'supplier' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <div className="font-bold mb-3">Choose month and year</div>
             <div className="flex gap-2 mb-4">

@@ -123,7 +123,7 @@ export default function ProductSearchWithThumbnail() {
       {/* Larger Image Modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-4"
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative max-w-2xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>

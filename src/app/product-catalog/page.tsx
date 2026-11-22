@@ -511,7 +511,7 @@ export default function ProductCatalogPage() {
         </table>
       </div>
       {zoom && (
-        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
+        <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
           <img src={zoom} alt="Product" className="max-w-full max-h-full rounded shadow-2xl" />
         </div>
       )}

@@ -918,7 +918,7 @@ export default function POSPage() {
 
       {/* Print ask */}
       {showPrintAsk && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-6 text-center max-w-sm">
             <p className="font-semibold mb-4">Sale saved. Print receipt?</p>
             <div className="flex gap-3">
@@ -934,7 +934,7 @@ export default function POSPage() {
       </div>
 
       {datePick && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
             <div className="font-bold mb-3">{datePick.startsWith('daily') ? 'Choose the day' : 'Choose the month'}</div>
             {datePick.startsWith('daily') ? (
@@ -986,7 +986,7 @@ export default function POSPage() {
           setTimeout(() => { window.print(); setTimeout(() => style.remove(), 500); }, 100);
         };
         return (
-          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+          <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
             <div id="daily-report" className="bg-white max-w-md mx-auto p-4 rounded shadow">
               <div className="text-center font-bold text-lg">DAILY SALES REPORT</div>
               <div className="text-center text-sm mb-3">{formatDate(today)} · {currentBranch()?.toUpperCase()}</div>
@@ -1072,7 +1072,7 @@ export default function POSPage() {
           setTimeout(() => { window.print(); setTimeout(() => style.remove(), 500); }, 100);
         };
         return (
-          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+          <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
             <div id="monthly-report" className="bg-white max-w-5xl mx-auto p-4 rounded shadow">
               <div className="text-center font-bold text-xl">{currentBranch()?.toUpperCase()}</div>
               <div className="text-center font-semibold mb-3">{monthLabel}</div>
@@ -1136,7 +1136,7 @@ export default function POSPage() {
           setShowUnpaid(false);
         };
         return (
-          <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+          <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
             <div className="bg-white max-w-4xl mx-auto p-4 rounded">
               <div className="text-center font-bold text-lg">UNPAID CREDIT CLIENTS</div>
               <div className="flex gap-2 mt-3">

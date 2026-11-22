@@ -366,7 +366,7 @@ export default function QuotationPage() {
       </div>
 
       {viewQuote && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-lg">
             <div className="font-bold text-lg mb-1">Quotation {viewQuote.quotationNo}</div>
             <div className="text-sm mb-2">{viewQuote.customerName} · {viewQuote.plateNo || 'No plate'}</div>
@@ -385,7 +385,7 @@ export default function QuotationPage() {
       )}
 
       {showPrintAsk && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm text-center">
             <div className="font-bold text-lg mb-2">Quotation Saved</div>
             <div className="mb-4">Print Quotation?</div>

@@ -293,7 +293,7 @@ export default function ExpensesPage() {
         </table>
       </div>
       {enlarged && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setEnlarged(null)}>
+        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4" onClick={() => setEnlarged(null)}>
           <img src={enlarged} alt="Invoice" className="max-h-[90vh] max-w-full" />
         </div>
       )}

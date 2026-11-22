@@ -283,7 +283,7 @@ export default function CheckVoucherPage() {
         </>
       )}
       {editingVoucher && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-lg">
             <h3 className="font-bold text-lg mb-3">Voucher {editingVoucher.voucherNo}</h3>
             <input className="w-full border rounded px-3 py-2 mb-2" value={editingVoucher.supplier || ''} onChange={(e) => setEditingVoucher({ ...editingVoucher, supplier: e.target.value })} />
@@ -321,7 +321,7 @@ export default function CheckVoucherPage() {
         </div>
       )}
       {printVoucher && (
-        <div className="fixed inset-0 bg-black/50 z-50 overflow-auto p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] overflow-auto p-4">
           <div className="bg-white max-w-[148mm] mx-auto p-4">
             <div className="text-center">
               <img src="/logo.png" alt="Anlurich" className="h-16 mx-auto object-contain" />
