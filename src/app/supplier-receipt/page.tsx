@@ -311,17 +311,8 @@ export default function SupplierReceiptPage() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
-                <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => { updateLine(line.id, 'barcode', e.target.value); suggestForLine(line.id, 'barcode', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
-                  {lineSuggest?.id === line.id && lineSuggest.field === 'barcode' && (
-                    <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
-                      {lineSuggest.matches.map((p) => (
-                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
-                          {p.partNumber}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <td className="p-1">
+                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} />
                 </td>
                 <td className="p-1 relative">
                   <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
