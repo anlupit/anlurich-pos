@@ -96,12 +96,42 @@ export default function SearchPurchasePage() {
     setBrand('');
   };
 
+  const downloadResults = async () => {
+    if (!results.length) return alert('Search first.');
+    const XLSX = await import('xlsx');
+    const data = mode === 'product'
+      ? results.map((r) => ({
+          Date: formatDate(r.invoiceDate),
+          'Invoice No': r.invoiceNumber || '',
+          Supplier: r.supplierName || '',
+          'Part Number': r.partNumber || '',
+          Brand: r.brand || '',
+          Qty: r.qty || 0,
+          'Net Amount': Number(r.netAmount || 0),
+        }))
+      : results.map((r) => ({
+          Date: formatDate(r.invoiceDate),
+          'Invoice No': r.invoiceNumber || r.invoiceNo || '',
+          Supplier: r.supplierName || '',
+          Total: Number(r.grandTotal || 0),
+          Status: String(r.status || 'unpaid'),
+        }));
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Search');
+    XLSX.writeFile(wb, 'search-purchase.xlsx');
+  };
+
   const handleInvoiceSearch = async () => {
-    const filters = { monthFrom, monthTo, supplier, invoiceNo };
-    const fresh = await searchInvoicesCloud({});
-    searchInvoices(fresh, filters);
-    setSupplier('');
-    setInvoiceNo('');
+    try {
+      const filters = { monthFrom, monthTo, supplier, invoiceNo };
+      const fresh = await searchInvoicesCloud({}).catch(() => []);
+      searchInvoices(Array.isArray(fresh) ? fresh : [], filters);
+      setSupplier('');
+      setInvoiceNo('');
+    } catch (err: any) {
+      alert(err?.message || 'Search failed.');
+    }
   };
 
   const handleProductSearch = async () => {
