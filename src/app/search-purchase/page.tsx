@@ -11,6 +11,7 @@ export default function SearchPurchasePage() {
   const [supplier, setSupplier] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [part, setPart] = useState('');
+  const [barcode, setBarcode] = useState('');
   const [brand, setBrand] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [mode, setMode] = useState<'invoice' | 'product'>('invoice');
@@ -59,22 +60,26 @@ export default function SearchPurchasePage() {
     setSearched(true);
   };
 
-  const searchProducts = (list: any[], filters = { part, brand }) => {
-    const qPart = filters.part.trim().toLowerCase();
-    const qBrand = filters.brand.trim().toLowerCase();
+  const searchProducts = (list: any[], filters = { barcode, part, brand }) => {
+    const qBarcode = String(filters.barcode || '').trim().toLowerCase();
+    const qPart = String(filters.part || '').trim().toLowerCase();
+    const qBrand = String(filters.brand || '').trim().toLowerCase();
     const rows: any[] = [];
-    list.forEach((inv) => {
-      (inv.lines || []).forEach((line: any) => {
+    (Array.isArray(list) ? list : []).forEach((inv) => {
+      (Array.isArray(inv?.lines) ? inv.lines : []).forEach((line: any) => {
+        const bc = String(line.barcode || '').toLowerCase();
         const pn = String(line.partNumber || line.partNo || line.oemPartNumber || '').toLowerCase();
         const br = String(line.brand || '').toLowerCase();
+        const barcodeOk = !qBarcode || bc.includes(qBarcode);
         const partOk = !qPart || pn.includes(qPart);
         const brandOk = !qBrand || br.includes(qBrand);
-        if (partOk && brandOk) {
+        if (barcodeOk && partOk && brandOk) {
           rows.push({
             invoiceId: inv.id,
             invoiceDate: inv.invoiceDate,
             invoiceNumber: inv.invoiceNumber,
             supplierName: inv.supplierName,
+            barcode: line.barcode,
             partNumber: line.partNumber || line.partNo,
             brand: line.brand,
             qty: line.qty || line.quantity,
@@ -92,6 +97,7 @@ export default function SearchPurchasePage() {
     }));
     setMode('product');
     setSearched(true);
+    setBarcode('');
     setPart('');
     setBrand('');
   };
@@ -135,11 +141,16 @@ export default function SearchPurchasePage() {
   };
 
   const handleProductSearch = async () => {
-    const filters = { part, brand };
-    const fresh = await searchInvoicesCloud(filters);
-    searchProducts(fresh, filters);
-    setPart('');
-    setBrand('');
+    try {
+      const filters = { barcode, part, brand };
+      const fresh = await searchInvoicesCloud({ part: barcode || part, brand }).catch(() => []);
+      searchProducts(Array.isArray(fresh) ? fresh : [], filters);
+      setBarcode('');
+      setPart('');
+      setBrand('');
+    } catch (err: any) {
+      alert(err?.message || 'Search failed.');
+    }
   };
 
   const openInvoice = (invoiceId: string) => {
@@ -256,6 +267,10 @@ export default function SearchPurchasePage() {
           <button onClick={handleInvoiceSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
         </div>
         <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }}>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Barcode</div>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
+          </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Part Number</div>
             <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />

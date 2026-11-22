@@ -25,6 +25,7 @@ export default function BranchDashboard() {
   const [searchMonth, setSearchMonth] = useState('');
   const [searchSupplier, setSearchSupplier] = useState('');
   const [searchInvoiceNo, setSearchInvoiceNo] = useState('');
+  const [searchBarcode, setSearchBarcode] = useState('');
   const [searchPart, setSearchPart] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
   const [logo, setLogo] = useState('');
@@ -33,8 +34,9 @@ export default function BranchDashboard() {
   const [searched, setSearched] = useState(false);
   const [viewing, setViewing] = useState<any | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
-  const month = new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const month = today.slice(0, 7);
   const year = new Date().getFullYear().toString();
 
   useEffect(() => {
@@ -94,65 +96,77 @@ export default function BranchDashboard() {
   }, [branchId]);
 
   const saleDay = (s: any) => String(s.date || s.dateTime || s.createdAt || '').slice(0, 10);
-  const branchSales = sales.filter((s) => !s.branch || s.branch === branchId);
-  const dailyTotal = branchSales.filter((s) => saleDay(s) === today).reduce((sum, s) => sum + Number(s.total || 0), 0);
-  const monthlyTotal = branchSales.filter((s) => saleDay(s).startsWith(month)).reduce((sum, s) => sum + Number(s.total || 0), 0);
-  const monthInvoices = invoices.filter((i) => String(i.invoiceDate || i.date || i.createdAt || '').startsWith(month));
-  const totalMonthlyPurchases = monthInvoices.reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
-  const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
-  const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + Number(i.grandTotal || i.total || 0), 0);
+  const saleAmount = (s: any) => Number(s.total || s.grandTotal || s.amount || 0);
+  const invoiceAmount = (i: any) => Number(i.grandTotal || i.total || i.amount || 0);
+  const branchSales = sales.filter((s) => !s.branch || String(s.branch).toLowerCase() === branchId.toLowerCase());
+  const dailyTotal = branchSales.filter((s) => saleDay(s) === today).reduce((sum, s) => sum + saleAmount(s), 0);
+  const monthlyTotal = branchSales.filter((s) => saleDay(s).startsWith(month)).reduce((sum, s) => sum + saleAmount(s), 0);
+  const monthInvoices = invoices.filter((i) => String(i.invoiceDate || i.date || i.createdAt || '').slice(0, 7) === month);
+  const totalDrPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('dr')).reduce((sum, i) => sum + invoiceAmount(i), 0);
+  const totalSiPurchases = monthInvoices.filter((i) => String(i.invoiceType || '').toLowerCase().includes('sales')).reduce((sum, i) => sum + invoiceAmount(i), 0);
 
   const searchInvoices = async () => {
-    const qSupplier = searchSupplier.trim();
-    const qInv = searchInvoiceNo.trim();
-    const cloud = await searchInvoicesCloud({ month: searchMonth, supplier: qSupplier, invoiceNo: qInv }, branchId).catch(() => []);
-    const source = cloud.length ? cloud : invoices;
-    const rows = source.filter((inv) => {
-      const invDate = String(inv.invoiceDate || inv.createdAt || '');
-      if (searchMonth && !invDate.startsWith(searchMonth)) return false;
-      if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier.toLowerCase())) return false;
-      if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv.toLowerCase())) return false;
-      return true;
-    }).sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || '')));
-    setInvoices(source);
-    setInvoiceResults(rows);
-    setMode('invoice');
-    setSearched(true);
-    setSearchMonth('');
-    setSearchSupplier('');
-    setSearchInvoiceNo('');
+    try {
+      const qSupplier = searchSupplier.trim();
+      const qInv = searchInvoiceNo.trim();
+      const cloud = await searchInvoicesCloud({ month: searchMonth, supplier: qSupplier, invoiceNo: qInv }, branchId).catch(() => []);
+      const source = Array.isArray(cloud) && cloud.length ? cloud : invoices;
+      const rows = source.filter((inv) => {
+        const invDate = String(inv.invoiceDate || inv.createdAt || '');
+        if (searchMonth && !invDate.startsWith(searchMonth)) return false;
+        if (qSupplier && !String(inv.supplierName || '').toLowerCase().includes(qSupplier.toLowerCase())) return false;
+        if (qInv && !`${inv.invoiceNumber || ''} ${inv.invoiceNo || ''}`.toLowerCase().includes(qInv.toLowerCase())) return false;
+        return true;
+      }).sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || '')));
+      setInvoices(source);
+      setInvoiceResults(rows);
+      setMode('invoice');
+      setSearched(true);
+      setSearchMonth('');
+      setSearchSupplier('');
+      setSearchInvoiceNo('');
+    } catch (err: any) {
+      alert(err?.message || 'Search failed.');
+    }
   };
 
   const searchProducts = async () => {
-    const qPart = searchPart.trim().toLowerCase();
-    const qBrand = searchBrand.trim().toLowerCase();
-    if (!qPart && !qBrand) return alert('Enter a part number or brand');
-    const cloud = await searchInvoicesCloud({ part: qPart, brand: qBrand }, branchId).catch(() => []);
-    const source = Array.isArray(cloud) ? cloud : [];
-    const rows: any[] = [];
-    source.forEach((inv) => {
-      if (inv.branch && inv.branch !== branchId) return;
-      (inv.lines || []).forEach((line: any) => {
-        const pn = String(line.partNumber || line.partNo || '').toLowerCase();
-        const br = String(line.brand || '').toLowerCase();
-        const name = String(line.productName || line.description || '').toLowerCase();
-        if ((!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand) || name.includes(qBrand))) {
-          rows.push({
-            ...line,
-            supplierName: inv.supplierName,
-            invoiceNumber: inv.invoiceNumber || inv.invoiceNo,
-            invoiceDate: inv.invoiceDate,
-            invoiceId: inv.id,
-            netAmount: line.netPrice || line.price || line.costPrice,
-          });
-        }
+    try {
+      const qBarcode = searchBarcode.trim().toLowerCase();
+      const qPart = searchPart.trim().toLowerCase();
+      const qBrand = searchBrand.trim().toLowerCase();
+      if (!qBarcode && !qPart && !qBrand) return alert('Enter a barcode, part number, or brand');
+      const cloud = await searchInvoicesCloud({ part: qBarcode || qPart, brand: qBrand }, branchId).catch(() => []);
+      const source = Array.isArray(cloud) ? cloud : [];
+      const rows: any[] = [];
+      source.forEach((inv) => {
+        if (inv.branch && inv.branch !== branchId) return;
+        (Array.isArray(inv?.lines) ? inv.lines : []).forEach((line: any) => {
+          const bc = String(line.barcode || '').toLowerCase();
+          const pn = String(line.partNumber || line.partNo || '').toLowerCase();
+          const br = String(line.brand || '').toLowerCase();
+          const name = String(line.productName || line.description || '').toLowerCase();
+          if ((!qBarcode || bc.includes(qBarcode)) && (!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand) || name.includes(qBrand))) {
+            rows.push({
+              ...line,
+              supplierName: inv.supplierName,
+              invoiceNumber: inv.invoiceNumber || inv.invoiceNo,
+              invoiceDate: inv.invoiceDate,
+              invoiceId: inv.id,
+              netAmount: line.netPrice || line.price || line.costPrice,
+            });
+          }
+        });
       });
-    });
-    setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
-    setMode('product');
-    setSearched(true);
-    setSearchPart('');
-    setSearchBrand('');
+      setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
+      setMode('product');
+      setSearched(true);
+      setSearchBarcode('');
+      setSearchPart('');
+      setSearchBrand('');
+    } catch (err: any) {
+      alert(err?.message || 'Search failed.');
+    }
   };
 
   const updateViewLine = (index: number, field: string, value: number) => {
@@ -201,7 +215,7 @@ export default function BranchDashboard() {
   };
 
   return (
-    <div className="min-h-screen p-4 overflow-x-hidden">
+    <div className="min-h-screen p-4 overflow-x-auto">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
           {logo ? <img src={logo} alt="Logo" className="w-14 h-14 object-contain" /> : null}
@@ -246,6 +260,10 @@ export default function BranchDashboard() {
           <button onClick={searchInvoices} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
         </div>
         <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchProducts(); } }}>
+          <div>
+            <div className="text-xs font-medium text-center mb-1">Barcode</div>
+            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={searchBarcode} onChange={(e) => setSearchBarcode(e.target.value)} />
+          </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Part Number</div>
             <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={searchPart} onChange={(e) => setSearchPart(e.target.value)} />
