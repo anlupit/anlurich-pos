@@ -90,21 +90,6 @@ export default function SearchBoschInvoicePage() {
     XLSX.utils.book_append_sheet(wb, sheet, 'Bosch Invoices');
     XLSX.writeFile(wb, 'bosch-invoices.xlsx');
   };
-    if (!results.length) return alert('Search first.');
-    const XLSX = await import('xlsx');
-    const data = results.map((r) => ({
-      Date: formatDate(r.date || r.invoiceDate || ''),
-      'Invoice No': r.invoiceNo || r.invoiceNumber || '',
-      Supplier: r.supplier || r.supplierName || '',
-      'Net of VAT': Number(r.netTotal || 0),
-      '12% VAT': Number(r.vatTotal || 0),
-      'Grand Total': Number(r.total || 0),
-    }));
-    const sheet = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sheet, 'Bosch Invoices');
-    XLSX.writeFile(wb, 'bosch-invoices.xlsx');
-  };
 
   return (
     <div className="p-4 overflow-x-auto">
