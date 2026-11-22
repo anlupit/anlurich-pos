@@ -128,7 +128,7 @@ export default function MobileParts() {
     if (!saved) return;
     setProducts((prev) => [...prev, saved]);
     setNewProduct({ barcode: '', partNumber: '', brand: '', name: '', description: '', oemPartNumber: '', carMake: '', carModel: '', yearModel: '', costPrice: '', markupPercent: '50' });
-    alert('Product added to the catalog.');
+    alert('Product saved to the Supabase product catalog.');
   };
 
   const find = (code: string) => {

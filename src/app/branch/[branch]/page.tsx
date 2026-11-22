@@ -137,6 +137,8 @@ export default function BranchDashboard() {
       const qBrand = searchBrand.trim().toLowerCase();
       if (!qBarcode && !qPart && !qBrand) return alert('Enter a barcode, part number, or brand');
       const cloud = await searchInvoicesCloud({ part: qBarcode || qPart, brand: qBrand }, branchId).catch(() => []);
+      const catalogRes = await fetch('/api/records?table=products', { cache: 'no-store' }).catch(() => null);
+      const catalog = catalogRes && catalogRes.ok ? await catalogRes.json().catch(() => []) : [];
       const source = Array.isArray(cloud) ? cloud : [];
       const rows: any[] = [];
       source.forEach((inv) => {
@@ -157,6 +159,25 @@ export default function BranchDashboard() {
             });
           }
         });
+      });
+      (Array.isArray(catalog) ? catalog : []).forEach((p: any) => {
+        const bc = String(p.barcode || '').toLowerCase();
+        const pn = String(p.partNumber || '').toLowerCase();
+        const br = String(p.brand || '').toLowerCase();
+        const name = String(p.name || p.description || '').toLowerCase();
+        if ((!qBarcode || bc.includes(qBarcode)) && (!qPart || pn.includes(qPart) || name.includes(qPart)) && (!qBrand || br.includes(qBrand) || name.includes(qBrand))) {
+          rows.push({
+            partNumber: p.partNumber,
+            barcode: p.barcode,
+            brand: p.brand,
+            productName: p.name,
+            description: p.description,
+            supplierName: 'Product Catalog',
+            invoiceNumber: 'Catalog',
+            invoiceDate: '',
+            netAmount: p.costPrice || 0,
+          });
+        }
       });
       setInvoiceResults(rows.sort((a, b) => String(b.invoiceDate || '').localeCompare(String(a.invoiceDate || ''))));
       setMode('product');
