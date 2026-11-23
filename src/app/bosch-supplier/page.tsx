@@ -1,12 +1,32 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { currentBranch } from '../../lib/branchData';
+import { currentBranch, loadSharedSuppliers, saveBranchSuppliers, loadBranchSuppliers } from '../../lib/branchData';
 
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
 type Line = { id: string; barcode: string; partNumber: string; productName: string; description: string; segment: string; qty: number; unit: string; price: number };
 const SEGMENTS = ['Accessories', 'Blue', 'COC', 'Garden', 'Measuring', 'Parts and Handtools'];
 const emptyLine = (): Line => ({ id: Date.now().toString(), barcode: '', partNumber: '', productName: '', description: '', segment: '', qty: 1, unit: 'pc', price: 0 });
+
+function PriceField({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text !== null ? text : (value ? Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  return (
+    <input
+      inputMode="decimal"
+      className="border rounded text-right"
+      style={{ width: '12ch' }}
+      value={shown}
+      onFocus={() => setText(value ? String(value) : '')}
+      onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
+      onBlur={() => {
+        const raw = String(text || '').replace(/[^0-9.]/g, '');
+        onChange(raw ? Math.round((parseFloat(raw) || 0) * 100) / 100 : 0);
+        setText(null);
+      }}
+    />
+  );
+}
 
 const money = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -37,6 +57,8 @@ export default function BoschSupplierInvoicePage() {
   const [allowed, setAllowed] = useState(false);
   const [catalog, setCatalog] = useState<Tool[]>([]);
   const [supplier, setSupplier] = useState('');
+  const [supplierOpen, setSupplierOpen] = useState(false);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [invoiceNo, setInvoiceNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
@@ -53,6 +75,7 @@ export default function BoschSupplierInvoicePage() {
     }
     setAllowed(true);
     loadTools().then(setCatalog);
+    loadSharedSuppliers().then(setSuppliers).catch(() => setSuppliers(loadBranchSuppliers()));
   }, []);
 
   const suggestFor = (id: string, text: string) => {
@@ -89,6 +112,10 @@ export default function BoschSupplierInvoicePage() {
       return alert('This Bosch invoice is already recorded.');
     }
     const invoice = { id: Date.now().toString(), branch: 'anlurich', supplier: supplier.trim(), invoiceNo: invoiceNo.trim(), date, lines: valid, netTotal, vatTotal, total, createdAt: new Date().toISOString() };
+    const existing = await loadSharedSuppliers().catch(() => loadBranchSuppliers());
+    if (!existing.some((s) => String(s.name || '').trim().toLowerCase() === supplier.trim().toLowerCase())) {
+      saveBranchSuppliers([...existing, { id: Date.now().toString(), name: supplier.trim() }]);
+    }
     try {
       await saveBoschInvoice(invoice);
     } catch (err: any) {
@@ -145,7 +172,16 @@ export default function BoschSupplierInvoicePage() {
       </div>
       <p className="text-sm text-gray-500 mb-4">Anlurich only. Adds stock to the Bosch catalog.</p>
       <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2">
-        <input className="border rounded px-3 py-2" placeholder="Supplier name" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+        <div className="relative">
+          <input className="border rounded px-3 py-2" placeholder="Supplier name" value={supplier} onChange={(e) => { setSupplier(e.target.value); setSupplierOpen(true); }} onFocus={() => setSupplierOpen(true)} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
+          {supplierOpen && supplier.trim() && (
+            <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
+              {suppliers.filter((s) => String(s.name || '').toLowerCase().includes(supplier.trim().toLowerCase())).slice(0, 8).map((s) => (
+                <button type="button" key={s.id || s.name} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplier(s.name); setSupplierOpen(false); }}>{s.name}</button>
+              ))}
+            </div>
+          )}
+        </div>
         <input className="border rounded px-3 py-2" placeholder="Invoice number" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
         <input type="date" className="border rounded px-3 py-2" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
@@ -188,7 +224,7 @@ export default function BoschSupplierInvoicePage() {
                 </td>
                 <td className="p-1 text-center"><input type="number" min={1} className="border rounded text-center" style={{ width: '6ch' }} value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value) || 1 } : x))} /></td>
                 <td className="p-1 text-center"><input className="border rounded text-center" style={{ width: '6ch' }} value={l.unit} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, unit: e.target.value } : x))} /></td>
-                <td className="p-1 text-right"><input type="number" className="border rounded text-right" style={{ width: '10ch' }} value={l.price || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x))} /></td>
+                <td className="p-1 text-right"><PriceField value={Number(l.price || 0)} onChange={(n) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: n } : x))} /></td>
                 <td className="p-1 text-right">{money(vatAmount(l))}</td>
                 <td className="p-1 text-right font-bold">{money(lineTotal(l))}</td>
                 <td className="p-1 text-right"><button onClick={() => setLines(lines.length === 1 ? [emptyLine()] : lines.filter((x) => x.id !== l.id))} className="text-red-600">X</button></td>
