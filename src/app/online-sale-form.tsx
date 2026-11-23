@@ -119,7 +119,16 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-3">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '8%' }} />
+          </colgroup>
           <thead className="text-white" style={{ background: color }}>
             <tr>
               <th className="p-2 text-left">Barcode</th>
@@ -136,11 +145,11 @@ export default function OnlineSale({ source }: { source: 'lazada' | 'shopee' }) 
               <tr key={l.id} className="border-t">
                 <td className="p-1"><input className="border rounded px-2 py-2 w-full" value={l.barcode} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} /></td>
                 <td className="p-1"><input className="border rounded px-2 py-2 w-full" value={l.partNumber} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x))} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-2 w-24 text-right" value={l.amount} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, amount: e.target.value } : x))} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-2 w-24 text-right" value={l.commission} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, commission: e.target.value } : x))} /></td>
-                <td className="p-1"><input className="border rounded px-2 py-2 w-16 text-center" value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-2 w-full text-right" value={l.amount} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, amount: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-2 w-full text-right" value={l.commission} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, commission: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-2 py-2 w-full text-center" value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: e.target.value } : x))} /></td>
                 <td className="p-2 text-right font-bold">{money(lineTotal(l))}</td>
-                <td className="p-1"><button onClick={() => setLines(lines.filter((x) => x.id !== l.id))} className="bg-red-600 text-white rounded px-2 py-1">X</button></td>
+                <td className="p-1 text-center"><button onClick={() => setLines(lines.filter((x) => x.id !== l.id))} className="bg-red-600 text-white rounded px-2 py-1">X</button></td>
               </tr>
             ))}
           </tbody>
