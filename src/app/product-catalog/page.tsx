@@ -305,44 +305,27 @@ export default function ProductCatalogPage() {
       sellingPrice,
     }; }).filter((p) => p.partNumber && p.name);
     if (newProducts.length === 0) return alert('No valid rows. Need Part Number and Name columns.');
-    const existing = await loadProductsCloud().catch(() => products);
-    const merged = [...existing];
-    let added = 0;
-    let updatedCount = 0;
-    newProducts.forEach((incoming) => {
-      const part = incoming.partNumber.toLowerCase();
-      const brand = String(incoming.brand || '').toLowerCase();
-      const index = merged.findIndex((p) =>
-        p.partNumber.toLowerCase() === part && String(p.brand || '').toLowerCase() === brand
-      );
-      if (index >= 0) {
-        merged[index] = { ...merged[index], ...incoming, id: merged[index].id };
-        updatedCount += 1;
-      } else {
-        merged.push(incoming);
-        added += 1;
-      }
-    });
-    setProducts(merged);
-    localStorage.setItem('anlurich-products', JSON.stringify(merged));
     setUploadStatus(`Saving ${newProducts.length} rows to Supabase...`);
     try {
-      const changed = newProducts.map((incoming) => merged.find((p) =>
-        p.partNumber.toLowerCase() === incoming.partNumber.toLowerCase() &&
-        String(p.brand || '').toLowerCase() === String(incoming.brand || '').toLowerCase()
-      ) || incoming);
-      const res = await fetch('/api/records', {
+      const uploadRows = newProducts.map((p) => ({ ...p, id: `${p.partNumber}-${p.brand || ''}`.slice(0, 120) }));
+      const res = await fetch('/api/products-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'products', migrate: true, rows: changed }),
+        body: JSON.stringify({ rows: uploadRows }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the upload.');
-      setUploadStatus(`Done. Added ${added}, updated ${updatedCount}.`);
-      alert(`Done. Added ${added}, updated ${updatedCount}. Old products were kept.`);
+      const existing = products;
+      const byKey = new Map(existing.map((p) => [`${String(p.partNumber || '').toLowerCase()}|${String(p.brand || '').toLowerCase()}`, p]));
+      uploadRows.forEach((row) => byKey.set(`${row.partNumber.toLowerCase()}|${String(row.brand || '').toLowerCase()}`, row));
+      const merged = Array.from(byKey.values());
+      setProducts(merged);
+      localStorage.setItem('anlurich-products', JSON.stringify(merged));
+      setUploadStatus(`Done. Saved ${body.saved || uploadRows.length} products.`);
+      alert(`Done. Saved ${body.saved || uploadRows.length} products to Supabase.`);
     } catch (err: any) {
-      setUploadStatus('Saved on this computer only.');
-      alert(`Saved on this computer only.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
+      setUploadStatus('Upload failed.');
+      alert(`Upload failed.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
     if (fileRef.current) fileRef.current.value = '';
   };
