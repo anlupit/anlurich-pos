@@ -14,6 +14,26 @@ type QuoteLine = {
   laborPrice: number;
 };
 
+function PriceField({ value, onChange, width }: { value: number; onChange: (n: number) => void; width: string }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text !== null ? text : (value ? Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  return (
+    <input
+      inputMode="decimal"
+      className="border rounded px-1 py-1 text-right"
+      style={{ width }}
+      value={shown}
+      onFocus={() => setText(value ? String(value) : '')}
+      onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
+      onBlur={() => {
+        const raw = String(text || '').replace(/[^0-9.]/g, '');
+        onChange(raw ? Math.round((parseFloat(raw) || 0) * 100) / 100 : 0);
+        setText(null);
+      }}
+    />
+  );
+}
+
 const BRANCH_HEADERS: Record<string, { name: string; location: string }> = {
   anlurich: { name: 'ANLURICH OPC', location: 'Silang, Cavite' },
   dasma: { name: 'DASMA AUTO PARTS', location: 'Dasma, Cavite' },
@@ -49,7 +69,7 @@ export default function QuotationPage() {
   const [hasLabor, setHasLabor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [lines, setLines] = useState<QuoteLine[]>([
-    { id: '1', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 },
+    { id: '1', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0, laborPrice: 0 },
   ]);
 
   useEffect(() => {
@@ -82,7 +102,7 @@ export default function QuotationPage() {
   const removeLine = (id: string) => {
     setLines((prev) => {
       const next = prev.filter((l) => l.id !== id);
-      return next.length ? next : [{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }];
+      return next.length ? next : [{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 }];
     });
   };
 
@@ -153,7 +173,7 @@ export default function QuotationPage() {
     setYearModel('');
     setChasisNo('');
     setNotes('');
-    setLines([{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0, laborPrice: 0 }]);
+    setLines([{ id: Date.now().toString(), partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0, laborPrice: 0 }]);
     setQuotationNo(nextQuotationNo());
     setEditingId(null);
   };
@@ -341,10 +361,10 @@ export default function QuotationPage() {
                   <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
                   <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                   <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                  <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 text-center" style={{ width: '4ch' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                  <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center" style={{ width: '4ch' }} value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
                   <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '8ch' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                  <td className="p-1"><input className="border rounded px-1 py-1 text-right" style={{ width: '12ch' }} value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
-                  {hasLabor && <td className="p-1"><input className="border rounded px-1 py-1 text-right" style={{ width: '10ch' }} value={Number(line.laborPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'laborPrice', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>}
+                  <td className="p-1"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} width="12ch" /></td>
+                  {hasLabor && <td className="p-1"><PriceField value={Number(line.laborPrice || 0)} onChange={(n) => updateLine(line.id, 'laborPrice', n)} width="10ch" /></td>}
                   <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="p-1 text-center"><button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button></td>
                 </tr>

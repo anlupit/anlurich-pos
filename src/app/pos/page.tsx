@@ -17,6 +17,25 @@ type Line = {
   labor?: number;
 };
 
+function PriceField({ value, onChange, className }: { value: number; onChange: (n: number) => void; className?: string }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text !== null ? text : (value ? Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  return (
+    <input
+      inputMode="decimal"
+      className={className || 'border rounded px-1 py-1 w-full text-right'}
+      value={shown}
+      onFocus={() => setText(value ? String(value) : '')}
+      onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
+      onBlur={() => {
+        const raw = String(text || '').replace(/[^0-9.]/g, '');
+        onChange(raw ? Math.round((parseFloat(raw) || 0) * 100) / 100 : 0);
+        setText(null);
+      }}
+    />
+  );
+}
+
 export default function POSPage() {
   const pathname = usePathname();
   const noInvoice = pathname === '/no-invoice';
@@ -841,8 +860,8 @@ export default function POSPage() {
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center" value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1 text-right"><input className="border rounded px-1 py-1 w-full text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
-                {hasLabor && <td className="p-1 text-right"><input className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={Number(line.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>}
+                <td className="p-1 text-right"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} /></td>
+                {hasLabor && <td className="p-1 text-right"><PriceField value={Number(line.labor || 0)} onChange={(n) => updateLine(line.id, 'labor', n)} className="border rounded px-2 py-1 text-[18px] text-right" /></td>}
                 <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button>
