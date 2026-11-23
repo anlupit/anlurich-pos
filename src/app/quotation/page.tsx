@@ -20,7 +20,7 @@ function PriceField({ value, onChange, width }: { value: number; onChange: (n: n
   return (
     <input
       inputMode="decimal"
-      className="border rounded px-1 py-1 text-right"
+      className="border rounded px-1 py-1 text-center"
       style={{ width }}
       value={shown}
       onFocus={() => setText(value ? String(value) : '')}
@@ -293,11 +293,11 @@ export default function QuotationPage() {
               <table className="w-full text-sm">
                 <thead className="bg-teal-500 text-white">
                   <tr>
-                    <th className="text-left p-2">Date</th>
-                    <th className="text-left p-2">Quotation No.</th>
-                    <th className="text-left p-2">Customer</th>
-                    <th className="text-left p-2">Plate No.</th>
-                    <th className="text-right p-2">Total</th>
+                    <th className="text-center p-2">Date</th>
+                    <th className="text-center p-2">Quotation No.</th>
+                    <th className="text-center p-2">Customer</th>
+                    <th className="text-center p-2">Plate No.</th>
+                    <th className="text-center p-2">Total</th>
                     <th className="p-2"></th>
                   </tr>
                 </thead>
@@ -308,7 +308,7 @@ export default function QuotationPage() {
                       <td className="p-2 font-medium">{q.quotationNo}</td>
                       <td className="p-2">{q.customerName}</td>
                       <td className="p-2">{q.plateNo || '—'}</td>
-                      <td className="p-2 text-right">₱{q.grandTotal?.toLocaleString()}</td>
+                      <td className="p-2 text-center">₱{q.grandTotal?.toLocaleString()}</td>
                       <td className="p-2 text-center whitespace-nowrap">
                         <button onClick={() => { setViewQuote(q); setViewEmail(q.customerEmail || ''); }} className="text-blue-600 text-xs font-medium mr-2">View / Edit</button>
                         <button onClick={() => deleteQuote(q)} className="text-red-600 text-xs font-medium">Delete</button>
@@ -325,23 +325,23 @@ export default function QuotationPage() {
         <div className="bg-white rounded-xl shadow p-4 mb-4">
           <h2 className="font-semibold mb-3">Customer Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-            <input className="border rounded-lg px-3 py-2" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Contact Number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Customer Email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2 bg-gray-50" value={quotationNo} readOnly placeholder="Quotation No." />
+            <label className="text-sm font-medium text-center">Customer Name<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Contact Number<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Contact Number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Customer Email<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Customer Email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Quotation No.<input className="border rounded-lg px-3 py-2 w-full text-center mt-1 bg-gray-50" value={quotationNo} readOnly /></label>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <input className="border rounded-lg px-3 py-2" placeholder="Plate No." value={plateNo} onChange={(e) => setPlateNo(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Car Make" value={carMake} onChange={(e) => setCarMake(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Car Model" value={carModel} onChange={(e) => setCarModel(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Year Model" value={yearModel} onChange={(e) => setYearModel(e.target.value)} />
-            <input className="border rounded-lg px-3 py-2" placeholder="Chasis No." value={chasisNo} onChange={(e) => setChasisNo(e.target.value)} />
+            <label className="text-sm font-medium text-center">Plate No.<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Plate No." value={plateNo} onChange={(e) => setPlateNo(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Car Make<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Car Make" value={carMake} onChange={(e) => setCarMake(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Car Model<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Car Model" value={carModel} onChange={(e) => setCarModel(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Year Model<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Year Model" value={yearModel} onChange={(e) => setYearModel(e.target.value)} /></label>
+            <label className="text-sm font-medium text-center">Chasis No.<input className="border rounded-lg px-3 py-2 w-full text-center mt-1" placeholder="Chasis No." value={chasisNo} onChange={(e) => setChasisNo(e.target.value)} /></label>
           </div>
         </div>
 
         {/* Product Lines */}
         <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
                 <th className="p-2 text-center">Part Number</th>
@@ -358,14 +358,14 @@ export default function QuotationPage() {
             <tbody>
               {lines.map((line) => (
                 <tr key={line.id} className="border-t">
-                  <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
-                  <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                  <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '15ch' }} value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                  <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center" style={{ width: '4ch' }} value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
-                  <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '8ch' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
+                  <td className="p-1"><input className="border rounded px-2 py-1 text-center w-full" value={line.partNumber} onChange={(e) => updateLine(line.id, 'partNumber', e.target.value)} /></td>
+                  <td className="p-1"><input className="border rounded px-2 py-1 text-center w-full" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                  <td className="p-1"><input className="border rounded px-2 py-1 text-center w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                  <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center w-full" value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
+                  <td className="p-1"><input className="border rounded px-1 py-1 text-center w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                   <td className="p-1"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} width="12ch" /></td>
                   {hasLabor && <td className="p-1"><PriceField value={Number(line.laborPrice || 0)} onChange={(n) => updateLine(line.id, 'laborPrice', n)} width="10ch" /></td>}
-                  <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  <td className="p-1 text-center font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="p-1 text-center"><button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button></td>
                 </tr>
               ))}
@@ -446,12 +446,12 @@ export default function QuotationPage() {
           </colgroup>
           <thead>
             <tr className="border-b">
-              <th className="text-left py-0.5">Description</th>
-              <th className="text-left py-0.5">Brand</th>
+              <th className="text-center py-0.5">Description</th>
+              <th className="text-center py-0.5">Brand</th>
               <th className="text-center py-0.5">Qty</th>
-              <th className="text-right py-0.5">Price</th>
-              {printSnap.lines.some((l: any) => Number(l.laborPrice) > 0) && <th className="text-right py-0.5">Labor</th>}
-              <th className="text-right py-0.5">Total</th>
+              <th className="text-center py-0.5">Price</th>
+              {printSnap.lines.some((l: any) => Number(l.laborPrice) > 0) && <th className="text-center py-0.5">Labor</th>}
+              <th className="text-center py-0.5">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -460,14 +460,14 @@ export default function QuotationPage() {
                 <td className="py-0.5">{l.description}</td>
                 <td className="py-0.5">{l.brand}</td>
                 <td className="py-0.5 text-center">{l.qty}</td>
-                <td className="py-0.5 text-right">{l.price.toLocaleString()}</td>
-                {printSnap.lines.some((x: any) => Number(x.laborPrice) > 0) && <td className="py-0.5 text-right">{(l.laborPrice || 0).toLocaleString()}</td>}
-                <td className="py-0.5 text-right">{(l.qty * l.price + (Number(l.laborPrice) || 0)).toLocaleString()}</td>
+                <td className="py-0.5 text-center">{l.price.toLocaleString()}</td>
+                {printSnap.lines.some((x: any) => Number(x.laborPrice) > 0) && <td className="py-0.5 text-center">{(l.laborPrice || 0).toLocaleString()}</td>}
+                <td className="py-0.5 text-center">{(l.qty * l.price + (Number(l.laborPrice) || 0)).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="text-right font-bold mt-2">GRAND TOTAL: {printSnap.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div className="text-center font-bold mt-2">GRAND TOTAL: {printSnap.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
       )}
     </div>

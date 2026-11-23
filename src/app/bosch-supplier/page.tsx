@@ -14,7 +14,7 @@ function PriceField({ value, onChange }: { value: number; onChange: (n: number) 
   return (
     <input
       inputMode="decimal"
-      className="border rounded text-right"
+      className="border rounded text-center"
       style={{ width: '12ch' }}
       value={shown}
       onFocus={() => setText(value ? String(value) : '')}
@@ -177,7 +177,7 @@ export default function BoschSupplierInvoicePage() {
           {supplierOpen && supplier.trim() && (
             <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
               {suppliers.filter((s) => String(s.name || '').toLowerCase().includes(supplier.trim().toLowerCase())).slice(0, 8).map((s) => (
-                <button type="button" key={s.id || s.name} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplier(s.name); setSupplierOpen(false); }}>{s.name}</button>
+                <button type="button" key={s.id || s.name} className="block w-full text-center px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplier(s.name); setSupplierOpen(false); }}>{s.name}</button>
               ))}
             </div>
           )}
@@ -189,45 +189,45 @@ export default function BoschSupplierInvoicePage() {
         <table className="w-full text-sm">
           <thead className="text-white" style={{ background: '#002366' }}>
             <tr>
-              <th className="p-2 text-left">Barcode</th>
-              <th className="p-2 text-left">Part Number</th>
-              <th className="p-2 text-left">Product Name</th>
-              <th className="p-2 text-left">Description</th>
-              <th className="p-2 text-left">Segment</th>
+              <th className="p-2 text-center">Barcode</th>
+              <th className="p-2 text-center">Part Number</th>
+              <th className="p-2 text-center">Product Name</th>
+              <th className="p-2 text-center">Description</th>
+              <th className="p-2 text-center">Segment</th>
               <th className="p-2 text-center">Qty</th>
               <th className="p-2 text-center">Unit</th>
-              <th className="p-2 text-right">Net Amount</th>
-              <th className="p-2 text-right">12% VAT</th>
-              <th className="p-2 text-right">Grand Total</th>
+              <th className="p-2 text-center">Net Amount</th>
+              <th className="p-2 text-center">12% VAT</th>
+              <th className="p-2 text-center">Grand Total</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {lines.map((l) => (
               <tr key={l.id} className="border-t">
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={l.barcode} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 text-center" style={{ width: '16ch' }} value={l.barcode} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, barcode: e.target.value } : x))} /></td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1" style={{ width: '16ch' }} value={l.partNumber} onChange={(e) => { setLines(lines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x)); suggestFor(l.id, e.target.value); }} />
+                  <input className="border rounded px-1 py-1 text-center" style={{ width: '16ch' }} value={l.partNumber} onChange={(e) => { setLines(lines.map((x) => x.id === l.id ? { ...x, partNumber: e.target.value } : x)); suggestFor(l.id, e.target.value); }} />
                   {suggest?.id === l.id && (
                     <div className="absolute z-20 bg-white border rounded shadow max-h-40 overflow-auto">
-                      {suggest.matches.map((p) => <button type="button" key={p.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => pick(l.id, p)}>{p.partNumber} · {p.name}</button>)}
+                      {suggest.matches.map((p) => <button type="button" key={p.id} className="block w-full text-center px-2 py-1 hover:bg-blue-50" onMouseDown={() => pick(l.id, p)}>{p.partNumber} · {p.name}</button>)}
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '18ch' }} value={l.productName} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, productName: e.target.value } : x))} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1" style={{ width: '24ch' }} value={l.description} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, description: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 text-center" style={{ width: '18ch' }} value={l.productName} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, productName: e.target.value } : x))} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 text-center" style={{ width: '24ch' }} value={l.description} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, description: e.target.value } : x))} /></td>
                 <td className="p-1">
-                  <select className="border rounded px-1 py-1" style={{ width: '16ch' }} value={l.segment} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, segment: e.target.value } : x))}>
+                  <select className="border rounded px-1 py-1 text-center" style={{ width: '16ch' }} value={l.segment} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, segment: e.target.value } : x))}>
                     <option value="">—</option>
                     {SEGMENTS.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </td>
                 <td className="p-1 text-center"><input inputMode="numeric" className="border rounded text-center" style={{ width: '6ch' }} value={l.qty || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0 } : x))} /></td>
                 <td className="p-1 text-center"><input className="border rounded text-center" style={{ width: '6ch' }} value={l.unit} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, unit: e.target.value } : x))} /></td>
-                <td className="p-1 text-right"><PriceField value={Number(l.price || 0)} onChange={(n) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: n } : x))} /></td>
-                <td className="p-1 text-right">{money(vatAmount(l))}</td>
-                <td className="p-1 text-right font-bold">{money(lineTotal(l))}</td>
-                <td className="p-1 text-right"><button onClick={() => setLines(lines.length === 1 ? [emptyLine()] : lines.filter((x) => x.id !== l.id))} className="text-red-600">X</button></td>
+                <td className="p-1 text-center"><PriceField value={Number(l.price || 0)} onChange={(n) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: n } : x))} /></td>
+                <td className="p-1 text-center">{money(vatAmount(l))}</td>
+                <td className="p-1 text-center font-bold">{money(lineTotal(l))}</td>
+                <td className="p-1 text-center"><button onClick={() => setLines(lines.length === 1 ? [emptyLine()] : lines.filter((x) => x.id !== l.id))} className="text-red-600">X</button></td>
               </tr>
             ))}
           </tbody>

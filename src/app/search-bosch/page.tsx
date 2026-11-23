@@ -108,12 +108,12 @@ export default function SearchBoschInvoicePage() {
           <table className="w-full text-sm">
             <thead className="text-white" style={{ background: '#002366' }}>
               <tr>
-                <th className="p-2 text-left">Date</th>
-                <th className="p-2 text-left">Invoice No.</th>
-                <th className="p-2 text-left">Supplier</th>
-                <th className="p-2 text-right">Net of VAT</th>
-                <th className="p-2 text-right">12% VAT</th>
-                <th className="p-2 text-right">Grand Total</th>
+                <th className="p-2 text-center">Date</th>
+                <th className="p-2 text-center">Invoice No.</th>
+                <th className="p-2 text-center">Supplier</th>
+                <th className="p-2 text-center">Net of VAT</th>
+                <th className="p-2 text-center">12% VAT</th>
+                <th className="p-2 text-center">Grand Total</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -123,10 +123,10 @@ export default function SearchBoschInvoicePage() {
                   <td className="p-2">{formatDate(r.date || r.invoiceDate)}</td>
                   <td className="p-2 font-medium">{r.invoiceNo || r.invoiceNumber}</td>
                   <td className="p-2">{r.supplier || r.supplierName}</td>
-                  <td className="p-2 text-right">{money(r.netTotal)}</td>
-                  <td className="p-2 text-right">{money(r.vatTotal)}</td>
-                  <td className="p-2 text-right font-bold">{money(r.total)}</td>
-                  <td className="p-2 text-right whitespace-nowrap">
+                  <td className="p-2 text-center">{money(r.netTotal)}</td>
+                  <td className="p-2 text-center">{money(r.vatTotal)}</td>
+                  <td className="p-2 text-center font-bold">{money(r.total)}</td>
+                  <td className="p-2 text-center whitespace-nowrap">
                     <button onClick={() => setViewing(JSON.parse(JSON.stringify(r)))} className="text-blue-700 font-bold mr-3">Edit / View</button>
                     <button onClick={() => remove(r)} className="text-red-600 font-black">X</button>
                   </td>
@@ -148,26 +148,26 @@ export default function SearchBoschInvoicePage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-1 text-left">Part Number</th>
-                  <th className="p-1 text-left">Product Name</th>
-                  <th className="p-1 text-left">Description</th>
+                  <th className="p-1 text-center">Part Number</th>
+                  <th className="p-1 text-center">Product Name</th>
+                  <th className="p-1 text-center">Description</th>
                   <th className="p-1 text-center">Qty</th>
-                  <th className="p-1 text-right">Net Amount</th>
+                  <th className="p-1 text-center">Net Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {(viewing.lines || []).map((l: any, i: number) => (
                   <tr key={i} className="border-t">
-                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
-                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.productName || l.model || ''} onChange={(e) => updateLine(i, 'productName', e.target.value)} /></td>
-                    <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={l.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={l.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={l.productName || l.model || ''} onChange={(e) => updateLine(i, 'productName', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={l.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
                     <td className="p-1 text-center"><input className="border rounded px-1 py-1 w-16 text-center" value={l.qty || ''} onChange={(e) => updateLine(i, 'qty', e.target.value)} /></td>
-                    <td className="p-1 text-right">{money((l.qty || 0) * (l.price || 0))}</td>
+                    <td className="p-1 text-center">{money((l.qty || 0) * (l.price || 0))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right font-black mt-3">Grand Total {money(viewing.total)}</div>
+            <div className="text-center font-black mt-3">Grand Total {money(viewing.total)}</div>
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => setViewing(null)} className="bg-gray-700 text-white px-4 py-2 rounded">Close</button>
               <button onClick={updateInvoice} className="text-white px-4 py-2 rounded font-bold" style={{ background: '#002366' }}>Update</button>

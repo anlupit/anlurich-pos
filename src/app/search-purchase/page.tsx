@@ -9,7 +9,7 @@ function PriceField({ value, onChange }: { value: number; onChange: (n: number) 
   return (
     <input
       inputMode="decimal"
-      className="w-28 border rounded px-2 py-1 text-right"
+      className="w-28 border rounded px-2 py-1 text-center"
       value={shown}
       onFocus={() => setText(value ? String(value) : '')}
       onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
@@ -269,34 +269,34 @@ export default function SearchPurchasePage() {
         <div className="flex flex-wrap items-end gap-2 mb-3" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">From Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
+            <input type="month" className="border rounded px-2 py-1 text-center" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">To Month / Year</div>
-            <input type="month" className="border rounded px-2 py-1" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
+            <input type="month" className="border rounded px-2 py-1 text-center" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Supplier Name</div>
-            <input className="border rounded px-2 py-1" style={{ width: '40ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '40ch' }} value={supplier} onChange={(e) => setSupplier(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Invoice No.</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInvoiceSearch(); } }} />
           </div>
           <button onClick={handleInvoiceSearch} className="bg-blue-700 text-white px-5 py-1.5 rounded-lg">Search Invoice</button>
         </div>
         <div className="flex flex-wrap items-end gap-2" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }}>
           <div>
             <div className="text-xs font-medium text-center mb-1">Barcode</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Part Number</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} value={part} onChange={(e) => setPart(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
           </div>
           <div>
             <div className="text-xs font-medium text-center mb-1">Brand</div>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={brand} onChange={(e) => setBrand(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} value={brand} onChange={(e) => setBrand(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProductSearch(); } }} />
           </div>
           <button onClick={handleProductSearch} className="bg-teal-600 text-white px-5 py-1.5 rounded-lg">Search Product</button>
         </div>
@@ -313,10 +313,10 @@ export default function SearchPurchasePage() {
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Invoice Date</th>
-                <th className="text-left p-2">Invoice No.</th>
-                <th className="text-left p-2">Supplier Name</th>
-                <th className="text-right p-2">Total Amount</th>
+                <th className="text-center p-2">Invoice Date</th>
+                <th className="text-center p-2">Invoice No.</th>
+                <th className="text-center p-2">Supplier Name</th>
+                <th className="text-center p-2">Total Amount</th>
                 <th className="text-center p-2">Status</th>
                 <th className="p-2"></th>
               </tr>
@@ -327,7 +327,7 @@ export default function SearchPurchasePage() {
                   <td className="p-2">{formatDate(r.invoiceDate)}</td>
                   <td className="p-2 font-medium">{r.invoiceNumber || r.invoiceNo}</td>
                   <td className="p-2">{r.supplierName}</td>
-                  <td className="p-2 text-right">{money(r.grandTotal)}</td>
+                  <td className="p-2 text-center">{money(r.grandTotal)}</td>
                   <td className="p-2 text-center">{String(r.status || 'unpaid').toLowerCase() === 'paid' ? 'Paid' : 'UnPaid'}</td>
                   <td className="p-2 text-center"><button onClick={() => openInvoice(r.id)} className="text-blue-600 font-medium">View / Edit</button></td>
                 </tr>
@@ -343,13 +343,13 @@ export default function SearchPurchasePage() {
           <table className="w-full" style={{ fontSize: '20px' }}>
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Invoice Date</th>
-                <th className="text-left p-2">Invoice Number</th>
-                <th className="text-left p-2">Supplier Name</th>
-                <th className="text-left p-2">Part Number</th>
-                <th className="text-left p-2">Brand</th>
+                <th className="text-center p-2">Invoice Date</th>
+                <th className="text-center p-2">Invoice Number</th>
+                <th className="text-center p-2">Supplier Name</th>
+                <th className="text-center p-2">Part Number</th>
+                <th className="text-center p-2">Brand</th>
                 <th className="text-center p-2">Delivered Qty</th>
-                <th className="text-right p-2">Net Amount</th>
+                <th className="text-center p-2">Net Amount</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -362,7 +362,7 @@ export default function SearchPurchasePage() {
                   <td className="p-2">{r.partNumber || '—'}</td>
                   <td className="p-2">{r.brand || '—'}</td>
                   <td className="p-2 text-center">{r.qty ?? '—'}</td>
-                  <td className="p-2 text-right">{r.netAmount != null ? money(r.netAmount) : '—'}</td>
+                  <td className="p-2 text-center">{r.netAmount != null ? money(r.netAmount) : '—'}</td>
                   <td className="p-2 text-center"><button onClick={() => openInvoice(r.invoiceId)} className="text-blue-600 font-medium">View / Edit</button></td>
                 </tr>
               ))}
@@ -397,23 +397,23 @@ export default function SearchPurchasePage() {
               <input type="date" className="border rounded px-3 py-2" value={String(viewing.invoiceDate || '').slice(0, 10)} onChange={(e) => setViewing({ ...viewing, invoiceDate: e.target.value })} />
             </div>
             <table className="w-full text-sm mb-3">
-              <thead className="bg-gray-100"><tr><th className="text-left p-1">Part Number</th><th className="text-left p-1">Description</th><th className="text-left p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-right p-1">Gross Price</th><th className="text-right p-1">Price</th><th className="text-right p-1">Total</th></tr></thead>
+              <thead className="bg-gray-100"><tr><th className="text-center p-1">Part Number</th><th className="text-center p-1">Description</th><th className="text-center p-1">Brand</th><th className="text-center p-1">Qty</th><th className="text-center p-1">Gross Price</th><th className="text-center p-1">Price</th><th className="text-center p-1">Total</th></tr></thead>
               <tbody>
                 {(viewing.lines || []).map((line: any, i: number) => (
                   <tr key={i} className="border-t">
-                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '20ch' }} value={line.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
-                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
-                    <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} value={line.partNumber || ''} onChange={(e) => updateLine(i, 'partNumber', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1 text-center" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
+                    <td className="p-1"><input className="border rounded px-2 py-1 text-center" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
                     <td className="p-1 text-center"><input inputMode="numeric" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
-                    <td className="p-1 text-right"><PriceField value={Number(line.grossPrice || line.price || 0)} onChange={(n) => updateLine(i, 'grossPrice', n)} /></td>
-                    <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
-                    <td className="p-1 text-right font-medium">₱{Number(line.total || (Number(line.qty || 0) * Number(line.price || line.netPrice || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="p-1 text-center"><PriceField value={Number(line.grossPrice || line.price || 0)} onChange={(n) => updateLine(i, 'grossPrice', n)} /></td>
+                    <td className="p-1 text-center"><input className="w-28 border rounded px-2 py-1 text-center" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
+                    <td className="p-1 text-center font-medium">₱{Number(line.total || (Number(line.qty || 0) * Number(line.price || line.netPrice || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <button type="button" onClick={addLine} className="mb-3 bg-blue-700 text-white px-3 py-1 rounded">+ Add Line</button>
-            <div className="text-right font-bold mb-3">Total: ₱{Number(viewing.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-center font-bold mb-3">Total: ₱{Number(viewing.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="flex gap-3">
               <button onClick={() => setViewing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>

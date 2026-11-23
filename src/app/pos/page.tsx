@@ -23,7 +23,7 @@ function PriceField({ value, onChange, className }: { value: number; onChange: (
   return (
     <input
       inputMode="decimal"
-      className={className || 'border rounded px-1 py-1 w-full text-right'}
+      className={className || 'border rounded px-1 py-1 w-full text-center'}
       value={shown}
       onFocus={() => setText(value ? String(value) : '')}
       onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
@@ -732,7 +732,7 @@ export default function POSPage() {
         {(currentBranch() || '').toLowerCase() === 'sezan' && (
           <label className="ml-auto flex items-center gap-2 text-sm font-bold">
             Sales
-            <select className="border rounded px-2 py-1" value={salesOutlet} onChange={(e) => setSalesOutlet(e.target.value)}>
+            <select className="border rounded px-2 py-1 text-center" value={salesOutlet} onChange={(e) => setSalesOutlet(e.target.value)}>
               <option value="sezan">Sezan Baliwag Auto Parts</option>
               <option value="timitsu">Timitsu Auto Parts</option>
             </select>
@@ -753,7 +753,7 @@ export default function POSPage() {
             <option>Check</option>
             {!noInvoice && <option>Credit</option>}
           </select>
-          <input className="border rounded px-2 py-2 mt-2 block text-left" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
+          <input className="border rounded px-2 py-2 mt-2 block text-center" style={{ width: '20ch' }} placeholder={paymentMethod === 'Check' ? 'Check No.' : 'Reference No.'} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
         </div>
         {!noInvoice && (
         <div className="md:col-span-4">
@@ -763,7 +763,7 @@ export default function POSPage() {
             {customerMatches.length > 0 && (
               <div className="absolute z-30 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-auto">
                 {customerMatches.map((c) => (
-                  <button type="button" key={c.id} className="block w-full text-left px-2 py-1 text-sm hover:bg-blue-50" onMouseDown={() => pickCustomer(c)}>
+                  <button type="button" key={c.id} className="block w-full text-center px-2 py-1 text-sm hover:bg-blue-50" onMouseDown={() => pickCustomer(c)}>
                     {c.name} {c.phone ? `· ${c.phone}` : ''} {c.plateNo ? `· ${c.plateNo}` : ''}
                   </button>
                 ))}
@@ -790,9 +790,9 @@ export default function POSPage() {
           <label className="block text-[18px] font-medium mb-1">Sales Invoice No.</label>
           <input className="w-full border rounded px-3 py-2 text-[18px]" placeholder="Type invoice no." value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} readOnly={noInvoice} />
         </div>
-        <div className="md:col-span-2 text-right">
+        <div className="md:col-span-2 text-center">
           <label className="block text-[18px] font-medium mb-1">Date & Time</label>
-          <input className="w-full border rounded px-3 py-2 bg-gray-50 text-right" value={saleDateTime} readOnly />
+          <input className="w-full border rounded px-3 py-2 bg-gray-50 text-center" value={saleDateTime} readOnly />
           {!noInvoice && (
           <div className="mt-2">
             <div className="text-xs font-black tracking-wide">TOTAL POINTS</div>
@@ -813,15 +813,15 @@ export default function POSPage() {
         <table className="text-sm md:text-[16px]" style={{ minWidth: '980px', width: '100%' }}>
           <thead className="bg-teal-500 text-white">
             <tr>
-              <th className="p-1 text-left w-[12%]">Barcode</th>
-              <th className="p-1 text-left w-[12%]">Part Number</th>
-              <th className="p-1 text-left w-[28%]">Description</th>
-              <th className="p-1 text-left w-[12%]">Brand</th>
+              <th className="p-1 text-center w-[12%]">Barcode</th>
+              <th className="p-1 text-center w-[12%]">Part Number</th>
+              <th className="p-1 text-center w-[28%]">Description</th>
+              <th className="p-1 text-center w-[12%]">Brand</th>
               <th className="p-1 text-center w-[6%]">Qty</th>
-              <th className="p-1 text-left w-[6%]">Unit</th>
-              <th className="p-1 text-right w-[10%]">Price</th>
-              {hasLabor && <th className="p-1 text-right w-[8%]">Labor</th>}
-              <th className="p-1 text-right w-[10%]">Total</th>
+              <th className="p-1 text-center w-[6%]">Unit</th>
+              <th className="p-1 text-center w-[10%]">Price</th>
+              {hasLabor && <th className="p-1 text-center w-[8%]">Labor</th>}
+              <th className="p-1 text-center w-[10%]">Total</th>
               <th className="p-1 w-[4%]"></th>
             </tr>
           </thead>
@@ -829,11 +829,11 @@ export default function POSPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1 w-full" value={line.barcode} onChange={(e) => { lookupBarcode(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); setLineSuggest(null); } }} />
+                  <input className="border rounded px-1 py-1 w-full text-center" value={line.barcode} onChange={(e) => { lookupBarcode(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value, true); setLineSuggest(null); } }} />
                   {lineSuggest?.id === line.id && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
-                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                        <button type="button" key={p.id} className="block w-full text-center px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
                           <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
                           <div className="text-gray-600">{p.description || p.name}</div>
                           <div className="text-green-700">₱{Number(p.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
@@ -843,11 +843,11 @@ export default function POSPage() {
                   )}
                 </td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1 w-full" value={line.partNumber} onChange={(e) => { lookupProduct(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} />
+                  <input className="border rounded px-1 py-1 w-full text-center" value={line.partNumber} onChange={(e) => { lookupProduct(line.id, e.target.value); suggestForLine(line.id, e.target.value); }} />
                   {lineSuggest?.id === line.id && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
-                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                        <button type="button" key={p.id} className="block w-full text-center px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
                           <div className="font-medium">{p.partNumber} · {p.brand || '—'}</div>
                           <div className="text-gray-600">{p.description || p.name}</div>
                           <div className="text-green-700">₱{Number(p.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
@@ -856,13 +856,13 @@ export default function POSPage() {
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center" value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1 text-right"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} /></td>
-                {hasLabor && <td className="p-1 text-right"><PriceField value={Number(line.labor || 0)} onChange={(n) => updateLine(line.id, 'labor', n)} className="border rounded px-2 py-1 text-[18px] text-right" /></td>}
-                <td className="p-1 text-right font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
+                <td className="p-1 text-center"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} /></td>
+                {hasLabor && <td className="p-1 text-center"><PriceField value={Number(line.labor || 0)} onChange={(n) => updateLine(line.id, 'labor', n)} className="border rounded px-2 py-1 text-[18px] text-center" /></td>}
+                <td className="p-1 text-center font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="p-1 text-center">
                   <button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button>
                 </td>
@@ -908,12 +908,12 @@ export default function POSPage() {
             <div className="flex justify-between"><span>Sub Total</span><span>₱{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between items-center">
               <span>Discount</span>
-              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
+              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-center" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0.00" />
             </div>
             {redeemPts > 0 && <div className="flex justify-between text-green-700"><span>Points Redeemed</span><span>-₱{redeemPts.toLocaleString()}</span></div>}
             <div className="flex justify-between items-center">
               <label className="flex items-center gap-2"><input type="checkbox" checked={lessEwt} onChange={(e) => setLessEwt(e.target.checked)} /> Less EWT</label>
-              {lessEwt && <input type="number" min={0} step="0.01" className="border rounded px-2 py-1 w-20 text-right" value={ewtPercent} onChange={(e) => setEwtPercent(e.target.value)} placeholder="%" />}
+              {lessEwt && <input type="number" min={0} step="0.01" className="border rounded px-2 py-1 w-20 text-center" value={ewtPercent} onChange={(e) => setEwtPercent(e.target.value)} placeholder="%" />}
             </div>
             {lessEwt && <div className="flex justify-between text-red-700"><span>EWT {ewtPercent || 0}%</span><span>-₱{ewt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
             <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
@@ -921,7 +921,7 @@ export default function POSPage() {
             <div className="flex justify-between text-sm text-gray-600"><span>12% VAT</span><span>₱{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between items-center border-t pt-2">
               <span>CASH TENDER</span>
-              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-right" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
+              <input type="number" min={0} className="border rounded px-2 py-1 w-28 text-center" value={cashTender} onChange={(e) => setCashTender(e.target.value)} placeholder="0.00" />
             </div>
             <div className="flex justify-between font-bold text-red-600 text-lg">
               <span>CHANGE</span>
@@ -1015,15 +1015,15 @@ export default function POSPage() {
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="border-b bg-gray-100">
-                        <th className="text-left p-1">Time</th>
-                        <th className="text-left p-1">Customer</th>
-                        <th className="text-left p-1">Invoice</th>
-                        <th className="text-left p-1">Ref / Check</th>
-                        <th className="text-right p-1">Total</th>
-                        <th className="text-right p-1">Tendered</th>
-                        <th className="text-right p-1">Change</th>
-                        <th className="text-right p-1">Net VAT</th>
-                        <th className="text-right p-1">12% VAT</th>
+                        <th className="text-center p-1">Time</th>
+                        <th className="text-center p-1">Customer</th>
+                        <th className="text-center p-1">Invoice</th>
+                        <th className="text-center p-1">Ref / Check</th>
+                        <th className="text-center p-1">Total</th>
+                        <th className="text-center p-1">Tendered</th>
+                        <th className="text-center p-1">Change</th>
+                        <th className="text-center p-1">Net VAT</th>
+                        <th className="text-center p-1">12% VAT</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1041,11 +1041,11 @@ export default function POSPage() {
                               <td className="p-1">{s.customerName || '—'}</td>
                               <td className="p-1">{s.invoiceNo}</td>
                               <td className="p-1">{s.referenceNo || '—'}</td>
-                              <td className="p-1 text-right">{money(t)}</td>
-                              <td className="p-1 text-right">{money(s.cashTender || 0)}</td>
-                              <td className="p-1 text-right">{money(s.change || 0)}</td>
-                              <td className="p-1 text-right">{money(net)}</td>
-                              <td className="p-1 text-right">{money(vat)}</td>
+                              <td className="p-1 text-center">{money(t)}</td>
+                              <td className="p-1 text-center">{money(s.cashTender || 0)}</td>
+                              <td className="p-1 text-center">{money(s.change || 0)}</td>
+                              <td className="p-1 text-center">{money(net)}</td>
+                              <td className="p-1 text-center">{money(vat)}</td>
                             </tr>
                           );
                         })}
@@ -1054,7 +1054,7 @@ export default function POSPage() {
                   </table>
                 </div>
               ))}
-              <div className="mt-3 text-right space-y-1">
+              <div className="mt-3 text-center space-y-1">
                 <div>Net of VAT: {money(net)}</div>
                 <div>12% VAT: {money(vat)}</div>
                 <div className="font-bold text-lg">GRAND TOTAL: {money(grand)}</div>
@@ -1098,14 +1098,14 @@ export default function POSPage() {
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="border-b bg-gray-100">
-                    <th className="text-left p-1">Invoice Date</th>
-                    <th className="text-left p-1">Invoice No.</th>
-                    <th className="text-left p-1">Customer Name</th>
-                    <th className="text-left p-1">Payment Type</th>
-                    <th className="text-left p-1">Ref No./Check No.</th>
-                    <th className="text-right p-1">Net of VAT</th>
-                    <th className="text-right p-1">12% VAT</th>
-                    <th className="text-right p-1">Total Amount</th>
+                    <th className="text-center p-1">Invoice Date</th>
+                    <th className="text-center p-1">Invoice No.</th>
+                    <th className="text-center p-1">Customer Name</th>
+                    <th className="text-center p-1">Payment Type</th>
+                    <th className="text-center p-1">Ref No./Check No.</th>
+                    <th className="text-center p-1">Net of VAT</th>
+                    <th className="text-center p-1">12% VAT</th>
+                    <th className="text-center p-1">Total Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1116,14 +1116,14 @@ export default function POSPage() {
                       <td className="p-1">{s.customerName || '—'}</td>
                       <td className="p-1">{s.paymentMethod || 'Cash'}</td>
                       <td className="p-1">{s.referenceNo || '—'}</td>
-                      <td className="p-1 text-right">{money(s.net)}</td>
-                      <td className="p-1 text-right">{money(s.vat)}</td>
-                      <td className="p-1 text-right">{money(s.total)}</td>
+                      <td className="p-1 text-center">{money(s.net)}</td>
+                      <td className="p-1 text-center">{money(s.vat)}</td>
+                      <td className="p-1 text-center">{money(s.total)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="text-right font-bold mt-3 space-y-1">
+              <div className="text-center font-bold mt-3 space-y-1">
                 <div>Net of VAT: {money(netSum)}</div>
                 <div>12% VAT: {money(vatSum)}</div>
                 <div className="text-lg">GRAND TOTAL: {money(totalSum)}</div>
@@ -1166,11 +1166,11 @@ export default function POSPage() {
                 <thead className="bg-red-600 text-white">
                   <tr>
                     <th className="p-2"></th>
-                    <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Invoice</th>
-                    <th className="p-2 text-left">Name</th>
-                    <th className="p-2 text-left">TIN</th>
-                    <th className="p-2 text-right">Total</th>
+                    <th className="p-2 text-center">Date</th>
+                    <th className="p-2 text-center">Invoice</th>
+                    <th className="p-2 text-center">Name</th>
+                    <th className="p-2 text-center">TIN</th>
+                    <th className="p-2 text-center">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1181,14 +1181,14 @@ export default function POSPage() {
                       <td className="p-2">{s.invoiceNo}</td>
                       <td className="p-2">{s.customerName}</td>
                       <td className="p-2">{s.tin}</td>
-                      <td className="p-2 text-right">{money(s.total)}</td>
+                      <td className="p-2 text-center">{money(s.total)}</td>
                     </tr>
                   ))}
                   {unpaid.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-400">No unpaid credit</td></tr>}
                 </tbody>
               </table>
-              <div className="text-right font-bold mt-3">Selected: {selectedUnpaid.length} · {money(unpaid.filter((s) => selectedUnpaid.includes(s.id)).reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
-              <div className="text-right font-bold">Unpaid Total: {money(unpaid.reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
+              <div className="text-center font-bold mt-3">Selected: {selectedUnpaid.length} · {money(unpaid.filter((s) => selectedUnpaid.includes(s.id)).reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
+              <div className="text-center font-bold">Unpaid Total: {money(unpaid.reduce((n, s) => n + (Number(s.total) || 0), 0))}</div>
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <input className="border rounded px-2 py-2" placeholder="Check No." value={payCheck.no} onChange={(e) => setPayCheck({ ...payCheck, no: e.target.value })} />
                 <input className="border rounded px-2 py-2" placeholder="Bank Name" value={payCheck.bank} onChange={(e) => setPayCheck({ ...payCheck, bank: e.target.value })} />
@@ -1224,10 +1224,10 @@ export default function POSPage() {
               <div><strong>Contact:</strong> {savedSale.customerPhone || '—'}</div>
               <div><strong>Plate:</strong> {savedSale.plateNo || '—'}</div>
             </div>
-            <table className="w-full"><thead><tr className="border-b"><th className="text-left">Part No. / Description</th><th>Qty</th><th className="text-right">Price</th><th className="text-right">Total</th></tr></thead>
-              <tbody>{savedSale.items.map((item: any) => <tr key={item.itemNo} className="border-b"><td>{item.partNumber} {item.description}</td><td className="text-center">{item.qty}</td><td className="text-right">₱{money(item.price)}</td><td className="text-right">₱{money(item.total)}</td></tr>)}</tbody>
+            <table className="w-full"><thead><tr className="border-b"><th className="text-center">Part No. / Description</th><th>Qty</th><th className="text-center">Price</th><th className="text-center">Total</th></tr></thead>
+              <tbody>{savedSale.items.map((item: any) => <tr key={item.itemNo} className="border-b"><td>{item.partNumber} {item.description}</td><td className="text-center">{item.qty}</td><td className="text-center">₱{money(item.price)}</td><td className="text-center">₱{money(item.total)}</td></tr>)}</tbody>
             </table>
-            <div className="text-right mt-2 font-bold">GRAND TOTAL: ₱{money(savedSale.total)}</div>
+            <div className="text-center mt-2 font-bold">GRAND TOTAL: ₱{money(savedSale.total)}</div>
           </div>
         );
         return (
@@ -1243,13 +1243,13 @@ export default function POSPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ background: '#007FFF', color: 'white' }}>
-                  <th className="text-left p-1">Part No</th>
-                  <th className="text-left p-1">Description</th>
-                  <th className="text-left p-1">Brand</th>
+                  <th className="text-center p-1">Part No</th>
+                  <th className="text-center p-1">Description</th>
+                  <th className="text-center p-1">Brand</th>
                   <th className="text-center p-1">Qty</th>
-                  {showLabor && <th className="text-right p-1">Labor</th>}
-                  <th className="text-right p-1">Price</th>
-                  <th className="text-right p-1">Total</th>
+                  {showLabor && <th className="text-center p-1">Labor</th>}
+                  <th className="text-center p-1">Price</th>
+                  <th className="text-center p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -1259,14 +1259,14 @@ export default function POSPage() {
                     <td className="py-0.5">{item.description}</td>
                     <td className="py-0.5">{item.brand || ''}</td>
                     <td className="py-0.5 text-center">{item.qty}</td>
-                    {showLabor && <td className="py-0.5 text-right">{money(item.labor || 0)}</td>}
-                    <td className="py-0.5 text-right">{money(item.price)}</td>
-                    <td className="py-0.5 text-right">{money(item.total)}</td>
+                    {showLabor && <td className="py-0.5 text-center">{money(item.labor || 0)}</td>}
+                    <td className="py-0.5 text-center">{money(item.price)}</td>
+                    <td className="py-0.5 text-center">{money(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right mt-2">
+            <div className="text-center mt-2">
               <div>Subtotal {money(savedSale.subtotal)}</div>
               {savedSale.discount > 0 && <div>Discount {money(savedSale.discount)}</div>}
               <div>Net of VAT {money(net)}</div>

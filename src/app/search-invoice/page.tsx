@@ -146,19 +146,19 @@ export default function SearchInvoicePage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-medium text-center mb-0.5">Invoice No.</div>
-            <input className="border rounded px-1 py-1 w-full" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={onEnter} />
+            <input className="border rounded px-1 py-1 w-full text-center" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-medium text-center mb-0.5">Contact No.</div>
-            <input className="border rounded px-1 py-1 w-full" value={contact} onChange={(e) => setContact(e.target.value)} onKeyDown={onEnter} />
+            <input className="border rounded px-1 py-1 w-full text-center" value={contact} onChange={(e) => setContact(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div className="min-w-0 flex-[1.4]">
             <div className="text-[10px] font-medium text-center mb-0.5">Customer Name</div>
-            <input className="border rounded px-1 py-1 w-full" value={customer} onChange={(e) => setCustomer(e.target.value)} onKeyDown={onEnter} />
+            <input className="border rounded px-1 py-1 w-full text-center" value={customer} onChange={(e) => setCustomer(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-medium text-center mb-0.5">Plate No.</div>
-            <input className="border rounded px-1 py-1 w-full" value={plate} onChange={(e) => setPlate(e.target.value)} onKeyDown={onEnter} />
+            <input className="border rounded px-1 py-1 w-full text-center" value={plate} onChange={(e) => setPlate(e.target.value)} onKeyDown={onEnter} />
           </div>
           <button onClick={handleSearch} className="bg-blue-700 text-white px-3 py-1.5 rounded-lg shrink-0">Search</button>
         </div>
@@ -169,11 +169,11 @@ export default function SearchInvoicePage() {
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Plate No.</th>
-                <th className="text-left p-2">Vehicle</th>
-                <th className="text-left p-2">Description</th>
-                <th className="text-right p-2">Labor</th>
+                <th className="text-center p-2">Date</th>
+                <th className="text-center p-2">Plate No.</th>
+                <th className="text-center p-2">Vehicle</th>
+                <th className="text-center p-2">Description</th>
+                <th className="text-center p-2">Labor</th>
               </tr>
             </thead>
             <tbody>
@@ -183,7 +183,7 @@ export default function SearchInvoicePage() {
                   <td className="p-2">{s.plateNo || '—'}</td>
                   <td className="p-2">{s.vehicleType || '—'}</td>
                   <td className="p-2">{item.description || item.partNumber || '—'}</td>
-                  <td className="p-2 text-right">₱{Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  <td className="p-2 text-center">₱{Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 </tr>
               )))}
             </tbody>
@@ -200,11 +200,11 @@ export default function SearchInvoicePage() {
           <table className="w-full text-sm">
             <thead className="bg-teal-500 text-white">
               <tr>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Invoice No.</th>
-                <th className="text-left p-2">Customer</th>
-                <th className="text-left p-2">Contact</th>
-                <th className="text-right p-2">Total</th>
+                <th className="text-center p-2">Date</th>
+                <th className="text-center p-2">Invoice No.</th>
+                <th className="text-center p-2">Customer</th>
+                <th className="text-center p-2">Contact</th>
+                <th className="text-center p-2">Total</th>
                 <th className="text-center p-2">Points</th>
                 <th className="p-2"></th>
               </tr>
@@ -216,7 +216,7 @@ export default function SearchInvoicePage() {
                   <td className="p-2 font-medium">{s.invoiceNo}</td>
                   <td className="p-2">{s.customerName || '—'}</td>
                   <td className="p-2">{s.customerPhone || '—'}</td>
-                  <td className="p-2 text-right">₱{s.total?.toLocaleString()}</td>
+                  <td className="p-2 text-center">₱{s.total?.toLocaleString()}</td>
                   <td className="p-2 text-center font-bold text-green-700">{pointsFor(s)}</td>
                   <td className="p-2 text-center">
                     <button onClick={() => setEditing(s)} className="text-blue-600 text-xs font-medium">View / Edit</button>
@@ -264,9 +264,9 @@ export default function SearchInvoicePage() {
                     </label>
                     {(editing.paidBy || 'Cash') === 'Check' && (
                       <>
-                        <input className="border rounded px-2 py-1" placeholder="Check No." value={editing.paymentRef || editing.referenceNo || ''} onChange={(e) => setEditing({ ...editing, paymentRef: e.target.value })} />
-                        <input className="border rounded px-2 py-1" placeholder="Bank Name" value={editing.bankName || ''} onChange={(e) => setEditing({ ...editing, bankName: e.target.value })} />
-                        <input type="date" className="border rounded px-2 py-1" value={editing.checkDate || ''} onChange={(e) => setEditing({ ...editing, checkDate: e.target.value })} />
+                        <input className="border rounded px-2 py-1 text-center" placeholder="Check No." value={editing.paymentRef || editing.referenceNo || ''} onChange={(e) => setEditing({ ...editing, paymentRef: e.target.value })} />
+                        <input className="border rounded px-2 py-1 text-center" placeholder="Bank Name" value={editing.bankName || ''} onChange={(e) => setEditing({ ...editing, bankName: e.target.value })} />
+                        <input type="date" className="border rounded px-2 py-1 text-center" value={editing.checkDate || ''} onChange={(e) => setEditing({ ...editing, checkDate: e.target.value })} />
                       </>
                     )}
                   </div>
@@ -276,13 +276,13 @@ export default function SearchInvoicePage() {
             <table className="w-full text-sm mb-3">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left p-1">Part Number</th>
-                  <th className="text-left p-1">Brand</th>
-                  <th className="text-left p-1">Description</th>
+                  <th className="text-center p-1">Part Number</th>
+                  <th className="text-center p-1">Brand</th>
+                  <th className="text-center p-1">Description</th>
                   <th className="text-center p-1">Qty</th>
-                  <th className="text-right p-1">Price</th>
-                  {showLabor && <th className="text-right p-1">Labor</th>}
-                  <th className="text-right p-1">Total</th>
+                  <th className="text-center p-1">Price</th>
+                  {showLabor && <th className="text-center p-1">Labor</th>}
+                  <th className="text-center p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -300,21 +300,21 @@ export default function SearchInvoicePage() {
                     <td className="p-1 text-center">
                       <input type="number" min={1} className="w-16 border rounded px-2 py-1 text-center" value={item.qty} onChange={(e) => updateItem(i, 'qty', parseInt(e.target.value) || 1)} />
                     </td>
-                    <td className="p-1 text-right">
-                      <input className="w-28 border rounded px-2 py-1 text-right" value={Number(item.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
+                    <td className="p-1 text-center">
+                      <input className="w-28 border rounded px-2 py-1 text-center" value={Number(item.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
                     </td>
                     {showLabor && (
-                      <td className="p-1 text-right">
-                        <input className="w-24 border rounded px-2 py-1 text-right" value={Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
+                      <td className="p-1 text-center">
+                        <input className="w-24 border rounded px-2 py-1 text-center" value={Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateItem(i, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} />
                       </td>
                     )}
-                    <td className="p-1 text-right">₱{Number(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="p-1 text-center">₱{Number(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="text-right font-bold mb-1">Total: ₱{Number(editing.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="text-right font-bold text-green-700 mb-3">Points earned: {pointsFor(editing)} (₱200 = 1 point)</div>
+            <div className="text-center font-bold mb-1">Total: ₱{Number(editing.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-center font-bold text-green-700 mb-3">Points earned: {pointsFor(editing)} (₱200 = 1 point)</div>
             <div className="flex gap-3">
               <button onClick={() => setEditing(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-lg">Close</button>
               <button onClick={deleteInvoice} className="flex-1 bg-red-600 text-white py-2 rounded-lg">Delete Invoice</button>

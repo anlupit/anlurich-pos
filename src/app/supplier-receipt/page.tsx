@@ -10,7 +10,7 @@ function PriceField({ value, onChange }: { value: number; onChange: (n: number) 
   return (
     <input
       inputMode="decimal"
-      className="border rounded px-1 py-1 w-full text-right"
+      className="border rounded px-1 py-1 w-full text-center"
       style={{ fontSize: '15px' }}
       value={shown}
       onFocus={() => setText(value ? String(value) : '')}
@@ -290,19 +290,19 @@ export default function SupplierReceiptPage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[20ch] flex-1 relative">
-            <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
+            <label className="block text-xs font-medium mb-1 text-center">Supplier Name</label>
             <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => { loadSharedSuppliers().then((rows) => setSuppliers([...rows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })))).catch(() => setSuppliers([...loadBranchSuppliers()].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })))); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
             {supplierOpen && supplierChoices.length > 0 && (
               <div className="absolute z-20 left-0 right-0 w-full bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
                 {supplierChoices.map((s) => (
-                  <button type="button" key={s.id} className="block w-full text-left px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
+                  <button type="button" key={s.id} className="block w-full text-center px-2 py-1 hover:bg-blue-50" onMouseDown={() => { setSupplierName(s.name); setSupplierOpen(false); }}>{s.name}</button>
                 ))}
               </div>
             )}
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Terms</label>
-            <select className="border rounded px-2 py-1" style={{ width: '12ch' }} value={terms} onChange={(e) => setTerms(e.target.value)}>
+            <select className="border rounded px-2 py-1 text-center" style={{ width: '12ch' }} value={terms} onChange={(e) => setTerms(e.target.value)}>
               <option value="">—</option>
               <option>COD</option>
               <option>30 days</option>
@@ -313,15 +313,15 @@ export default function SupplierReceiptPage() {
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Invoice Date</label>
-            <input type="date" className="border rounded px-2 py-1" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+            <input type="date" className="border rounded px-2 py-1 text-center" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Invoice Number</label>
-            <input className="border rounded px-2 py-1" style={{ width: '20ch' }} maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} onBlur={warnDuplicate} />
+            <input className="border rounded px-2 py-1 text-center" style={{ width: '20ch' }} maxLength={20} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} onBlur={warnDuplicate} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-center">Invoice Type</label>
-            <select className="border rounded px-2 py-1" style={{ width: '16ch' }} value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
+            <select className="border rounded px-2 py-1 text-center" style={{ width: '16ch' }} value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
               <option value="">—</option>
               <option>DR Invoice</option>
               <option>Sales Invoice</option>
@@ -352,23 +352,23 @@ export default function SupplierReceiptPage() {
             {lines.map((line) => (
               <tr key={line.id} className="border-t">
                 <td className="p-1">
-                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} onBlur={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value); } }} />
+                  <input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.barcode} onChange={(e) => updateLine(line.id, 'barcode', e.target.value)} onBlur={(e) => lookupBarcode(line.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(line.id, (e.target as HTMLInputElement).value); } }} />
                 </td>
                 <td className="p-1 relative">
-                  <input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
+                  <input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.partNumber} onChange={(e) => { updateLine(line.id, 'partNumber', e.target.value); suggestForLine(line.id, 'partNumber', e.target.value); }} onBlur={() => setTimeout(() => setLineSuggest(null), 150)} />
                   {lineSuggest?.id === line.id && lineSuggest.field === 'partNumber' && (
                     <div className="absolute z-30 left-0 right-0 top-full bg-white border rounded shadow max-h-40 overflow-auto">
                       {lineSuggest.matches.map((p) => (
-                        <button type="button" key={p.id} className="block w-full text-left px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
+                        <button type="button" key={p.id} className="block w-full text-center px-2 py-1 text-xs hover:bg-blue-50" onMouseDown={() => pickSuggestion(line.id, p)}>
                           {p.partNumber}
                         </button>
                       ))}
                     </div>
                   )}
                 </td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.productName} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.brand} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.productName} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'productName', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.brand} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
+                <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center font-semibold" style={{ fontSize: '15px' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1"><PriceField value={Number(line.grossPrice || 0)} onChange={(n) => updateLine(line.id, 'grossPrice', n)} /></td>
