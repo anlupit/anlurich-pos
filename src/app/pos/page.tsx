@@ -73,7 +73,7 @@ export default function POSPage() {
   const [showLetterhead, setShowLetterhead] = useState(false);
   const [savedSale, setSavedSale] = useState<any>(null);
   const [lines, setLines] = useState<Line[]>([
-    { id: '1', barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+    { id: '1', barcode: '', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 },
   ]);
   const [discount, setDiscount] = useState('');
   const [lessEwt, setLessEwt] = useState(false);
@@ -192,14 +192,14 @@ export default function POSPage() {
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+      { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 },
     ]);
   };
 
   const removeLine = (id: string) => {
     setLines((prev) => {
       const next = prev.filter((l) => l.id !== id);
-      return next.length ? next : [{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }];
+      return next.length ? next : [{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 }];
     });
   };
 
@@ -268,7 +268,7 @@ export default function POSPage() {
           price: found.sellingPrice || 0,
           qty: 1,
         } : l),
-        { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 },
+        { id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 },
       ];
     });
   };
@@ -653,7 +653,7 @@ export default function POSPage() {
   };
 
   const clearEntry = () => {
-    setLines([{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 1, unit: 'pcs', price: 0 }]);
+    setLines([{ id: Date.now().toString(), barcode: '', partNumber: '', description: '', brand: '', qty: 0, unit: 'pcs', price: 0 }]);
     setCustomerName('');
     setCustomerPhone('');
     setVehicleType('');
@@ -839,7 +839,7 @@ export default function POSPage() {
                 </td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={1} className="border rounded px-1 py-1 w-full text-center" value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value) || 1)} /></td>
+                <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center" value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
                 <td className="p-1 text-right"><input className="border rounded px-1 py-1 w-full text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
                 {hasLabor && <td className="p-1 text-right"><input className="border rounded px-2 py-1 text-[18px] text-right" style={{ width: '10ch' }} value={Number(line.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(line.id, 'labor', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>}

@@ -635,29 +635,51 @@ export async function updateQuotation(quotation: any) {
   localStorage.setItem(key, JSON.stringify(updated));
 }
 
-// Suppliers — private per branch
-export function loadBranchSuppliers(branch?: string): any[] {
+// Suppliers — shared by all branches
+export function loadBranchSuppliers(): any[] {
   if (typeof window === 'undefined') return [];
-  const b = branch || currentBranch();
-  if (b === 'admin' || !b) {
-    const all: any[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('anlurich-suppliers-')) {
-        try { all.push(...JSON.parse(localStorage.getItem(key) || '[]')); } catch {}
-      }
+  const all: any[] = [];
+  try { all.push(...JSON.parse(localStorage.getItem('anlurich-suppliers') || '[]')); } catch {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('anlurich-suppliers-')) {
+      try { all.push(...JSON.parse(localStorage.getItem(key) || '[]')); } catch {}
     }
-    return all;
   }
-  try {
-    return JSON.parse(localStorage.getItem(`anlurich-suppliers-${b}`) || '[]');
-  } catch { return []; }
+  const seen = new Set<string>();
+  return all.filter((s) => {
+    const name = String(s?.name || '').trim().toLowerCase();
+    if (!name || seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
 }
 
-export function saveBranchSuppliers(suppliers: any[], branch?: string) {
-  const b = branch || currentBranch() || 'unknown';
-  localStorage.setItem(`anlurich-suppliers-${b}`, JSON.stringify(suppliers));
-  pushCloud(`anlurich-suppliers-${b}`, suppliers);
+export function saveBranchSuppliers(suppliers: any[]) {
+  const seen = new Set<string>();
+  const clean = (Array.isArray(suppliers) ? suppliers : []).filter((s) => {
+    const name = String(s?.name || '').trim().toLowerCase();
+    if (!name || seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+  localStorage.setItem('anlurich-suppliers', JSON.stringify(clean));
+  pushCloud('anlurich-suppliers', clean);
+}
+
+export async function loadSharedSuppliers() {
+  const cloud = await pullCloud('anlurich-suppliers').catch(() => []);
+  const local = loadBranchSuppliers();
+  const all = [...(Array.isArray(cloud) ? cloud : []), ...local];
+  const seen = new Set<string>();
+  const clean = all.filter((s) => {
+    const name = String(s?.name || '').trim().toLowerCase();
+    if (!name || seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+  localStorage.setItem('anlurich-suppliers', JSON.stringify(clean));
+  return clean;
 }
 
 export function loadProducts(): any[] {

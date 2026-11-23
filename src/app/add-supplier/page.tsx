@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { loadBranchSuppliers, saveBranchSuppliers, currentBranch } from '../../lib/branchData';
+import { loadBranchSuppliers, saveBranchSuppliers, loadSharedSuppliers } from '../../lib/branchData';
 
 type Supplier = {
   id: string;
@@ -20,9 +20,7 @@ export default function AddSupplierPage() {
   const [branch, setBranch] = useState('');
 
   useEffect(() => {
-    const b = currentBranch();
-    setBranch(b);
-    setSuppliers(loadBranchSuppliers(b));
+    loadSharedSuppliers().then(setSuppliers).catch(() => setSuppliers(loadBranchSuppliers()));
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,7 +34,7 @@ export default function AddSupplierPage() {
       updated = [...suppliers, { id: Date.now().toString(), ...form }];
     }
     setSuppliers(updated);
-    saveBranchSuppliers(updated, branch);
+    saveBranchSuppliers(updated);
     setForm({ name: '', address: '', tin: '', contact: '', phone: '', email: '' });
     setEditingId(null);
   };
@@ -50,13 +48,13 @@ export default function AddSupplierPage() {
     if (!confirm('Delete this supplier?')) return;
     const updated = suppliers.filter((s) => s.id !== id);
     setSuppliers(updated);
-    saveBranchSuppliers(updated, branch);
+    saveBranchSuppliers(updated);
   };
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold text-yellow-600 mb-1">Add Supplier</h1>
-      <div className="text-xs text-gray-500 mb-4">Private for this branch only</div>
+      <div className="text-xs text-gray-500 mb-4">Shared by all branches</div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <input className="border rounded px-3 py-2" placeholder="Supplier Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />

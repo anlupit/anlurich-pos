@@ -1,8 +1,28 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos, searchInvoicesCloud, loadInvoices } from '../../lib/branchData';
+import { saveInvoice, currentBranch, loadBranchSuppliers, saveBranchSuppliers, loadSharedSuppliers, adjustStockByItem, syncOnline, loadInvoicesCloud, updateInvoices, stripInvoicePhotos, searchInvoicesCloud, loadInvoices } from '../../lib/branchData';
 import { upsertCatalogFromInvoice, loadProductsCloud } from '../../lib/products';
+
+function PriceField({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text !== null ? text : (value ? Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  return (
+    <input
+      inputMode="decimal"
+      className="border rounded px-1 py-1 w-full text-right"
+      style={{ fontSize: '15px' }}
+      value={shown}
+      onFocus={() => setText(value ? String(value) : '')}
+      onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
+      onBlur={() => {
+        const raw = String(text || '').replace(/[^0-9.]/g, '');
+        onChange(raw ? Math.round((parseFloat(raw) || 0) * 100) / 100 : 0);
+        setText(null);
+      }}
+    />
+  );
+}
 
 type Supplier = { id: string; name: string; address?: string; tin?: string; contact?: string; phone?: string; email?: string };
 
@@ -46,6 +66,7 @@ export default function SupplierReceiptPage() {
       setSuppliers([...saved].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })));
     };
     refreshSuppliers();
+    loadSharedSuppliers().then((rows) => setSuppliers([...rows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })))).catch(() => {});
     loadProductsCloud().then(setCatalog).catch(() => {});
     stripInvoicePhotos().catch(() => {});
   }, []);
@@ -270,7 +291,7 @@ export default function SupplierReceiptPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[20ch] flex-1 relative">
             <label className="block text-xs font-medium mb-1 text-left">Supplier Name</label>
-            <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => { setSuppliers([...loadBranchSuppliers()].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
+            <input className="w-full border rounded px-2 py-1" placeholder="Type to narrow supplier" value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierOpen(true); }} onFocus={() => { loadSharedSuppliers().then((rows) => setSuppliers([...rows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })))).catch(() => setSuppliers([...loadBranchSuppliers()].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })))); setSupplierOpen(true); }} onBlur={() => setTimeout(() => setSupplierOpen(false), 150)} />
             {supplierOpen && supplierChoices.length > 0 && (
               <div className="absolute z-20 left-0 right-0 w-full bg-white border rounded shadow mt-1 max-h-40 overflow-auto">
                 {supplierChoices.map((s) => (
@@ -350,7 +371,7 @@ export default function SupplierReceiptPage() {
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full" style={{ fontSize: '15px' }} value={line.description} onFocus={() => setLineSuggest(null)} onChange={(e) => updateLine(line.id, 'description', e.target.value)} /></td>
                 <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 w-full text-center font-semibold" style={{ fontSize: '15px' }} value={line.qty} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 1)} /></td>
                 <td className="p-1"><input className="border rounded px-1 py-1 w-full text-center" style={{ fontSize: '15px' }} value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                <td className="p-1"><input type="number" min={0} step="0.01" className="border rounded px-1 py-1 w-full text-right" style={{ fontSize: '15px' }} value={line.grossPrice || ''} onChange={(e) => updateLine(line.id, 'grossPrice', parseFloat(e.target.value) || 0)} /></td>
+                <td className="p-1"><PriceField value={Number(line.grossPrice || 0)} onChange={(n) => updateLine(line.id, 'grossPrice', n)} /></td>
                 <td className="p-1 text-center font-medium">{money(netPrice(line))}</td>
                 <td className="p-1 text-center font-medium">{money(lineTotal(line))}</td>
                 <td className="p-1 text-center sticky right-0 bg-white">

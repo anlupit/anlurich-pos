@@ -6,7 +6,7 @@ import { currentBranch, loadSharedSuppliers, saveBranchSuppliers, loadBranchSupp
 type Tool = { id: string; partNumber: string; name: string; category: string; description: string; costPrice: number; sellingPrice: number; qty: number };
 type Line = { id: string; barcode: string; partNumber: string; productName: string; description: string; segment: string; qty: number; unit: string; price: number };
 const SEGMENTS = ['Accessories', 'Blue', 'COC', 'Garden', 'Measuring', 'Parts and Handtools'];
-const emptyLine = (): Line => ({ id: Date.now().toString(), barcode: '', partNumber: '', productName: '', description: '', segment: '', qty: 1, unit: 'pc', price: 0 });
+const emptyLine = (): Line => ({ id: Date.now().toString(), barcode: '', partNumber: '', productName: '', description: '', segment: '', qty: 0, unit: 'pc', price: 0 });
 
 function PriceField({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [text, setText] = useState<string | null>(null);
@@ -222,7 +222,7 @@ export default function BoschSupplierInvoicePage() {
                     {SEGMENTS.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </td>
-                <td className="p-1 text-center"><input type="number" min={1} className="border rounded text-center" style={{ width: '6ch' }} value={l.qty} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value) || 1 } : x))} /></td>
+                <td className="p-1 text-center"><input inputMode="numeric" className="border rounded text-center" style={{ width: '6ch' }} value={l.qty || ''} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, qty: parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0 } : x))} /></td>
                 <td className="p-1 text-center"><input className="border rounded text-center" style={{ width: '6ch' }} value={l.unit} onChange={(e) => setLines(lines.map((x) => x.id === l.id ? { ...x, unit: e.target.value } : x))} /></td>
                 <td className="p-1 text-right"><PriceField value={Number(l.price || 0)} onChange={(n) => setLines(lines.map((x) => x.id === l.id ? { ...x, price: n } : x))} /></td>
                 <td className="p-1 text-right">{money(vatAmount(l))}</td>

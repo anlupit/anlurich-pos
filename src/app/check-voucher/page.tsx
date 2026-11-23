@@ -71,7 +71,10 @@ export default function CheckVoucherPage() {
   const searchUnpaid = async () => {
     if (!supplier.trim()) return alert('Enter supplier name');
     const source = branch === 'admin'
-      ? (await Promise.all(BRANCHES.map((b) => loadInvoicesCloud(b.id).catch(() => [])))).flat()
+      ? (await Promise.all(BRANCHES.map(async (b) => {
+          const rows = await loadInvoicesCloud(b.id).catch(() => []);
+          return (Array.isArray(rows) ? rows : []).map((i) => ({ ...i, branch: i.branch || b.id }));
+        }))).flat()
       : await loadInvoicesCloud(branch).catch(() => loadInvoices(branch));
     setInvoices(Array.isArray(source) ? source : []);
     setSelected([]);
@@ -83,6 +86,15 @@ export default function CheckVoucherPage() {
     const monthOk = !month || String(i.invoiceDate || i.createdAt || '').startsWith(month);
     const supplierOk = !supplier.trim() || String(i.supplierName || '').toLowerCase().includes(supplier.trim().toLowerCase());
     return (tab === 'paid' ? paid : !paid) && monthOk && supplierOk;
+  }).sort((a, b) => {
+    const branchSort = String(a.branch || '').localeCompare(String(b.branch || ''));
+    if (branchSort) return branchSort;
+    const dateA = String(a.invoiceDate || a.createdAt || '');
+    const dateB = String(b.invoiceDate || b.createdAt || '');
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    const numA = parseInt(String(a.invoiceNumber || a.invoiceNo || '').replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(String(b.invoiceNumber || b.invoiceNo || '').replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
   });
 
   const chosen = invoices.filter((i) => selected.includes(i.id));
@@ -227,13 +239,12 @@ export default function CheckVoucherPage() {
           <thead className="bg-blue-700 text-white">
             <tr>
               {tab === 'pay' && <th className="p-2"></th>}
-              {isAdmin && <th className="text-left p-2">Branch</th>}
-              <th className="text-left p-2">Supplier</th>
-              <th className="text-left p-2">Invoice No.</th>
-              <th className="text-left p-2">Type</th>
               <th className="text-left p-2">Date</th>
+              <th className="text-left p-2">Invoice No.</th>
+              <th className="text-left p-2">Supplier Name</th>
               <th className="text-right p-2">Amount</th>
-              {tab === 'pay' && <th className="text-center p-2">1% EWT</th>}
+              <th className="text-center p-2">EWT 1%</th>
+              <th className="text-left p-2">Branch</th>
               {tab === 'paid' && <th className="text-left p-2">Voucher No.</th>}
             </tr>
           </thead>
@@ -241,13 +252,12 @@ export default function CheckVoucherPage() {
             {list.map((inv) => (
               <tr key={inv.id} className="border-t">
                 {tab === 'pay' && <td className="p-2 text-center"><input type="checkbox" checked={selected.includes(inv.id)} onChange={() => toggle(inv.id)} /></td>}
-                {isAdmin && <td className="p-2">{inv.branch}</td>}
-                <td className="p-2">{inv.supplierName}</td>
-                <td className="p-2">{inv.invoiceNumber || inv.invoiceNo}</td>
-                <td className="p-2">{inv.invoiceType || '—'}</td>
                 <td className="p-2">{formatDate(inv.invoiceDate)}</td>
+                <td className="p-2">{inv.invoiceNumber || inv.invoiceNo}</td>
+                <td className="p-2">{inv.supplierName}</td>
                 <td className="p-2 text-right">{money(inv.grandTotal)}</td>
-                {tab === 'pay' && <td className="p-2 text-center">{isSales(inv) ? <input type="checkbox" checked={!!ewtRate[inv.id]} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: !p[inv.id] }))} /> : '—'}</td>}
+                <td className="p-2 text-center">{isSales(inv) ? <input type="checkbox" checked={!!ewtRate[inv.id]} onChange={() => setEwtRate((p) => ({ ...p, [inv.id]: !p[inv.id] }))} /> : '—'}</td>
+                <td className="p-2">{inv.branch}</td>
                 {tab === 'paid' && <td className="p-2">{inv.checkVoucherNo || '—'}</td>}
               </tr>
             ))}

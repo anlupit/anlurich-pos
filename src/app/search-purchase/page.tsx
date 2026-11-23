@@ -3,6 +3,25 @@
 import { useState, useEffect } from 'react';
 import { loadInvoices, loadInvoicesCloud, updateInvoices, currentBranch, formatDate, stripInvoicePhotos, searchInvoicesCloud, saveInvoice, deleteInvoiceRecord, clearOldInvoiceRecords, adjustStockByItem } from '../../lib/branchData';
 
+function PriceField({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text !== null ? text : (value ? Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  return (
+    <input
+      inputMode="decimal"
+      className="w-28 border rounded px-2 py-1 text-right"
+      value={shown}
+      onFocus={() => setText(value ? String(value) : '')}
+      onChange={(e) => setText(e.target.value.replace(/[^0-9.]/g, ''))}
+      onBlur={() => {
+        const raw = String(text || '').replace(/[^0-9.]/g, '');
+        onChange(raw ? Math.round((parseFloat(raw) || 0) * 100) / 100 : 0);
+        setText(null);
+      }}
+    />
+  );
+}
+
 export default function SearchPurchasePage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const year = new Date().getFullYear();
@@ -161,7 +180,7 @@ export default function SearchPurchasePage() {
 
   const recalc = (lines: any[], d1: number, d2: number, d3: number) => {
     const next = lines.map((l) => {
-      const gross = Number(l.grossPrice || l.price || 0);
+      const gross = Math.round(Number(l.grossPrice || l.price || 0) * 100) / 100;
       const net = Math.round(gross * (1 - d1 / 100) * (1 - d2 / 100) * (1 - d3 / 100) * 100) / 100;
       return { ...l, grossPrice: gross, netPrice: net, price: net, total: Math.round((Number(l.qty) || 0) * net * 100) / 100 };
     });
@@ -386,7 +405,7 @@ export default function SearchPurchasePage() {
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '60ch' }} value={line.description || ''} onChange={(e) => updateLine(i, 'description', e.target.value)} /></td>
                     <td className="p-1"><input className="border rounded px-2 py-1" style={{ width: '30ch' }} value={line.brand || ''} onChange={(e) => updateLine(i, 'brand', e.target.value)} /></td>
                     <td className="p-1 text-center"><input inputMode="numeric" className="w-16 border rounded px-2 py-1 text-center" value={line.qty} onChange={(e) => updateLine(i, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
-                    <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.grossPrice || line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'grossPrice', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
+                    <td className="p-1 text-right"><PriceField value={Number(line.grossPrice || line.price || 0)} onChange={(n) => updateLine(i, 'grossPrice', n)} /></td>
                     <td className="p-1 text-right"><input className="w-28 border rounded px-2 py-1 text-right" value={Number(line.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(e) => updateLine(i, 'price', Math.round((parseFloat(e.target.value.replace(/,/g, '')) || 0) * 100) / 100)} /></td>
                     <td className="p-1 text-right font-medium">₱{Number(line.total || (Number(line.qty || 0) * Number(line.price || line.netPrice || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
