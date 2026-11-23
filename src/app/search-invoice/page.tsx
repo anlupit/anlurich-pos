@@ -138,11 +138,11 @@ export default function SearchInvoicePage() {
         <div className="flex items-end gap-1" onKeyDown={onEnter}>
           <div className="shrink-0">
             <div className="text-[10px] font-medium text-center mb-0.5">From</div>
-            <input type="month" className="border rounded px-1 py-1 w-[9.5rem]" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={onEnter} />
+            <input type="month" className="border rounded px-1 py-1 w-[9.5rem] text-center" value={monthFrom} onChange={(e) => setMonthFrom(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div className="shrink-0">
             <div className="text-[10px] font-medium text-center mb-0.5">To</div>
-            <input type="month" className="border rounded px-1 py-1 w-[9.5rem]" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={onEnter} />
+            <input type="month" className="border rounded px-1 py-1 w-[9.5rem] text-center" value={monthTo} onChange={(e) => setMonthTo(e.target.value)} onKeyDown={onEnter} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-medium text-center mb-0.5">Invoice No.</div>
@@ -179,8 +179,8 @@ export default function SearchInvoicePage() {
             <tbody>
               {results.flatMap((s) => (s.items || []).map((item: any, i: number) => (
                 <tr key={`${s.id}-${i}`} className="border-t">
-                  <td className="p-2">{formatDate(s.date)}</td>
-                  <td className="p-2">{s.plateNo || '—'}</td>
+                  <td className="p-2 text-center">{formatDate(s.date)}</td>
+                  <td className="p-2 text-center">{s.plateNo || '—'}</td>
                   <td className="p-2">{s.vehicleType || '—'}</td>
                   <td className="p-2">{item.description || item.partNumber || '—'}</td>
                   <td className="p-2 text-center">₱{Number(item.labor || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -212,10 +212,10 @@ export default function SearchInvoicePage() {
             <tbody>
               {results.map((s) => (
                 <tr key={s.id} className="border-t">
-                  <td className="p-2">{formatDate(s.date)}</td>
-                  <td className="p-2 font-medium">{s.invoiceNo}</td>
-                  <td className="p-2">{s.customerName || '—'}</td>
-                  <td className="p-2">{s.customerPhone || '—'}</td>
+                  <td className="p-2 text-center">{formatDate(s.date)}</td>
+                  <td className="p-2 text-center font-medium">{s.invoiceNo}</td>
+                  <td className="p-2 text-center">{s.customerName || '—'}</td>
+                  <td className="p-2 text-center">{s.customerPhone || '—'}</td>
                   <td className="p-2 text-center">₱{s.total?.toLocaleString()}</td>
                   <td className="p-2 text-center font-bold text-green-700">{pointsFor(s)}</td>
                   <td className="p-2 text-center">

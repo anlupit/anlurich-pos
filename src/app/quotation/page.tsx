@@ -342,6 +342,17 @@ export default function QuotationPage() {
         {/* Product Lines */}
         <div className="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
           <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '28%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '12%' }} />
+              {hasLabor && <col style={{ width: '10%' }} />}
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '6%' }} />
+            </colgroup>
             <thead className="bg-teal-500 text-white">
               <tr>
                 <th className="p-2 text-center">Part Number</th>
@@ -363,8 +374,8 @@ export default function QuotationPage() {
                   <td className="p-1"><input className="border rounded px-2 py-1 text-center w-full" value={line.brand} onChange={(e) => updateLine(line.id, 'brand', e.target.value)} /></td>
                   <td className="p-1"><input inputMode="numeric" className="border rounded px-1 py-1 text-center w-full" value={line.qty || ''} onChange={(e) => updateLine(line.id, 'qty', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)} /></td>
                   <td className="p-1"><input className="border rounded px-1 py-1 text-center w-full" value={line.unit} onChange={(e) => updateLine(line.id, 'unit', e.target.value)} /></td>
-                  <td className="p-1"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} width="12ch" /></td>
-                  {hasLabor && <td className="p-1"><PriceField value={Number(line.laborPrice || 0)} onChange={(n) => updateLine(line.id, 'laborPrice', n)} width="10ch" /></td>}
+                  <td className="p-1"><PriceField value={Number(line.price || 0)} onChange={(n) => updateLine(line.id, 'price', n)} width="100%" /></td>
+                  {hasLabor && <td className="p-1"><PriceField value={Number(line.laborPrice || 0)} onChange={(n) => updateLine(line.id, 'laborPrice', n)} width="100%" /></td>}
                   <td className="p-1 text-center font-medium">₱{lineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="p-1 text-center"><button type="button" onClick={() => removeLine(line.id)} className="text-red-600 text-xs font-medium">Delete</button></td>
                 </tr>
