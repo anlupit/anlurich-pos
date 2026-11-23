@@ -323,9 +323,17 @@ export default function ProductCatalogPage() {
       }
     });
     setProducts(merged);
+    localStorage.setItem('anlurich-products', JSON.stringify(merged));
+    alert(`Reading ${newProducts.length} rows. Saving to Supabase...`);
     try {
-      await saveProducts(merged);
-      alert(`Added ${added}, updated ${updatedCount}. Old products were kept.`);
+      const changed = newProducts.map((incoming) => merged.find((p) =>
+        p.partNumber.toLowerCase() === incoming.partNumber.toLowerCase() &&
+        String(p.brand || '').toLowerCase() === String(incoming.brand || '').toLowerCase()
+      ) || incoming);
+      for (const p of changed) {
+        await saveProductCloud(p);
+      }
+      alert(`Done. Added ${added}, updated ${updatedCount}. Old products were kept.`);
     } catch (err: any) {
       alert(`Saved on this computer only.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
