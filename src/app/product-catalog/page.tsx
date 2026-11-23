@@ -22,6 +22,7 @@ export default function ProductCatalogPage() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [findPart, setFindPart] = useState('');
   const [findBrand, setFindBrand] = useState('');
   const [findName, setFindName] = useState('');
@@ -324,17 +325,23 @@ export default function ProductCatalogPage() {
     });
     setProducts(merged);
     localStorage.setItem('anlurich-products', JSON.stringify(merged));
-    alert(`Reading ${newProducts.length} rows. Saving to Supabase...`);
+    setUploadStatus(`Saving ${newProducts.length} rows to Supabase...`);
     try {
       const changed = newProducts.map((incoming) => merged.find((p) =>
         p.partNumber.toLowerCase() === incoming.partNumber.toLowerCase() &&
         String(p.brand || '').toLowerCase() === String(incoming.brand || '').toLowerCase()
       ) || incoming);
-      for (const p of changed) {
-        await saveProductCloud(p);
-      }
+      const res = await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'products', migrate: true, rows: changed }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.ok === false) throw new Error(body.error || 'Supabase did not save the upload.');
+      setUploadStatus(`Done. Added ${added}, updated ${updatedCount}.`);
       alert(`Done. Added ${added}, updated ${updatedCount}. Old products were kept.`);
     } catch (err: any) {
+      setUploadStatus('Saved on this computer only.');
       alert(`Saved on this computer only.\n\n${err?.message || 'Check DATABASE_URL in Vercel.'}`);
     }
     if (fileRef.current) fileRef.current.value = '';
@@ -435,6 +442,7 @@ export default function ProductCatalogPage() {
             Mass Upload (Excel/CSV)
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
           </label>
+          {uploadStatus && <span className="text-sm font-bold text-blue-800">{uploadStatus}</span>}
           <button onClick={deleteSelected} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete Selected</button>
           <button onClick={generateBarcodes} className="bg-blue-800 text-white px-4 py-2 rounded-lg text-sm">Generate Barcode</button>
         </div>
