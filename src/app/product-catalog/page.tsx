@@ -370,13 +370,29 @@ export default function ProductCatalogPage() {
     if (confirm('Barcode generated. Print now on 4x6 thermal waybill sticker paper?')) printLabels(labels);
   };
 
-  const downloadTemplate = () => {
-    const csv = 'Part Number,Name,Barcode,OEM Part Number,Brand,Description,Category,Position,Car Make,Car Model,Year Model,Cost Price,Mark Up %\nBRK-001,Brake Pad Set,123456789,OEM-001,GTX,Front brake pads,Brake System,Front,Toyota,Vios,2014-2020,1200.00,50\nBBF3-20,Brake Fluid,9316068437780,,Bendix,BRAKE FLUID DOT-3 1X12 (900ml),Fluids,,, , ,250.50,50';
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'product-catalog-template.csv';
-    a.click();
+  const downloadSelected = async () => {
+    const rows = products.filter((p) => selected.includes(p.id));
+    if (!rows.length) return alert('Tick the products to download.');
+    const XLSX = await import('xlsx');
+    const data = rows.map((p) => ({
+      'Part Number': p.partNumber || '',
+      Name: p.name || '',
+      Barcode: p.barcode || '',
+      'OEM Part Number': p.oemPartNumber || '',
+      Brand: p.brand || '',
+      Description: p.description || '',
+      Category: p.category || '',
+      Position: p.position || '',
+      'Car Make': p.carMake || '',
+      'Car Model': p.carModel || '',
+      'Year Model': p.yearModel || '',
+      'Cost Price': p.costPrice ?? '',
+      'Mark Up %': p.markupPercent ?? 50,
+    }));
+    const sheet = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Selected Products');
+    XLSX.writeFile(wb, 'selected-products.xlsx');
   };
 
   const unique = (values: (string | undefined)[]) => Array.from(new Set(values.map((v) => String(v || '').trim()).filter(Boolean))).sort();
@@ -406,7 +422,7 @@ export default function ProductCatalogPage() {
 
       <div className="bg-white rounded-xl shadow p-4 mb-4">
         <div className="flex gap-3 mb-3">
-          <button onClick={downloadTemplate} className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm">Download Template</button>
+          <button onClick={downloadSelected} className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm">Download Selected</button>
           <label className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm cursor-pointer">
             Mass Upload (Excel/CSV)
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcel} />
