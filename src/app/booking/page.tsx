@@ -47,13 +47,9 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen p-4" style={{ background: '#f4f6fb' }}>
-      <div className="max-w-lg mx-auto bg-white rounded-xl shadow p-5">
-        <div className="text-center mb-4">
-          <img src="/logo.png" alt="Anlurich" className="h-16 mx-auto object-contain" />
-          <div className="font-bold">Auto Parts Inventory</div>
-          <h1 className="text-2xl font-black" style={{ color: '#002366' }}>Service Booking</h1>
-        </div>
-        <div className="grid gap-3">
+      <div className="max-w-lg mx-auto bg-white rounded-xl shadow overflow-hidden">
+        <img src="/booking-banner.jpg" alt="Anlurich Auto Parts" className="w-full h-auto block" />
+        <div className="p-5">
           <label className="text-sm font-medium">Customer Name<input className="border rounded px-3 py-2 w-full mt-1" value={form.customerName} onChange={(e) => set('customerName', e.target.value)} /></label>
           <label className="text-sm font-medium">Contact Number<input className="border rounded px-3 py-2 w-full mt-1" value={form.phone} onChange={(e) => set('phone', e.target.value)} /></label>
           <label className="text-sm font-medium">Plate No.<input className="border rounded px-3 py-2 w-full mt-1" value={form.plateNo} onChange={(e) => set('plateNo', e.target.value)} /></label>
