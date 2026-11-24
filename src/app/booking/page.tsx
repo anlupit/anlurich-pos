@@ -10,22 +10,44 @@ const BRANCHES = [
   { id: 'sezan', name: 'Sezan Baliwag Auto Parts' },
 ];
 
-const SERVICES = ['Oil Change', 'Brake Check', 'Periodic Maintenance', 'Aircon Service', 'Battery Check', 'General Checkup', 'Other'];
+const PMS = [
+  { name: 'Change Oil', price: 500 },
+  { name: 'Brake Cleaning and Re-adjustment', price: 800 },
+  { name: 'Coolant Flushing', price: 300 },
+  { name: 'Brake and Clutch Fluid Flushing', price: 300 },
+  { name: 'Spark Plug Change and Throttle Cleaning', price: 400 },
+  { name: 'Fuel Filter Change', price: 500 },
+  { name: 'Transmission Oil Change', price: 450 },
+  { name: 'Differential Gear Oil Change', price: 450 },
+];
+const OTHER = ['Engine Diagnose', 'Underchasis Repair', 'Aircon Repair', 'Transmission Service'];
 
 export default function BookingPage() {
   const [form, setForm] = useState({
     customerName: '', phone: '', plateNo: '', vehicle: '', branch: 'anlurich',
-    service: 'Periodic Maintenance', date: '', time: '09:00', notes: '',
+    date: '', time: '09:00', notes: '',
   });
+  const [pms, setPms] = useState(false);
+  const [pmsItems, setPmsItems] = useState<string[]>([]);
+  const [other, setOther] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState('');
 
   const set = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+  const toggle = (list: string[], value: string, setter: (next: string[]) => void) => {
+    setter(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
+  };
+  const pmsTotal = PMS.filter((item) => pmsItems.includes(item.name)).reduce((sum, item) => sum + item.price, 0);
 
   const save = async () => {
     if (!form.customerName.trim() || !form.phone.trim() || !form.date) return alert('Name, phone, and date are required.');
+    if (!pms && other.length === 0) return alert('Select a service.');
     setSaving(true);
-    const row = { ...form, id: Date.now().toString(), status: 'Pending', createdAt: new Date().toISOString() };
+    const service = [
+      pms ? `PMS: ${pmsItems.join(', ') || 'No item selected'}` : '',
+      ...other,
+    ].filter(Boolean).join(' | ');
+    const row = { ...form, service, pms, pmsItems, other, pmsTotal, id: Date.now().toString(), status: 'Pending', createdAt: new Date().toISOString() };
     const res = await fetch('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
@@ -59,11 +81,26 @@ export default function BookingPage() {
               {BRANCHES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </label>
-          <label className="text-sm font-medium">Service
-            <select className="border rounded px-3 py-2 w-full mt-1" value={form.service} onChange={(e) => set('service', e.target.value)}>
-              {SERVICES.map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </label>
+          <div className="border rounded p-3">
+            <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={pms} onChange={(e) => setPms(e.target.checked)} /> PMS Service</label>
+            {pms && (
+              <div className="mt-2 grid gap-1">
+                {PMS.map((item) => (
+                  <label key={item.name} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2"><input type="checkbox" checked={pmsItems.includes(item.name)} onChange={() => toggle(pmsItems, item.name, setPmsItems)} /> {item.name}</span>
+                    <span>₱{item.price.toLocaleString()}.00</span>
+                  </label>
+                ))}
+                <div className="text-right font-bold mt-1">PMS Total ₱{pmsTotal.toLocaleString()}.00</div>
+              </div>
+            )}
+          </div>
+          {OTHER.map((item) => (
+            <div key={item}>
+              <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={other.includes(item)} onChange={() => toggle(other, item, setOther)} /> {item}</label>
+              {other.includes(item) && <div className="text-sm text-green-700 ml-6">Free Check Up and Estimate</div>}
+            </div>
+          ))}
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm font-medium">Date<input type="date" className="border rounded px-3 py-2 w-full mt-1" value={form.date} onChange={(e) => set('date', e.target.value)} /></label>
             <label className="text-sm font-medium">Time<input type="time" className="border rounded px-3 py-2 w-full mt-1" value={form.time} onChange={(e) => set('time', e.target.value)} /></label>
