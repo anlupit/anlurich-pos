@@ -265,6 +265,25 @@ export async function GET(req: Request) {
     const invoiceNo = url.searchParams.get('invoiceNo');
     const part = url.searchParams.get('part');
     const brand = url.searchParams.get('brand');
+    const name = url.searchParams.get('name');
+    const q = url.searchParams.get('q');
+    if (table === 'products' && (part || brand || name || q)) {
+      const values: any[] = [];
+      const where: string[] = [];
+      const add = (column: string, value: string) => {
+        values.push(`%${value}%`);
+        where.push(`${column} ILIKE $${values.length}`);
+      };
+      if (part) add('part_number', part);
+      if (brand) add('brand', brand);
+      if (name) add('name', name);
+      if (q) {
+        values.push(`%${q}%`);
+        where.push(`(part_number ILIKE $${values.length} OR barcode ILIKE $${values.length} OR brand ILIKE $${values.length} OR name ILIKE $${values.length} OR data->>'description' ILIKE $${values.length})`);
+      }
+      const { rows } = await pool.query(`SELECT data FROM products WHERE ${where.join(' AND ')} ORDER BY name ASC, brand ASC, part_number ASC LIMIT 50`, values);
+      return NextResponse.json(rows.map((r) => r.data));
+    }
     const values: any[] = [];
     const where: string[] = [];
     const branchTable = physical !== table;

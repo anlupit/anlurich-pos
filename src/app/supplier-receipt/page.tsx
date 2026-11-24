@@ -123,15 +123,14 @@ export default function SupplierReceiptPage() {
   };
 
   const suggestForLine = async (id: string, field: 'barcode' | 'partNumber', text: string) => {
-    const q = text.trim().toLowerCase();
+    const q = text.trim();
     if (q.length < 2) { setLineSuggest(null); return; }
-    const latest = await loadProductsCloud().catch(() => catalog);
-    if (latest.length) setCatalog(latest);
-    const source = latest.length ? latest : catalog;
-    const matches = source.filter((p) => {
-      if (field === 'barcode') return String(p.barcode || '').toLowerCase().includes(q);
-      return String(p.partNumber || '').toLowerCase().includes(q);
-    }).slice(0, 8);
+    const res = await fetch(`/api/records?table=products&q=${encodeURIComponent(q)}`, { cache: 'no-store' }).catch(() => null);
+    const rows = res ? await res.json().catch(() => []) : [];
+    const matches = (Array.isArray(rows) ? rows : []).filter((p) => field === 'barcode'
+      ? String(p.barcode || '').toLowerCase().includes(q.toLowerCase())
+      : String(p.partNumber || '').toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 8);
     if (!matches.length) { setLineSuggest(null); return; }
     setLineSuggest({ id, field, matches });
   };

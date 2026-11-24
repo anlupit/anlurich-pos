@@ -34,55 +34,6 @@ export default function ProductCatalogPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    Promise.all([loadProductsCloud(), searchInvoicesCloud({})]).then(([rows, invoices]) => {
-      const local = loadProducts();
-      const byPart = new Map<string, Product>();
-      [...local, ...(Array.isArray(rows) ? rows : [])].forEach((p) => {
-        const key = String(p.partNumber || p.id || '').trim().toLowerCase();
-        if (key) byPart.set(key, p);
-      });
-      const base = Array.from(byPart.values());
-      const latest = new Map<string, { date: string; net: number; description?: string }>();
-      invoices.forEach((inv: any) => {
-        const date = String(inv.invoiceDate || inv.createdAt || '');
-        (inv.lines || []).forEach((line: any) => {
-          const part = String(line.partNumber || '').trim().toLowerCase();
-          if (!part) return;
-          const net = Number(line.netPrice || line.price || 0);
-          const prev = latest.get(part);
-          if (!prev || date > prev.date) latest.set(part, { date, net, description: line.description });
-        });
-      });
-      setProducts(base.map((p) => {
-        const hit = latest.get(String(p.partNumber || '').trim().toLowerCase());
-        if (!hit || !hit.net) return p;
-        return { ...p, costPrice: Math.round(hit.net * 100) / 100, description: hit.description || p.description, sellingPrice: Math.ceil((hit.net * 1.5) / 100) * 100 };
-      }));
-      const known = new Set(base.map((p) => String(p.partNumber || '').trim().toLowerCase()));
-      const missing: Product[] = [];
-      invoices.forEach((inv: any) => {
-        (inv.lines || []).forEach((line: any) => {
-          const part = String(line.partNumber || '').trim();
-          if (!part || known.has(part.toLowerCase())) return;
-          known.add(part.toLowerCase());
-          const cost = Number(line.netPrice || line.price || 0);
-          missing.push({
-            id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-            partNumber: part,
-            brand: line.brand || undefined,
-            name: line.productName || line.description || part,
-            description: line.description || undefined,
-            costPrice: cost > 0 ? Math.round(cost * 100) / 100 : undefined,
-            sellingPrice: cost > 0 ? Math.ceil((cost * 1.5) / 100) * 100 : undefined,
-          });
-        });
-      });
-      if (missing.length) {
-        const next = [...base, ...missing];
-        setProducts(next);
-        saveProducts(next).catch(() => {});
-      }
-    }).catch(() => setProducts(loadProducts()));
     fetch('/api/records?table=product_images', { cache: 'no-store' })
       .then((r) => r.json())
       .then((rows) => {
@@ -162,7 +113,6 @@ export default function ProductCatalogPage() {
       brand: form.brand.trim() || undefined,
       name: form.name.trim(),
       description: form.description.trim() || undefined,
-      description: form.description || undefined,
       category: form.category || undefined,
       position: form.position || undefined,
       carMake: form.carMake || undefined,
@@ -398,20 +348,18 @@ export default function ProductCatalogPage() {
   const makeSuggestions = unique([...products.map((p) => p.carMake), 'Toyota', 'Honda', 'Mitsubishi', 'Nissan', 'Hyundai', 'Ford', 'Isuzu', 'Suzuki', 'Mazda', 'Kia']);
   const modelSuggestions = unique(products.map((p) => p.carModel));
   const categorySuggestions = unique([...products.map((p) => p.category), 'Brake System', 'Engine', 'Suspension', 'Electrical', 'Filters', 'Fluids', 'Body Parts', 'Cooling System', 'Transmission', 'Accessories']);
-  const filtered = products.filter((p) => {
-    const part = findPart.trim().toLowerCase();
-    const brand = findBrand.trim().toLowerCase();
-    const name = findName.trim().toLowerCase();
-    const desc = findDesc.trim().toLowerCase();
-    return (!part || String(p.partNumber || '').toLowerCase().includes(part))
-      && (!brand || String(p.brand || '').toLowerCase().includes(brand))
-      && (!name || String(p.name || '').toLowerCase().includes(name))
-      && (!desc || String(p.description || '').toLowerCase().includes(desc) || String(p.name || '').toLowerCase().includes(desc));
-  }).sort((a, b) =>
-    String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base', numeric: true }) ||
-    String(a.brand || '').localeCompare(String(b.brand || ''), undefined, { sensitivity: 'base', numeric: true }) ||
-    String(a.partNumber || '').localeCompare(String(b.partNumber || ''), undefined, { sensitivity: 'base', numeric: true })
-  );
+  const searchCatalog = async () => {
+    const params = new URLSearchParams({ table: 'products' });
+    if (findPart.trim()) params.set('part', findPart.trim());
+    if (findBrand.trim()) params.set('brand', findBrand.trim());
+    if (findName.trim()) params.set('name', findName.trim());
+    if (findDesc.trim()) params.set('q', findDesc.trim());
+    if ([...params.keys()].length === 1) return alert('Type a part number, brand, or name first.');
+    const res = await fetch(`/api/records?${params.toString()}`, { cache: 'no-store' });
+    const rows = await res.json().catch(() => []);
+    setProducts(Array.isArray(rows) ? rows : []);
+  };
+  const filtered = products;
 
   return (
     <div className="min-h-screen p-4 overflow-x-auto">
@@ -479,7 +427,8 @@ export default function ProductCatalogPage() {
           <input className="border rounded px-3 py-2" placeholder="Search part number, ex. GCT" value={findPart} onChange={(e) => setFindPart(e.target.value)} />
           <input className="border rounded px-3 py-2" placeholder="Search brand" value={findBrand} onChange={(e) => setFindBrand(e.target.value)} />
           <input className="border rounded px-3 py-2" placeholder="Search product name" value={findName} onChange={(e) => setFindName(e.target.value)} />
-          <input className="border rounded px-3 py-2" placeholder="Search description" value={findDesc} onChange={(e) => setFindDesc(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search description" value={findDesc} onChange={(e) => setFindDesc(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') searchCatalog(); }} />
+          <button onClick={searchCatalog} className="bg-blue-700 text-white px-4 py-2 rounded-lg">Search</button>
           <div className="text-sm text-gray-500 self-center">{filtered.length} shown</div>
         </div>
         <table className="w-full text-sm">

@@ -230,18 +230,17 @@ export default function POSPage() {
 
   const catalogList = () => bosch ? boschCatalog.map((p) => ({ ...p, name: p.name, brand: p.brand || 'Bosch' })) : loadProducts();
 
-  const suggestForLine = (id: string, text: string) => {
-    const q = text.trim().toLowerCase();
+  const suggestForLine = async (id: string, text: string) => {
+    const q = text.trim();
     if (q.length < 2) { setLineSuggest(null); return; }
-    const list = catalogList();
-    const matches = list.filter((p) =>
-      String(p.partNumber || '').toLowerCase().includes(q) ||
-      String(p.barcode || '').toLowerCase().includes(q) ||
-      String(p.name || '').toLowerCase().includes(q) ||
-      String(p.description || '').toLowerCase().includes(q) ||
-      String(p.brand || '').toLowerCase().includes(q)
-    ).slice(0, 8);
-    setLineSuggest(matches.length ? { id, matches } : null);
+    if (bosch) {
+      const matches = boschCatalog.filter((p) => `${p.partNumber} ${p.name}`.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+      setLineSuggest(matches.length ? { id, matches } : null);
+      return;
+    }
+    const res = await fetch(`/api/records?table=products&q=${encodeURIComponent(q)}`, { cache: 'no-store' }).catch(() => null);
+    const rows = res ? await res.json().catch(() => []) : [];
+    setLineSuggest(Array.isArray(rows) && rows.length ? { id, matches: rows.slice(0, 8) } : null);
   };
 
   const pickSuggestion = (id: string, found: ManagedProduct) => {
