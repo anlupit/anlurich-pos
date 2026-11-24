@@ -6,7 +6,7 @@ export default function AuthGuard() {
   useEffect(() => {
     const path = window.location.pathname;
     const lower = path.toLowerCase();
-    if (path === '/' || path.startsWith('/api') || lower.startsWith('/customer') || lower.startsWith('/mobile') || lower.startsWith('/iphone')) return;
+    if (path === '/' || path.startsWith('/api') || lower.startsWith('/customer') || lower.startsWith('/booking') || lower.startsWith('/mobile') || lower.startsWith('/iphone')) return;
     const auth = sessionStorage.getItem('anlurich-auth');
     if (!auth) {
       window.location.href = '/';
