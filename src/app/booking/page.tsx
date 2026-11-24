@@ -82,7 +82,7 @@ export default function BookingPage() {
             </select>
           </label>
           <div className="border rounded p-3">
-            <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={pms} onChange={(e) => setPms(e.target.checked)} /> PMS Service</label>
+            <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={pms} onChange={(e) => setPms(e.target.checked)} /> PMS Service Labor Cost</label>
             {pms && (
               <div className="mt-2 grid gap-1">
                 {PMS.map((item) => (
@@ -91,7 +91,8 @@ export default function BookingPage() {
                     <span>₱{item.price.toLocaleString()}.00</span>
                   </label>
                 ))}
-                <div className="text-right font-bold mt-1">PMS Total ₱{pmsTotal.toLocaleString()}.00</div>
+                <div className="text-right font-bold mt-1">PMS Labor Total ₱{pmsTotal.toLocaleString()}.00</div>
+                <div className="text-xs text-gray-500 text-right">Labor only. Parts are not included.</div>
               </div>
             )}
           </div>
