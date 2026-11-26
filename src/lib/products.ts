@@ -107,9 +107,9 @@ export async function upsertCatalogFromSale(lines: any[]) {
       String(p.partNumber || '').toLowerCase() === part.toLowerCase() ||
       (barcode && String(p.barcode || '').toLowerCase() === barcode.toLowerCase())
     );
-    if (existing) continue; // only add if not already in catalog
+    if (existing) continue;
     const selling = Number(l.price) > 0 ? Math.round(Number(l.price) * 100) / 100 : undefined;
-    products.push({
+    const item: Product = {
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
       partNumber: part,
       barcode: barcode || undefined,
@@ -117,10 +117,11 @@ export async function upsertCatalogFromSale(lines: any[]) {
       name: l.description || part,
       description: l.description || undefined,
       sellingPrice: selling,
-    });
+    };
+    await saveProductCloud(item);
+    products.push(item);
     added += 1;
   }
-  if (added > 0) await saveProducts(products);
   return { added };
 }
 
