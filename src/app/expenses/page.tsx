@@ -34,6 +34,7 @@ const CATEGORIES = [
   'Taxes and Licenses',
   'Representation',
   'Salaries and Wages',
+  'SSS, PhilHealth and PAGIBIG',
   'Miscellaneous',
 ];
 
