@@ -80,6 +80,9 @@ export default function POSPage() {
   const [saleDateTime, setSaleDateTime] = useState('');
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [showDaily, setShowDaily] = useState(false);
+  const [showCashCount, setShowCashCount] = useState(false);
+  const [cashBegin, setCashBegin] = useState('');
+  const [cashActual, setCashActual] = useState('');
   const [showMonthly, setShowMonthly] = useState(false);
   const [datePick, setDatePick] = useState<'daily-print' | 'daily-download' | 'monthly-print' | 'monthly-download' | null>(null);
   const [reportDay, setReportDay] = useState(new Date().toISOString().slice(0, 10));
@@ -928,6 +931,7 @@ export default function POSPage() {
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={resetForm} className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium" title="Clear products and customer details">Clear Form</button>
+            <button onClick={() => setShowCashCount(true)} className="bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm">Cash Count</button>
             <button onClick={handleSave} disabled={saving} className="flex-1 bg-blue-700 text-white py-2 rounded-lg font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save Sale'}</button>
           </div>
         </div>
@@ -945,6 +949,30 @@ export default function POSPage() {
           </div>
         </div>
       )}
+
+      {showCashCount && (() => {
+        const today = new Date().toISOString().slice(0, 10);
+        const branchId = currentBranch() || 'branch';
+        const key = `cash-begin-${branchId}-${today}`;
+        const begin = Number(cashBegin || localStorage.getItem(key) || 0);
+        const cashSales = loadSales().filter((s) => String(s.date || s.dateTime || '').slice(0, 10) === today && (s.paymentMethod || 'Cash') === 'Cash').reduce((n, s) => n + Number(s.total || 0), 0);
+        const expected = begin + cashSales;
+        const actual = Number(cashActual || 0);
+        const diff = actual - expected;
+        return (
+          <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-5 w-full max-w-sm">
+              <div className="font-bold text-lg mb-3">Cash Count · {today}</div>
+              <label className="text-sm font-medium">Drawer Cash Beginning<input className="border rounded px-3 py-2 w-full mt-1 text-center" value={cashBegin || localStorage.getItem(key) || ''} onChange={(e) => { setCashBegin(e.target.value); localStorage.setItem(key, String(Number(e.target.value) || 0)); }} /></label>
+              <div className="flex justify-between mt-3"><span>Cash Sales Today</span><span>₱{cashSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between font-bold"><span>Expected Cash</span><span>₱{expected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+              <label className="text-sm font-medium block mt-3">Actual Cash Counted<input className="border rounded px-3 py-2 w-full mt-1 text-center" value={cashActual} onChange={(e) => setCashActual(e.target.value)} /></label>
+              <div className={`flex justify-between font-bold mt-3 ${diff === 0 ? 'text-green-700' : 'text-red-600'}`}><span>{diff >= 0 ? 'Over' : 'Short'}</span><span>₱{Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+              <button onClick={() => setShowCashCount(false)} className="w-full bg-blue-700 text-white py-2 rounded-lg mt-4">Close</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Letterhead is already printed on the paper */}
 
